@@ -1,0 +1,71 @@
+diff --git a/node_modules/@banuba/react-native/android/src/main/java/com/banuba/reactnative/BanubaSdkManagerModule.java b/node_modules/@banuba/react-native/android/src/main/java/com/banuba/reactnative/BanubaSdkManagerModule.java
+index fd56fa3..54fc4aa 100644
+--- a/node_modules/@banuba/react-native/android/src/main/java/com/banuba/reactnative/BanubaSdkManagerModule.java
++++ b/node_modules/@banuba/react-native/android/src/main/java/com/banuba/reactnative/BanubaSdkManagerModule.java
+@@ -66,33 +66,43 @@ class BanubaSdkManagerModule extends ReactContextBaseJavaModule implements Permi
+     BanubaSdkManager.deinitialize();
+   }
+ 
+-  @ReactMethod
+-  public void attachView(int tag) {
+-
+-    UIManagerModule uiManagerModule = getReactApplicationContext().getNativeModule(UIManagerModule.class);
+-    uiManagerModule.addUIBlock((viewHierarchyManager) -> {
+-      SurfaceView epView = (SurfaceView) viewHierarchyManager.resolveView(tag);
++@ReactMethod
++public void attachView(int tag) {
++  UIManagerModule uiManagerModule = getReactApplicationContext().getNativeModule(UIManagerModule.class);
+   
+-      if (epView == null) {
+-        throw new RuntimeException("Invalid EffectPlayerView with tag " + tag);
+-      }
+-      getSdkManager().attachSurface(epView);
++  // Add null check and retry mechanism
++  if (uiManagerModule == null) {
++    Log.w(TAG, "UIManagerModule is null, retrying in 100ms...");
+     
+-      epView.setOnTouchListener(
+-        new BanubaSdkTouchListener(
+-          getReactApplicationContext(),
+-          getSdkManager().getEffectPlayer()
+-        )
+-      );
++    // Retry after a delay
++    android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
++    handler.postDelayed(() -> attachView(tag), 100);
++    return;
++  }
+   
+-      epView.post(() ->
+-        getSdkManager().onSurfaceChanged(0, epView.getWidth(), epView.getHeight()));
+-    });
++  uiManagerModule.addUIBlock((viewHierarchyManager) -> {
++    SurfaceView epView = (SurfaceView) viewHierarchyManager.resolveView(tag);
+ 
+-    // This will fire all the events left in `addUIBlock` queue
+-    getCurrentActivity().runOnUiThread(()->
+-      getCurrentActivity().findViewById(android.R.id.content).requestLayout());
+-  }
++    if (epView == null) {
++      throw new RuntimeException("Invalid EffectPlayerView with tag " + tag);
++    }
++    getSdkManager().attachSurface(epView);
++
++    epView.setOnTouchListener(
++      new BanubaSdkTouchListener(
++        getReactApplicationContext(),
++        getSdkManager().getEffectPlayer()
++      )
++    );
++
++    epView.post(() ->
++      getSdkManager().onSurfaceChanged(0, epView.getWidth(), epView.getHeight()));
++  });
++
++  // This will fire all the events left in `addUIBlock` queue
++  getCurrentActivity().runOnUiThread(()->
++    getCurrentActivity().findViewById(android.R.id.content).requestLayout());
++}
+ 
+   @ReactMethod
+   public void closeCamera() {
