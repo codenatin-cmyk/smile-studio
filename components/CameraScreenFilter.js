@@ -1,4 +1,5 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as FileSystem from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
 import { useRef, useState } from 'react';
 import {
@@ -181,7 +182,7 @@ export default function CameraScreenFilter() {
       const asset = await MediaLibrary.createAssetAsync(fileUri);
       await MediaLibrary.createAlbumAsync('Virtual Braces', asset, false);
       
-      Alert.alert('Success! 🎉', 'Image saved to gallery!');
+      Alert.alert('Image saved to gallery!');
     } catch (error) {
       console.error('Error saving image:', error);
       Alert.alert(
