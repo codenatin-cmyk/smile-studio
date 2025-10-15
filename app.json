@@ -77,6 +77,17 @@
           "photosPermission": "Allow $(PRODUCT_NAME) to save photos.",
           "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos."
         }
+      ],
+        [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "useLegacyPackaging": true
+          },
+          "ios": {}
+        }
       ]
     ],
     "experiments": {
