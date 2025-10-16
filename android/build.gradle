@@ -5,19 +5,11 @@ buildscript {
       minSdkVersion = 26
       compileSdkVersion = 35
       targetSdkVersion = 35
-      bnb_sdk_version = '1.17.+'
   }
   repositories {
     google()
     mavenCentral()
-    maven {
-      name "GitHubPackages"
-      url "https://maven.pkg.github.com/sdk-banuba/banuba-sdk-android"
-      credentials {
-       username = project.findProperty("BANUBA_USERNAME") ?: System.getenv("BANUBA_USERNAME")
-        password = project.findProperty("BANUBA_TOKEN") ?: System.getenv("BANUBA_TOKEN")
-      }
-    }
+   
   }
   dependencies {
     classpath('com.android.tools.build:gradle')
@@ -45,15 +37,7 @@ allprojects {
     mavenCentral()
     maven { url 'https://www.jitpack.io' }
 
-    // Banuba SDK
-    maven {
-      name "GitHubPackages"
-      url "https://maven.pkg.github.com/sdk-banuba/banuba-sdk-android"
-      credentials {
-        username = project.findProperty("BANUBA_USERNAME") ?: System.getenv("BANUBA_USERNAME")
-        password = project.findProperty("BANUBA_TOKEN") ?: System.getenv("BANUBA_TOKEN")
-      }
-    }
+   
   }
 }
 

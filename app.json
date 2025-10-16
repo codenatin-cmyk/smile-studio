@@ -29,7 +29,9 @@
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
       ]
     },
     "web": {
@@ -71,14 +73,14 @@
           "recordAudioAndroid": true
         }
       ],
-       [
+      [
         "expo-media-library",
         {
           "photosPermission": "Allow $(PRODUCT_NAME) to save photos.",
           "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos."
         }
       ],
-        [
+      [
         "expo-build-properties",
         {
           "android": {
@@ -96,7 +98,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "1147f3d4-5c8a-4311-9971-86d1d1209062"
+        "projectId": "c6efaecc-124a-4e13-a10b-3b2f47ad3f65"
       }
     }
   }
