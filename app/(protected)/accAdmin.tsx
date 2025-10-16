@@ -682,6 +682,7 @@ useEffect(() => {
                     height: 30,
                     alignSelf: "center",
                     width: "90%",
+                    paddingHorizontal: 20
                   }}
                   onPress={() => setModalUpdate(true)}
                   disabled={loading}
@@ -695,7 +696,6 @@ useEffect(() => {
                         fontSize: 12,
                         fontWeight: "600",
                         color: "white",
-                        letterSpacing: 0.5,
                         textTransform: "uppercase",
                         textAlign: "center",
                       }}

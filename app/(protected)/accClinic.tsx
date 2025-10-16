@@ -68,7 +68,7 @@ export default function Account() {
     return <Text>Loading...</Text>;
   }
 
- const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState("");
   const [website, setWebsite] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -78,41 +78,50 @@ export default function Account() {
   const [adress, setAdress] = useState("");
   const [clinicPho, setClinicPho] = useState("");
   const [licensePho, setLicensePho] = useState("");
+  const [clinicId, setClinicId] = useState<string>();
 
+  const [viewFirst, setviewFirst] = useState(true);
   const [viewFirstShow, setviewFirstShow] = useState(true);
+  const [viewClinic, setviewClinic] = useState(false);
+
   const [termsOfUse, setTermsOfUse] = useState(false);
+  const [selectedCI, setSelectedCI] = useState("");
+  const [selectedOffers, setSelectedOffers] = useState("");
   const [appointmentsToday, setAppointmentsToday] = useState<Appointment[]>([]);
 
-  const [moved, setMoved] = useState(() => {
+   const [moved, setMoved] = useState(() => {
     // Initialize sidebar state based on screen size
     const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
     return windowWidth < 1200; // Collapsed by default on smaller screens
   });
+
+
   const [mobilemoved, mobilesetMoved] = useState(false);
   const [expanded, setExpanded] = useState(true);
   const [userCount, setUserCount] = useState<number | null>(null);
   const [clinicCount, setClinicCount] = useState<number | null>(null);
    const { width, height } = useWindowDimensions();
-  const isMobile = width < 480;
-  const isTablet = width >= 480 && width < 768;
-  const isDesktop = width >= 768;
-  
-  // ✅ NEW: Improved sidebar width calculations
-  const drawerWidth = isMobile ? 370 : isTablet ? 300 : 280; // ✅ 280px for desktop
-
-  // Reset sidebar position when screen size changes
+   const isMobile = width < 1200;
+   const isTablet = width >= 480 && width < 768;
+   const isDesktop = width >= 768;
+   
+   // ✅ NEW: Improved sidebar width calculations
+   const drawerWidth = isMobile ? 370 : isTablet ? 300 : 280; // ✅ 280px for desktop
+ 
+   // Reset sidebar position when screen size changes
   useEffect(() => {
-    if (isDesktop) {
-      setMoved(false); // Always show sidebar on desktop
-    } else if (isTablet || width < 1200) {
-      setMoved(true)
-    }
-  }, [isDesktop, isTablet, width]);
+     if (isDesktop) {
+       setMoved(false); // Always show sidebar on desktop
+     } else if (isTablet || width < 1200) {
+       setMoved(true)
+     }
+   }, [isDesktop, isTablet, width]);
 
   const offset = moved ? -320 : 0;
   const moboffset = moved ? -370 : 0;
   const mobbutoffset = moved ? -305 : 0;
 
+  const [fullProfile, setFullProfile] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalSignout, setModalSignout] = useState(false);
   const [modalUpdate, setModalUpdate] = useState(false);
@@ -133,6 +142,8 @@ export default function Account() {
   const [isSubmitting, setIsSubmitting] = useState(false); 
 
   const [clinicList, setClinicList] = useState<any[]>([]);
+  const [selectedClinicId, setSelectedClinicId] = useState<string>();
+  const [messageToClinic, setMessageToClinic] = useState<string>();
   const [modalMessage, setModalMessage] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState('');
   const [denialReason, setDenialReason] = useState<string>();
@@ -159,6 +170,8 @@ export default function Account() {
   const [notifMessage, setNotifMessage] = useState<string>();
   const [offerList, setOfferList] = useState<string[]>([]);
   const [isSaved, setIsSaved] = useState(false);
+  const [offerModalVisible, setOfferModalVisible] = useState(false);
+  const [isAttended, setIsAttended] = useState(false);
   const [emptyOfferWarningVisible, setEmptyOfferWarningVisible] = useState(false);
   const [needDTIModal, setNeedDTIModal] = useState(false);
   const [newOfferText, setNewOfferText] = useState('');
@@ -203,98 +216,14 @@ const defaultWeeklySchedule = {
   const [requestViewVisible, setRequestViewVisible] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState([]);
 
-  const openRequestView = (requestStr : any) => {
+  const openRequestView = (requestStr) => {
     try {
       const parsed = JSON.parse(requestStr);
       setSelectedRequest(parsed);
     } catch {
-      setSelectedRequest([requestStr ]); // fallback to raw string if JSON parsing fails
+      setSelectedRequest([requestStr]); // fallback to raw string if JSON parsing fails
     }
     setRequestViewVisible(true);
-  };
-
-   const responsive = {
-    fontSize: {
-      tiny: isMobile ? 10 : 12,
-      small: isMobile ? 12 : 14,
-      body: isMobile ? 14 : 16,
-      subtitle: isMobile ? 18 : 20,
-      title: isMobile ? 20 : 24,
-      heading: isMobile ? 16 : 18,
-    },
-    spacing: {
-      xs: isMobile ? 4 : 6,
-      sm: isMobile ? 6 : 8,
-      md: isMobile ? 10 : 12,
-      lg: isMobile ? 16 : 20,
-    },
-    padding: {
-      card: isMobile ? 12 : 16,
-      container: isMobile ? 8 : 16,
-      modal: isMobile ? 16 : 50,
-    },
-    radius: {
-      sm: 6,
-      md: 8,
-      lg: 12,
-    },
-    width: {
-      dashboard: !isDesktop ? "95%" : "80%",
-      modal: !isMobile ? "25%" : "95%",
-    },
-    height: {
-      card: 240,
-      input: isMobile ? 40 : 44,
-    },
-  };
-
-  const textStyles = {
-    title: {
-      fontSize: responsive.fontSize.title,
-      fontWeight: "bold" as const,
-      color: "#00505cff",
-    },
-    heading: {
-      fontSize: responsive.fontSize.heading,
-      fontWeight: "bold" as const,
-      color: "#00505cff",
-    },
-    subtitle: {
-      fontSize: responsive.fontSize.subtitle,
-      color: "#00505cff",
-    },
-    body: {
-      fontSize: responsive.fontSize.body,
-      color: "#333",
-    },
-    label: {
-      fontWeight: "bold" as const,
-      fontSize: responsive.fontSize.body,
-    },
-  };
-
-  const buttonStyles = {
-    primary: {
-      backgroundColor: "#00505cff",
-      paddingVertical: 12,
-      paddingHorizontal: 20,
-      borderRadius: responsive.radius.md,
-      alignItems: "center" as const,
-    },
-    secondary: {
-      backgroundColor: "#4CAF50",
-      paddingVertical: 8,
-      paddingHorizontal: 16,
-      borderRadius: 6,
-      alignItems: "center" as const,
-    },
-    danger: {
-      backgroundColor: "#b32020",
-      paddingVertical: 12,
-      paddingHorizontal: 20,
-      borderRadius: responsive.radius.md,
-      alignItems: "center" as const,
-    },
   };
 
 function openScheduleEditor(dentist, index) {
@@ -518,7 +447,7 @@ const handleResetOffers = async () => {
       return [];
     }
 
-    // console.log("Appointments with names:", data);
+    console.log("Appointments with names:", data);
     setAppointmentList(data);
 
     // Refresh Current and Past list
@@ -555,7 +484,7 @@ const handleResetOffers = async () => {
       return [];
     }
 
-    // console.log("Appointments with names:", data);
+    console.log("Appointments with names:", data);
     setAppointmentCurrentList(data);
     return data;
   };
@@ -592,7 +521,7 @@ const fetchAppointmentsToday = async () => {
     return [];
   }
 
-  // console.log("Today's appointments:", data);
+  console.log("Today's appointments:", data);
   return data;
 };
 
@@ -652,7 +581,7 @@ useEffect(() => {
       return [];
     }
 
-    // console.log("Appointments with names:", data);
+    console.log("Appointments with names:", data);
     setAppointmentPast(data);
     return data;
   };
@@ -757,7 +686,7 @@ const notAttendedAppointment = async (appointmentId: string) => {
         filter: `clinic_id=eq.${session.user.id}`,
       },
       (payload) => {
-        // console.log('Realtime appointment change:', payload);
+        console.log('Realtime appointment change:', payload);
 
         // Re-fetch all appointment lists on any change
         fetchAppointments();
@@ -2112,12 +2041,17 @@ const PatientHistoryModalComponent = () => (
               alignItems: 'center',
             }}
           >
-            <Text style={[textStyles.title, {
-  marginBottom: responsive.spacing.lg,
-  alignSelf: "center",
-}]}>
-  WARNING!
-</Text>
+            <Text
+              style={{
+                fontSize: 24,
+                fontWeight: "bold",
+                marginBottom: 20,
+                alignSelf: "center",
+                color: "#00505cff",
+              }}
+            >
+              WARNING!
+            </Text>
             <Entypo name="warning" size={isMobile? 75 : 150} color="#d7c41aff" />
             <Text
               style={{
@@ -2346,7 +2280,7 @@ const PatientHistoryModalComponent = () => (
       {/* Glider Panel */}
       <View
         style={{
-          width: isMobile ? drawerWidth : isTablet ? "30%" : "18%", // ✅ Responsive for all sizes
+          width: isMobile ? drawerWidth : "18%",
           left: 0,
           top: 0,
           flexDirection: "row",
@@ -2381,12 +2315,14 @@ const PatientHistoryModalComponent = () => (
                 padding: 50,
               }}
             >
-              <View style={{
-  backgroundColor: "white",
-  borderRadius: responsive.radius.lg,
-  padding: responsive.padding.modal,
-  width: responsive.width.modal,
-}}>
+              <View
+                style={{
+                  backgroundColor: "white",
+                  borderRadius: 12,
+                  padding: 20,
+                  alignItems: "center",
+                  width: !isMobile ? "30%" : "85%",
+                }}
               >
                 <Text
                   style={{
@@ -2456,121 +2392,116 @@ const PatientHistoryModalComponent = () => (
               </View>
             </View>
           </Modal>
-          {(isMobile || isTablet) && (
-  <View style={[{ height: 60}]}>
-    <TouchableOpacity
-      style={{
-        width: 50,
-        height: 50,
-        backgroundColor: 'transparent',
-        alignSelf: 'flex-end',
-        left: 60,
-        borderRadius: 10,
-        zIndex: 9999,
-      }}
-      onPress={() => {
-        setMoved((prev) => !prev);
-        setExpanded((prev) => !prev);
-      }}
-      disabled={loading}
-    >
-      {moved ? (
-        <MaterialIcons name="keyboard-arrow-right" size={34} color="#00505cff" />
-      ) : (
-        <MaterialIcons name="keyboard-arrow-left" size={34} color="#00505cff" />
-      )}
-    </TouchableOpacity>
-  </View>
-)}
+          {(isMobile) && (
+            <View style={[{ height: 60}]}>
+              <TouchableOpacity
+                style={{
+                  width: 50,
+                  height: 50,
+                  backgroundColor: 'transparent',
+                  alignSelf: 'flex-end',
+                  left: 60,
+                  borderRadius: 10,
+                  zIndex: 9999,
+                }}
+                onPress={() => {
+                  setMoved((prev) => !prev);
+                  setExpanded((prev) => !prev);
+                }}
+                disabled={loading}
+              >
+                {moved ? (
+                  <MaterialIcons name="keyboard-arrow-right" size={34} color="#00505cff" />
+                ) : (
+                  <MaterialIcons name="keyboard-arrow-left" size={34} color="#00505cff" />
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
             <Image
-  source={require("../../assets/favicon.ico.png")}
-  style={{...styles.logo, marginTop: isMobile ? -50  : null}}
-/>
+              source={require("../../assets/favicon.ico.png")}
+              style={{...styles.logo, marginTop: isMobile ? -50  : null}}
+            />
 
-<Text style={{
-  fontWeight: 'bold', 
-  fontSize: responsive.fontSize.subtitle, 
-  marginTop: -40, 
-  color: '#00505cff', 
-  textAlign: 'center',
-}}>
-  SMILE STUDIO
-</Text>
-<Text style={{
-  fontSize: responsive.fontSize.tiny, 
-  color: '#00505cff', 
-  textAlign: 'center', 
-  marginBottom: responsive.spacing.sm,
-}}>
-  GRIN CREATORS
-</Text>
+            <Text style={{fontWeight: 'bold', fontSize: 20, marginTop: -40, color: '#00505cff', textAlign: 'center', }}>SMILE STUDIO</Text>
+            <Text style={{fontSize: 12, color: '#00505cff', textAlign: 'center', marginBottom: 7, }}>GRIN CREATORS</Text>
             <View style={{padding: 7, marginLeft: 40, marginRight: 40, backgroundColor: 'white', marginBottom: 30, borderRadius: 10}}>
               <Text style={{fontSize: 12, color: '#00505cff', textAlign: 'center'}}>CLINIC</Text>
             </View>
-              <TouchableOpacity
-  style={[buttonStyles.primary, {
-    marginTop: 0,
-    marginBottom: responsive.spacing.md,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 6,
-    height: isMobile ? 30 : 36,
-    alignSelf: "center",
-    width: "90%",
-  }]}
-  onPress={() => setModalUpdate(true)}
->
-  <Text style={{
-    fontSize: responsive.fontSize.small,
-    fontWeight: "600",
-    color: "white",
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-    textAlign: "center",
-  }}>
-    Edit Information
-  </Text>
-</TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: '#00505cff',
+                    borderRadius: 12,
+                    marginTop: 0,
+                    marginBottom: 12,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 6 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 8,
+                    elevation: 6,
+                    height: 30,
+                    alignSelf: "center",
+                    width: "90%",
+                  }}
+                  onPress={() => setModalUpdate(true)}
+                  disabled={loading}
+                  activeOpacity={0.8}
+                >
+                  {loading ? (
+                    <ActivityIndicator animating color={"white"} />
+                  ) : (
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: "600",
+                        color: "white",
+                        letterSpacing: 0.5,
+                        textTransform: "uppercase",
+                        textAlign: "center",
+                      }}
+                    >
+                      Edit Information
+                    </Text>
+                  )}
+                </TouchableOpacity>
                 {/*Modal : Edit Info */}
                 <Modal
-  transparent
-  animationType="fade"
-  visible={modalUpdate}
-  onRequestClose={() => setModalUpdate(false)}
->
-  <View
-    style={{
-      flex: 1,
-      backgroundColor: "rgba(0,0,0,0.4)",
-      justifyContent: "center",
-      alignItems: "center",
-      padding: responsive.padding.modal,
-    }}
-  >
-    <View
-      style={{
-        backgroundColor: "white",
-        borderRadius: responsive.radius.lg,
-        padding: responsive.padding.modal,
-        alignItems: "center",
-        width: responsive.width.modal,
-      }}
-    >
-                      <View style={[styles.avatarSection, { 
-  marginVertical: responsive.spacing.lg 
-}]}>
-  <TouchableOpacity
-    onPress={() => {
-      if (Platform.OS === "web") {
-        pickImageWeb();
-      } else {
-        pickImageMobile();
-      }
-    }}
-    style={styles.avatarContainer}
-  >
+                  transparent
+                  animationType="fade"
+                  visible={modalUpdate}
+                  onRequestClose={() => setModalUpdate(false)}
+                >
+                  <View
+                    style={{
+                      flex: 1,
+                      backgroundColor: "rgba(0,0,0,0.4)",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      padding: 50,
+                    }}
+                  >
+                    <View
+                      style={{
+                        backgroundColor: "white",
+                        borderRadius: 12,
+                        padding: 20,
+                        alignItems: "center",
+                        width: !isMobile ? "25%" : "95%",
+                      }}
+                    >
+                      <View style={styles.avatarSection}>
+                        <TouchableOpacity
+                          onPress={() => {
+                            if (Platform.OS === "web") {
+                              pickImageWeb();
+                            } else {
+                              pickImageMobile();
+                            }
+                          }}
+                          style={styles.avatarContainer}
+                        >
                           {avatarUrl ? (
                             <Image
                               source={{
@@ -2604,24 +2535,14 @@ const PatientHistoryModalComponent = () => (
                       </View>
 
                       {/* Rest of your profile content */}
-<View>
-  <Text style={[textStyles.body, {
-    fontWeight: "bold", 
-    fontStyle: "italic", 
-    textAlign: "center", 
-    color: "#003f30ff"
-  }]}>
-    {clinicName}
-  </Text>
-  <Text style={[textStyles.body, {
-    fontStyle: "italic", 
-    textAlign: "center", 
-    marginBottom: responsive.spacing.md, 
-    color: "#003f30ff"
-  }]}>
-    {website}
-  </Text>
-</View>
+                      <View>
+                        <Text style={{fontWeight: "bold", fontStyle: "italic", fontSize: 16, textAlign: "center", color: "#003f30ff"}}>
+                          {clinicName}
+                        </Text>
+                        <Text style={{fontStyle: "italic", fontSize: 16, textAlign: "center", marginBottom: 10, color: "#003f30ff"}}>
+                          {website}
+                        </Text>
+                      </View>
                       <Modal
                         transparent
                         animationType="fade"
@@ -2670,21 +2591,19 @@ const PatientHistoryModalComponent = () => (
                             </TouchableOpacity>
 
                             {/* Clinic's Introduction TextInput */}
-                            <Text style={[textStyles.label, { 
-  marginBottom: responsive.spacing.xs 
-}]}>
-  Clinic's Slogan
-</Text>
-<TextInput
-  style={{
-    height: 100,
-    borderColor: "#ccc",
-    borderWidth: 1,
-    borderRadius: responsive.radius.md,
-    padding: responsive.padding.card,
-    marginBottom: responsive.spacing.md,
-    textAlignVertical: "top",
-  }}
+                            <Text style={{ marginBottom: 6, fontWeight: "bold" }}>
+                              Clinic's Slogan
+                            </Text>
+                            <TextInput
+                              style={{
+                                height: 100,
+                                borderColor: "#ccc",
+                                borderWidth: 1,
+                                borderRadius: 8,
+                                padding: 10,
+                                marginBottom: 15,
+                                textAlignVertical: "top",
+                              }}
                               multiline
                               placeholder="Write introduction..."
                               maxLength={100}
@@ -2715,27 +2634,34 @@ const PatientHistoryModalComponent = () => (
 
                             {/* Buttons at the bottom */}
                             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-<TouchableOpacity
-  style={[buttonStyles.danger, {
-    flex: 1,
-    marginRight: responsive.spacing.sm,
-  }]}
-  onPress={() => setProfileInfoVisible(false)}
->
-  <Text style={{
-    color: "white",
-    fontWeight: "bold",
-    textAlign: "center",
-  }}>
-    Close
-  </Text>
-</TouchableOpacity>
+                              <TouchableOpacity
+                                style={{
+                                  flex: 1,
+                                  backgroundColor: "#b32020",
+                                  paddingVertical: 12,
+                                  borderRadius: 8,
+                                  marginRight: 10,
+                                }}
+                                onPress={() => setProfileInfoVisible(false)}
+                              >
+                                <Text
+                                  style={{
+                                    color: "white",
+                                    fontWeight: "bold",
+                                    textAlign: "center",
+                                  }}
+                                >
+                                  Close
+                                </Text>
+                              </TouchableOpacity>
 
-<TouchableOpacity
-  style={[buttonStyles.primary, {
-    flex: 1,
-    backgroundColor: "#2e7dccff",
-  }]}
+                              <TouchableOpacity
+                                style={{
+                                  flex: 1,
+                                  backgroundColor: "#2e7dccff",
+                                  paddingVertical: 12,
+                                  borderRadius: 8,
+                                }}
                                 onPress={() => {
                                   updateProfileInfoModal(); // always updates with current toggle state
 
@@ -3306,35 +3232,35 @@ const PatientHistoryModalComponent = () => (
           </View>
         </LinearGradient>
         {/* Toggle Button */}
-          {(isMobile || isTablet) && (
-  <View style={[styles.toggleButtonWrapper, { height: 60 }]}>
-    <TouchableOpacity
-      style={{
-        width: 50,
-        height: 50,
-        backgroundColor: !moved ? 'transparent' : '#00505cff',
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: 10,
-        zIndex: 9999,
-        shadowColor: !moved ? "transparent" : "#00000045",
-        shadowRadius: !moved ? null : 2,
-        shadowOffset: !moved ? null : { width: 2, height: 2 },
-      }}
-      onPress={() => {
-        setMoved((prev) => !prev);
-        setExpanded((prev) => !prev);
-      }}
-      disabled={loading}
-    >
-      {moved ? (
-        <MaterialIcons name="keyboard-arrow-right" size={34} color= {!moved ? 'transparent' : 'white'} />
-      ) : (
-        <MaterialIcons name="keyboard-arrow-left" size={34} color= {!moved ? 'transparent' : 'white'} />
-      )}
-    </TouchableOpacity>
-  </View>
-)}
+          {(isMobile) && (
+            <View style={[styles.toggleButtonWrapper, { height: 60 }]}>
+                <TouchableOpacity
+                  style={{
+                    width: 50,
+                    height: 50,
+                    backgroundColor: !moved ? 'transparent' : '#00505cff',
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 10,
+                    zIndex: 9999,
+                    shadowColor: !moved ? "transparent" : "#00000045",
+                    shadowRadius: !moved ? null : 2,
+                    shadowOffset: !moved ? null : { width: 2, height: 2 },
+                  }}
+                  onPress={() => {
+                    setMoved((prev) => !prev);
+                    setExpanded((prev) => !prev);
+                  }}
+                  disabled={loading}
+                >
+                  {moved ? (
+                    <MaterialIcons name="keyboard-arrow-right" size={34} color= {!moved ? 'transparent' : 'white'} />
+                  ) : (
+                    <MaterialIcons name="keyboard-arrow-left" size={34} color= {!moved ? 'transparent' : 'white'} />
+                  )}
+                </TouchableOpacity>
+            </View>
+          )}
       </View>
 
       {/* Dashboard */}
@@ -3445,23 +3371,28 @@ const PatientHistoryModalComponent = () => (
         </Modal>
 
         {dashboardView === "profile" && (
-<View
-  style={[
-    styles.dashboard,
-    {
-      width: responsive.width.dashboard,
-      right: dashboardView === "profile" ? 11 : 20000,
-      backgroundColor: '#f1f5f9',
-    },
-  ]}
->
-  <ScrollView>
-    <Text style={[textStyles.title, {
-      marginBottom: responsive.spacing.lg,
-      alignSelf: isMobile ? "center" : "flex-start",
-    }]}>
-      Profile
-    </Text>
+        <View
+          style={[
+            styles.dashboard,
+            {
+              width: !isDesktop ? "95%" : expanded ? "80%" : "95%",
+              right: dashboardView === "profile" ? 11 : 20000,
+              backgroundColor: '#f1f5f9',
+            },
+          ]}
+        >
+          <ScrollView>
+            <Text
+              style={{
+                fontSize: 24,
+                fontWeight: "bold",
+                marginBottom: 20,
+                alignSelf: isMobile ? "center" : "flex-start",
+                color: '#00505cff',
+              }}
+            >
+              Profile
+            </Text>
             <View style={styles.proinfo}>
               <Image
                 source={
@@ -3561,26 +3492,31 @@ const PatientHistoryModalComponent = () => (
                   </TouchableOpacity>
                 </View>
             </Modal>
-           <View style={[styles.cardRow, {
-  flexDirection: isMobile ? "column" : "row",
-  gap: responsive.spacing.md,
-  paddingHorizontal: responsive.padding.container,
-}]}>
-  <View style={[styles.card, { height: responsive.height.card }]}>
-    <Text style={{
-      fontWeight: "bold",
-      fontSize: isMobile ? 40 : 50,
-      textAlign: "center",
-      color: '#00505cff',
-    }}>
-      {appointmentsToday.length}
-    </Text>
-    <Text style={[textStyles.subtitle, {
-      textAlign: "center",
-      marginTop: responsive.spacing.sm,
-    }]}>
-      Appointments
-    </Text>
+            <View style={styles.cardRow}>
+              <View style={styles.card}>
+                <Text
+                  style={{
+                    fontWeight: "bold",
+                    fontSize: 50,
+                    textAlign: "center",
+                    color: '#00505cff',
+                  }}
+                >
+                  {
+                    // You might want to store the length in state for reactivity
+                    appointmentsToday.length // Assuming you've fetched and stored it
+                  }
+                </Text>
+                <Text
+                  style={{
+                    textAlign: "center",
+                    marginTop: 6,
+                    fontSize: isMobile ? 15 : 25,
+                    color: '#00505cff',
+                  }}
+                >
+                  Appointments
+                </Text>
                 <Text
                   style={{
                     textAlign: "center",
@@ -3833,22 +3769,20 @@ const PatientHistoryModalComponent = () => (
                     alignItems: (appointmentsList?.length ?? 0) === 0 ? "center" : "stretch",
                   }}
                   renderItem={(e) => (
-<View
-  style={{
-    width: "100%",
-    gap: responsive.spacing.sm,
-    paddingHorizontal: responsive.padding.card,
-    paddingVertical: responsive.padding.card,
-    backgroundColor: "#ffffd7ff",
-    borderRadius: responsive.radius.md,
-  }}
->
-  <Text style={textStyles.label}>Patient's Name :</Text>
-  <Text style={textStyles.body}>
-    {`${e.item.profiles.first_name} ${e.item.profiles.last_name}`}
-  </Text>
+                    <View
+                      style={{
+                        width: "100%",
+                        gap: 5,
+                        paddingHorizontal: 20,
+                        paddingVertical: 15,
+                        backgroundColor: "#ffffd7ff",
+                        borderRadius: 8,
+                      }}
+                    >
+                      <Text style={{ fontWeight: "bold" }}>Patient's Name :</Text>
+                      <Text>{`${e.item.profiles.first_name} ${e.item.profiles.last_name}`}</Text>
 
-  <Text style={textStyles.label}>Date & Time of Appointment :</Text>
+                      <Text style={{ fontWeight: "bold" }}>Date & Time of Appointment :</Text>
                       <Text>{`Date : ${new Date(e.item.date_time).toLocaleString(undefined, {
                               year: "numeric",
                               month: "numeric",
@@ -3903,30 +3837,46 @@ const PatientHistoryModalComponent = () => (
                       </View>
 
                       <View
-  style={{
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    marginTop: responsive.spacing.md,
-    gap: responsive.spacing.sm,
-  }}
->
-  <TouchableOpacity
-    onPress={() => acceptAppointment(e.item.id)}
-    style={buttonStyles.secondary}
-  >
-    <Text style={{ color: "white", fontWeight: "600", fontSize: responsive.fontSize.small }}>
-      Accept
-    </Text>
-  </TouchableOpacity>
-  <TouchableOpacity
-    onPress={() => setRejectAppointmentID(e.item.id)}
-    style={buttonStyles.danger}
-  >
-    <Text style={{ color: "white", fontWeight: "600", fontSize: responsive.fontSize.small }}>
-      Reject
-    </Text>
-  </TouchableOpacity>
-</View>
+                        style={{
+                          flexDirection: "row",
+                          justifyContent: "flex-end",
+                          marginTop: 10,
+                          gap: 10,
+                        }}
+                      >
+                        <TouchableOpacity
+                          onPress={() => acceptAppointment(e.item.id)}
+                          style={{
+                            backgroundColor: "#4CAF50",
+                            paddingVertical: 8,
+                            paddingHorizontal: 16,
+                            borderRadius: 6,
+                          }}
+                        >
+                          <Text
+                            style={{ color: "white", fontWeight: "600" }}
+                          >
+                            Accept
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => {
+                            setRejectAppointmentID(e.item.id);
+                          }}
+                          style={{
+                            backgroundColor: "#F44336",
+                            paddingVertical: 8,
+                            paddingHorizontal: 16,
+                            borderRadius: 6,
+                          }}
+                        >
+                          <Text
+                            style={{ color: "white", fontWeight: "600" }}
+                          >
+                            Reject
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
 
                       <Text
                         style={{
@@ -4204,19 +4154,24 @@ const PatientHistoryModalComponent = () => (
       styles.dashboard,
       {
         flex: 1,
-        width: responsive.width.dashboard,
+        width: !isDesktop ? "95%" : expanded ? "80%" : "95%",
         right: dashboardView === "schedule" ? 11 : 20000,
       },
     ]}
   >
     <ScrollView
       style={{ flex: 1 }}
-      contentContainerStyle={{ flexGrow: 1, paddingBottom: responsive.padding.container }}
+      contentContainerStyle={{ flexGrow: 1, paddingBottom: 50 }}
     >
-      <Text style={[textStyles.title, {
-        alignSelf: isMobile ? "center" : "flex-start",
-        textAlign: isMobile ? "center" : "left",
-      }]}>
+      <Text
+        style={{
+          fontSize: 24,
+          fontWeight: "bold",
+          alignSelf: isMobile ? "center" : "flex-start",
+          color: '#00505cff',
+          textAlign: isMobile ? "center" : "left",
+        }}
+      >
         Clinic's Schedule &
       </Text>
       <Text
@@ -4386,22 +4341,21 @@ const PatientHistoryModalComponent = () => (
             gap: 10,
           }}
         >
-<TextInput
-  placeholder="Dentist's Firstname Lastname"
-  placeholderTextColor={"#ccc"}
-  value={newDentistName}
-  onChangeText={setNewDentistName}
-  style={{
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    padding: responsive.padding.card,
-    borderRadius: responsive.radius.sm,
-    backgroundColor: "#fff",
-    height: responsive.height.input,
-  }}
-  maxLength={50}
-/>
+          <TextInput
+            placeholder="Dentist's Firstname Lastname"
+            placeholderTextColor={"#ccc"}
+            value={newDentistName}
+            onChangeText={setNewDentistName}
+            style={{
+              flex: 1,
+              borderWidth: 1,
+              borderColor: "#ccc",
+              padding: 10,
+              borderRadius: 6,
+              backgroundColor: "#fff",
+            }}
+            maxLength={50}
+          />
           <TextInput
             placeholder="Specialization / General Dentist"
             placeholderTextColor={"#ccc"}
@@ -4722,21 +4676,20 @@ const PatientHistoryModalComponent = () => (
               }}
             >
               <TextInput
-  value={newOfferText}
-  onChangeText={setNewOfferText}
-  placeholder="Enter a new offer..."
-  maxLength={50}
-  style={{
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: responsive.padding.card,
-    borderRadius: responsive.radius.sm,
-    backgroundColor: '#fff',
-    marginRight: responsive.spacing.sm,
-    height: responsive.height.input,
-  }}
-/>
+                value={newOfferText}
+                onChangeText={setNewOfferText}
+                placeholder="Enter a new offer..."
+                maxLength={50}
+                style={{
+                  flex: 1,
+                  borderWidth: 1,
+                  borderColor: '#ccc',
+                  padding: 10,
+                  borderRadius: 6,
+                  backgroundColor: '#fff',
+                  marginRight: 10,
+                }}
+              />
               <TouchableOpacity
                 onPress={async () => {
                   const trimmed = newOfferText.trim();
@@ -5204,22 +5157,22 @@ const PatientHistoryModalComponent = () => (
               { label: "No-Shows", value: stats.notAttended, color: "#c0392b", icon: "user-times" },
             ].map((item, i) => (
               <View
-  key={i}
-  style={{
-    flex: isMobile ? 1 : 0,
-    minWidth: isMobile ? "100%" : "30%",
-    backgroundColor: "#fff",
-    padding: responsive.padding.card,
-    borderRadius: responsive.radius.lg,
-    borderLeftWidth: 5,
-    borderLeftColor: item.color,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  }}
->
+                key={i}
+                style={{
+                  flex: isMobile ? 1 : 0,
+                  minWidth: isMobile ? "100%" : "30%",
+                  backgroundColor: "#fff",
+                  padding: 20,
+                  borderRadius: 12,
+                  borderLeftWidth: 5,
+                  borderLeftColor: item.color,
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 4,
+                  elevation: 3,
+                }}
+              >
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 14, color: "#7f8c8d", marginBottom: 8 }}>
@@ -6258,20 +6211,20 @@ const PatientHistoryModalComponent = () => (
               </Text>
 
               <TouchableOpacity
-  onPress={() => setDownloadModal(true)}
-  style={[buttonStyles.primary, {
-    alignItems: "center",
-    marginBottom: responsive.spacing.sm,
-  }]}
->
-  <Text style={{ 
-    color: "#fff", 
-    fontSize: responsive.fontSize.body, 
-    fontWeight: "600" 
-  }}>
-    Download History Excel
-  </Text>
-</TouchableOpacity>
+                onPress={() => setDownloadModal(true)}
+                style={{
+                  backgroundColor: "#00505cff",
+                  paddingVertical: 12,
+                  paddingHorizontal: 20,
+                  borderRadius: 8,
+                  alignItems: "center",
+                  marginBottom: 10,
+                }}
+              >
+                <Text style={{ color: "#fff", fontSize: 16, fontWeight: "600" }}>
+                  Download History Excel
+                </Text>
+              </TouchableOpacity>
 
               {/* Download Confirmation Modal */}
               <Modal
@@ -6883,34 +6836,39 @@ const PatientHistoryModalComponent = () => (
               )}
 
                 <Modal
-  visible={showVerifyModal}
-  transparent
-  animationType="fade"
-  onRequestClose={() => setShowVerifyModal(false)}
->
-  <View
-    style={{
-      flex: 1,
-      backgroundColor: "rgba(0,0,0,0.5)",
-      justifyContent: "center",
-      alignItems: "center",
-    }}
-  >
-    <View
-      style={{
-        backgroundColor: "white",
-        borderRadius: responsive.radius.lg,
-        padding: responsive.padding.modal,
-        width: responsive.width.modal,
-        alignItems: "center",
-      }}
-    >
-      <Text style={[textStyles.heading, {
-        marginBottom: responsive.spacing.md,
-        textAlign: "center",
-      }]}>
-        Do you want to verify your clinic?
-      </Text>
+                  visible={showVerifyModal}
+                  transparent
+                  animationType="fade"
+                  onRequestClose={() => setShowVerifyModal(false)}
+                >
+                  <View
+                    style={{
+                      flex: 1,
+                      backgroundColor: "rgba(0,0,0,0.5)",
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
+                  >
+                    <View
+                      style={{
+                        backgroundColor: "white",
+                        borderRadius: 10,
+                        padding: 20,
+                        width: isMobile ? "90%" : "40%",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 18,
+                          fontWeight: "bold",
+                          marginBottom: 10,
+                          textAlign: "center",
+                          color: '#00505cff'
+                        }}
+                      >
+                        Do you want to verify your clinic?
+                      </Text>
 
                       <View
                         style={{
@@ -7375,8 +7333,7 @@ const PatientHistoryModalComponent = () => (
       • Indirect damages (e.g., lost time, travel costs).{"\n\n"}
 
       <Text style={{ fontWeight: "bold" }}>9. Feedback & Complaints{"\n"}</Text>
-  
-    Users may provide feedback or file complaints regarding clinics, services, or system errors by contacting Smile Studio Support.     Reports of unprofessional conduct by clinics or users will be reviewed, and appropriate action may include warnings, suspensions, or termination of accounts.{"\n\n"}
+      Users may provide feedback or file complaints regarding clinics, services, or system errors by contacting Smile Studio Support.     Reports of unprofessional conduct by clinics or users will be reviewed, and appropriate action may include warnings, suspensions, or termination of accounts.{"\n\n"}
 
       <Text style={{ fontWeight: "bold" }}>10. Termination & Enforcement{"\n"}</Text>
       <Text style={{ fontWeight: "bold" }}>10.1 By Smile Studio</Text>{" "}

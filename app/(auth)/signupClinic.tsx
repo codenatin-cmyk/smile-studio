@@ -1,13 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { LinearGradient } from 'expo-linear-gradient';
-import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, ScrollView, useWindowDimensions, Image, Platform, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
-import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
-import { useSession } from '../../lib/SessionContext';  // Adjust path accordingly
+import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
-import { FontAwesome } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { Alert, Image, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { useSession } from '../../lib/SessionContext'; // Adjust path accordingly
 
   type ErrorsType = {
     clinicName?: string;
@@ -407,7 +406,7 @@ return (
             </View>
 
             {/* Clinic Location Section */}
-            <View style={{ marginBottom: 30, flex : 1, marginTop: isMobile ? -60 : null  }}>
+            <View style={{ marginBottom: 30, flex : 1, marginTop: isMobile ? 10 : null  }}>
               <Text style={styles.sectionHeader}>Clinic Location</Text>
 
               {/* Street */}
@@ -519,7 +518,7 @@ return (
           </View>
 
           {/* Password Setup Section */}
-          <View style={{ marginBottom: 30, marginTop: isMobile ? 65 : null }}>
+          <View style={{ marginBottom: 120, marginTop: isMobile ? 20 : null }}>
             <Text style={{ ...styles.sectionHeader }}>Set Password</Text>
 
             {/* Password */}
@@ -595,35 +594,9 @@ return (
 
           {/* Terms Modal */}
           <Modal visible={modalVisible} animationType="fade" transparent={true}>
-            <View
-              style={{
-                flex: 1,
-                backgroundColor: 'rgba(0,0,0,0.6)',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-            >
-              <View
-                style={{
-                  backgroundColor: '#f1f5f9',
-                  marginHorizontal: 20,
-                  borderRadius: 10,
-                  maxHeight: '80%',
-                  padding: 20,
-                  width: isMobile ? '80%' : '35%',
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 22,
-                    fontWeight: 'bold',
-                    marginBottom: 15,
-                    textAlign: 'center',
-                    color: '#00505cff',
-                  }}
-                >
-                  Terms of Use & Privacy Policy
-                </Text>
+            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', position: 'absolute', top: 0, bottom: 0 }} >
+              <View style={{ backgroundColor: '#f1f5f9', marginHorizontal: 20, borderRadius: 10, maxHeight: '80%', padding: 20, width: isMobile ? '80%' : '35%', }} >
+                <Text style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 15, textAlign: 'center', color: '#00505cff', }} > Terms of Use & Privacy Policy </Text>
 
                 <ScrollView style={{ marginBottom: 20, paddingHorizontal: 16 }}>
                   <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#00505cff', marginBottom: 8 }}>

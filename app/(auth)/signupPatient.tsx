@@ -1,25 +1,24 @@
-import React, { useState } from 'react';
+import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
+import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
 import {
-  View,
+  Image,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  Image,
-  ScrollView,
   useWindowDimensions,
-  Modal,
-  Platform,
+  View,
 } from 'react-native';
-import BirthdatePicker from './birthdayPicker';
-import { useRouter } from 'expo-router';
-import { Picker } from '@react-native-picker/picker';
-import * as ImagePicker from 'expo-image-picker';
-import { Ionicons } from '@expo/vector-icons';
 import { useSession } from '../../lib/SessionContext';
-import { FontAwesome } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase'; // <-- Add this line (adjust path if needed)
+import BirthdatePicker from './birthdayPicker';
 
 interface Errors {
   firstName?: string;
@@ -379,7 +378,7 @@ const handleSignup = async () => {
     </View>
 
     {/* === Password Setup Section === */}
-    <View style={{ marginBottom: 30, marginTop: isMobile ? -75 : null }}>
+    <View style={{ marginBottom: 200, marginTop: isMobile ? 40 : null }}>
       <Text style={{ ...styles.sectionHeader}}>Set Password</Text>
 
       {/* Password */}
@@ -427,35 +426,9 @@ const handleSignup = async () => {
 
     {/* === Terms Modal === */}
     <Modal visible={modalVisible} animationType="fade" transparent={true}>
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: 'rgba(0,0,0,0.6)',
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}
-      >
-        <View
-          style={{
-            backgroundColor: '#f1f5f9',
-            marginHorizontal: 20,
-            borderRadius: 10,
-            maxHeight: '80%',
-            padding: 20,
-            width: isMobile ? '80%' : '35%',
-          }}
-        >
-          <Text
-            style={{
-              fontSize: 22,
-              fontWeight: 'bold',
-              marginBottom: 15,
-              textAlign: 'center',
-              color: '#00505cff',
-            }}
-          >
-            Terms of Use & Privacy Policy
-          </Text>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', position: 'absolute', top: 0, bottom: 0}} >
+        <View style={{ backgroundColor: '#f1f5f9', marginHorizontal: 20, borderRadius: 10, maxHeight: '80%', padding: 20, width: isMobile ? '80%' : '35%', }} >
+          <Text style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 15, textAlign: 'center', color: '#00505cff', }} > Terms of Use & Privacy Policy </Text>
 
                 <ScrollView style={{ marginBottom: 20, paddingHorizontal: 16 }}>
                   <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#00505cff', marginBottom: 8 }}>

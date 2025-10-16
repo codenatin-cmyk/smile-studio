@@ -15,21 +15,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import * as Sharing from 'expo-sharing';
 import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Image,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  useWindowDimensions,
-  View
-} from "react-native";
+import { ActivityIndicator, Alert, FlatList, Image, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import * as XLSX from 'xlsx';
 import { supabase } from "../../lib/supabase";
 import ChatView from "../view/ChatView";
@@ -222,7 +208,7 @@ export default function Account() {
   };
 
 
-
+  console.log("Current Appointment: ", appointmentsList)
 
   const offersArray = typeof offerList === "string"
     ? offerList.split("?")
@@ -336,7 +322,7 @@ useEffect(() => {
       return [];
     }
 
-    // console.log("Appointments with names:", data);
+    console.log("Appointments with names eto:", data);
     setAppointmentList(data);
 
     // Refresh Current and Past list
@@ -372,7 +358,7 @@ useEffect(() => {
       return [];
     }
 
-    // console.log("Appointments with names:", data);
+    // console.log("Appointments Current with names:", data);
     setAppointmentCurrentList(data);
     return data;
   };
@@ -617,7 +603,8 @@ const createAppointment = async (
         patient_id: session.user.id,  // Patient ID from authenticated user
         date_time: datetime.toISOString(),
         message: message,
-        request: tempSelectedDentists
+        request: tempSelectedDentists,
+        notification_sent: false
       },
     ])
     .select();
@@ -5494,12 +5481,12 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
             {isMobile ? (
               // Mobile card layout
               <ScrollView contentContainerStyle={{ paddingHorizontal: 12 }}>
-                {appointmentsCurrentList.length === 0 ? (
+                {appointmentsList.length === 0 ? (
                   <View style={{ width: "100%", alignItems: "center", marginTop: 40 }}>
                     <Text style={{ fontSize: 20, color: "gray" }}>- No Appointments -</Text>
                   </View>
                 ) : (
-                  appointmentsCurrentList.map((item) => (
+                  appointmentsList.map((item) => (
                     <View
                       key={item.id}
                       style={{
