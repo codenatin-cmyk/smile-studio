@@ -116,6 +116,15 @@ export default function Account() {
   const [showAllClinics, setShowAllClinics] = useState(false);
 
 
+
+const [supportModalVisible, setSupportModalVisible] = useState(false);
+const [supportInput, setSupportInput] = useState('');
+const [supportMessages, setSupportMessages] = useState<any[]>([]);
+const [supportLoading, setSupportLoading] = useState(false);
+const [supportFilter, setSupportFilter] = useState<'all' | 'pending' | 'in_progress' | 'resolved'>('all');
+
+
+
 useEffect(() => {
   const fetchPatientUsers = async () => {
     try {
@@ -188,6 +197,64 @@ const banUser = async (id, currentStatus, reason) => {
   }
 };
   
+
+const updateSupportStatus = async (messageId: string, status: string, adminNotes?: string) => {
+  try {
+    const updates: any = { status };
+    if (adminNotes !== undefined) {
+      updates.admin_notes = adminNotes;
+    }
+
+    const { error } = await supabase
+      .from('support_messages')
+      .update(updates)
+      .eq('id', messageId);
+
+    if (error) throw error;
+
+    Alert.alert('Success', 'Status updated successfully');
+  } catch (error) {
+    console.error('Error updating support status:', error);
+    Alert.alert('Error', 'Failed to update status');
+  }
+};
+
+const fetchSupportMessages = async () => {
+  setSupportLoading(true);
+  try {
+    const { data: messages, error: messagesError } = await supabase
+      .from('support_messages')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (messagesError) throw messagesError;
+
+    const userIds = [...new Set(messages?.map(m => m.user_id).filter(Boolean))];
+
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name, role, avatar_url')
+      .in('id', userIds);
+
+    if (profilesError) throw profilesError;
+
+    const profileMap = new Map(profiles?.map(p => [p.id, p]));
+
+    const messagesWithProfiles = messages?.map(msg => ({
+      ...msg,
+      profiles: profileMap.get(msg.user_id) || null
+    })) || [];
+
+    setSupportMessages(messagesWithProfiles);
+  } catch (error) {
+    console.error('Error fetching support messages:', error);
+    Alert.alert('Error', 'Failed to load support messages');
+  } finally {
+    setSupportLoading(false);
+  }
+};
+
+
 useEffect(() => {
   async function fetchClinics() {
     try {
@@ -247,6 +314,46 @@ useEffect(() => {
       setMoved(true)
     }
 }, []);
+
+
+
+useEffect(() => {
+  if (!session?.user?.id) return;
+
+  fetchSupportMessages();
+
+  const channel = supabase
+    .channel('admin-support-messages')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'support_messages',
+      },
+      (payload) => {
+        console.log('Real-time support message change:', payload);
+
+        if (payload.eventType === 'INSERT') {
+          fetchSupportMessages();
+        } else if (payload.eventType === 'UPDATE') {
+          setSupportMessages((prev) =>
+            prev.map((msg) => (msg.id === payload.new.id ? { ...msg, ...payload.new } : msg))
+          );
+        } else if (payload.eventType === 'DELETE') {
+          setSupportMessages((prev) =>
+            prev.filter((msg) => msg.id !== payload.old.id)
+          );
+        }
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, [session?.user?.id]);
+
 
 
   async function getProfile() {
@@ -727,6 +834,7 @@ useEffect(() => {
                       justifyContent: "center",
                       alignItems: "center",
                       padding: 50,
+                      
                     }}
                   >
                     <View
@@ -735,7 +843,9 @@ useEffect(() => {
                         borderRadius: 12,
                         padding: 20,
                         alignItems: "center",
-                        width: !isMobile ? "25%" : "85%",
+                        width: !isMobile ? "300px" : "85%",
+                        
+                       
                       }}
                     >
                       <View style={styles.avatarSection}>
@@ -779,6 +889,7 @@ useEffect(() => {
                           ...styles.contentsmenu,
                           outlineWidth: 0,
                           width: "100%",
+                          color: 'black'
                         }}
                         placeholder="add bio..."
                         placeholderTextColor="black"
@@ -791,6 +902,7 @@ useEffect(() => {
                           fontSize: 18,
                           marginBottom: 20,
                           textAlign: "center",
+                          color: 'black'
                         }}
                       >
                         Do you wanna update it?
@@ -1429,13 +1541,7 @@ useEffect(() => {
             <Text style={{ textAlign: "center" }}>No clinics found.</Text>
           ) : (
             <>
-              <View
-                style={{
-                  flexDirection: isMobile ? "column" : "row",
-                  flexWrap: isMobile ? "nowrap" : "wrap",
-                  justifyContent: isMobile ? "flex-start" : "center",
-                }}
-              >
+              <View style={{ flexDirection: isMobile ? "column" : "row", flexWrap: isMobile ? "nowrap" : "wrap", justifyContent: isMobile ? "flex-start" : "center", }} >
                 {clinicList
                   .filter((clinic) => clinic.isFirst === false)
                   .slice(0, showAllClinics ? clinicList.length : 8) // Show only 8 clinics unless "showAllClinics" is true
@@ -1456,1041 +1562,1035 @@ useEffect(() => {
                         elevation: 4,
                         alignItems: "center",
                         minHeight: 140,
-                        width: isMobile ? "95%" : "45%",
+                       width: width < 1024 ? "95%" : "45%",
                       }}
                     >
                     {/* Left side: Image + Info */}
-                    <View
-                      style={{
-                        flex: 7,
-                        flexDirection: "row",
-                        alignItems: "center",
-                        marginLeft: 4,
-                      }}
-                    >
-<View style={{ position: "relative" }}>
-  {clinic.clinic_photo_url ? (
-    <Image
-      source={{ uri: clinic.clinic_photo_url }}
-      style={{
-        width: isMobile ? 70 : 100,
-        height: isMobile ? 70 : 100,
-        borderRadius: 16,
-        marginRight: 16,
-        backgroundColor: "#fff",
-      }}
-      resizeMode="cover"
-    />
-  ) : (
-    <View
-      style={{
-        width: isMobile ? 70 : 100,
-        height: isMobile ? 70 : 100,
-        borderRadius: 16,
-        marginRight: 16,
-        backgroundColor: "#fff",
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <FontAwesome5 name="clinic-medical" size={64} color="#4a878bff" />
-    </View>
-  )}
+                    <View style={{ flex: 7, flexDirection: "row", alignItems: "center", marginLeft: 4, }} >
+                      <View style={{ position: "relative" }}>
+                        {clinic.clinic_photo_url ? (
+                          <Image
+                            source={{ uri: clinic.clinic_photo_url }}
+                            style={{
+                              width: isMobile ? 70 : 100,
+                              height: isMobile ? 70 : 100,
+                              borderRadius: 16,
+                              marginRight: 16,
+                              backgroundColor: "#fff",
+                            }}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <View
+                            style={{
+                              width: isMobile ? 70 : 100,
+                              height: isMobile ? 70 : 100,
+                              borderRadius: 16,
+                              marginRight: 16,
+                              backgroundColor: "#fff",
+                              justifyContent: "center",
+                              alignItems: "center",
+                            }}
+                          >
+                            <FontAwesome5 name="clinic-medical" size={64} color="#4a878bff" />
+                          </View>
+                        )}
 
-  {/* Small Button Overlay */}
-  <TouchableOpacity
-    style={{
-      position: "absolute",
-      bottom: -4,
-      backgroundColor: "rgba(0,0,0,0.4)",
-      right: 6,
-      paddingVertical: 4,
-      paddingHorizontal: 8,
-      borderRadius: 8,
-    }}
-    onPress={() => {
-      setSelectedSunday(clinic.clinic_schedule[0]?.sunday || {});
-      setSelectedMonday(clinic.clinic_schedule[0]?.monday || {});
-      setSelectedTuesday(clinic.clinic_schedule[0]?.tuesday || {});
-      setSelectedWednesday(clinic.clinic_schedule[0]?.wednesday || {});
-      setSelectedThursday(clinic.clinic_schedule[0]?.thursday || {});
-      setSelectedFriday(clinic.clinic_schedule[0]?.friday || {});
-      setSelectedSaturday(clinic.clinic_schedule[0]?.saturday || {});
+                        {/* Small Button Overlay */}
+                        <TouchableOpacity
+                          style={{
+                            position: "absolute",
+                            bottom: -4,
+                            backgroundColor: "rgba(0,0,0,0.4)",
+                            right: 6,
+                            paddingVertical: 4,
+                            paddingHorizontal: 8,
+                            borderRadius: 8,
+                          }}
+                          onPress={() => {
+                            setSelectedSunday(clinic.clinic_schedule[0]?.sunday || {});
+                            setSelectedMonday(clinic.clinic_schedule[0]?.monday || {});
+                            setSelectedTuesday(clinic.clinic_schedule[0]?.tuesday || {});
+                            setSelectedWednesday(clinic.clinic_schedule[0]?.wednesday || {});
+                            setSelectedThursday(clinic.clinic_schedule[0]?.thursday || {});
+                            setSelectedFriday(clinic.clinic_schedule[0]?.friday || {});
+                            setSelectedSaturday(clinic.clinic_schedule[0]?.saturday || {});
 
-      setSelectedClinicName(clinic.clinic_name);
-      setSelectedClinicEmail(clinic.email);
-      setSelectedClinicSlogan(clinic.bio);
-      setSelectedClinicAddress(clinic.address);
-      setSelectedClinicMobile(clinic.mobile_number);
-      setSelectedClinicCreatedAt(clinic.created_at);
-      setSelectedClinicRole(clinic.role);
-      setSelectedClinicDentist(clinic.isDentistAvailable);
-      setSelectedClinicImage(clinic.clinic_photo_url);
-      setviewClinic(true);
-      setSelectedClinicId(clinic.id);
-      setMapView([clinic.longitude, clinic.latitude]);
-      setSelectedCI(clinic.introduction);
-      setSelectedOffers(clinic.offers);
-      setVerified(clinic.isVerified);
-      setDentistList(clinic.dentists)
-    }}
-  >
-    <Text style={{ color: "#fff", fontSize: isMobile ? 8 : 10 }}>View Clinic</Text>
-  </TouchableOpacity>
+                            setSelectedClinicName(clinic.clinic_name);
+                            setSelectedClinicEmail(clinic.email);
+                            setSelectedClinicSlogan(clinic.bio);
+                            setSelectedClinicAddress(clinic.address);
+                            setSelectedClinicMobile(clinic.mobile_number);
+                            setSelectedClinicCreatedAt(clinic.created_at);
+                            setSelectedClinicRole(clinic.role);
+                            setSelectedClinicDentist(clinic.isDentistAvailable);
+                            setSelectedClinicImage(clinic.clinic_photo_url);
+                            setviewClinic(true);
+                            setSelectedClinicId(clinic.id);
+                            setMapView([clinic.longitude, clinic.latitude]);
+                            setSelectedCI(clinic.introduction);
+                            setSelectedOffers(clinic.offers);
+                            setVerified(clinic.isVerified);
+                            setDentistList(clinic.dentists)
+                          }}
+                        >
+                          <Text style={{ color: "#fff", fontSize: isMobile ? 8 : 10 }}>View Clinic</Text>
+                        </TouchableOpacity>
 
-  {/* Modal */}
-<Modal
-  transparent
-  visible={viewClinic}
-  onRequestClose={() => setviewClinic(false)}
->
-  <View
-    style={{
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      padding: 20,
-    }}
-  >
-    <View
-      style={{
-        backgroundColor: "#fff",
-        borderRadius: 20,
-        padding: 24,
-        width: isMobile ? "90%" : "35%",
-        elevation: 8,
-        borderWidth: 2,
-        borderColor: "rgba(214, 214, 214, 1)",
-        position: "relative",
-      }}
-    >
-      {/* ❌ Top-Right Close Button */}
-      <TouchableOpacity
-        onPress={() => setviewClinic(false)}
-        style={{
-          position: "absolute",
-          top: 16,
-          right: 16,
-          zIndex: 10,
-          padding: 8,
-          borderRadius: 20,
-          width: 36,
-          height: 36,
-          backgroundColor: "#da3434ff",
-          alignItems: "center",
-          justifyContent: "center",
-          shadowColor: "#da3434ff",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.3,
-          shadowRadius: 4,
-          elevation: 3,
-        }}
-      >
-        <Text style={{ fontSize: 20, fontWeight: "bold", color: "white" }}>×</Text>
-      </TouchableOpacity>
+                        {/* Modal */}
+                      <Modal
+                        transparent
+                        visible={viewClinic}
+                        onRequestClose={() => setviewClinic(false)}
+                      >
+                        <View
+                          style={{
+                            flex: 1,
+                            justifyContent: "center",
+                            alignItems: "center",
+                            padding: 20,
+                          }}
+                        >
+                          <View
+                            style={{
+                              backgroundColor: "#fff",
+                              borderRadius: 20,
+                              padding: 24,
+                              width: isMobile ? "90%" : "60%",
+                              elevation: 8,
+                              borderWidth: 2,
+                              borderColor: "rgba(214, 214, 214, 1)",
+                              position: "relative",
+                            }}
+                          >
+                            {/* ❌ Top-Right Close Button */}
+                            <TouchableOpacity
+                              onPress={() => setviewClinic(false)}
+                              style={{
+                                position: "absolute",
+                                top: 16,
+                                right: 16,
+                                zIndex: 10,
+                                padding: 8,
+                                borderRadius: 20,
+                                width: 36,
+                                height: 36,
+                                backgroundColor: "#da3434ff",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                shadowColor: "#da3434ff",
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.3,
+                                shadowRadius: 4,
+                                elevation: 3,
+                              }}
+                            >
+                              <Text style={{ fontSize: 20, fontWeight: "bold", color: "white" }}>×</Text>
+                            </TouchableOpacity>
 
-      {/* Profile Header */}
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          marginBottom: 20,
-          paddingRight: 40,
-        }}
-      >
-        {selectedClinicImage ? (
-          <Image
-            source={{ uri: selectedClinicImage }}
-            style={{
-              width: 80,
-              height: 80,
-              borderRadius: 40,
-              marginRight: 16,
-              backgroundColor: "#f2f2f2",
-              borderWidth: 3,
-              borderColor: "rgba(214, 214, 214, 1)",
-            }}
-          />
-        ) : (
-          <View
-            style={{
-              width: 80,
-              height: 80,
-              borderRadius: 40,
-              marginRight: 16,
-              backgroundColor: "#e8f4f5",
-              alignItems: "center",
-              justifyContent: "center",
-              borderWidth: 3,
-              borderColor: "rgba(214, 214, 214, 1)",
-            }}
-          >
-            <FontAwesome5 name="clinic-medical" size={40} color="#4a878bff" />
-          </View>
-        )}
-        <View style={{ flex: 1 }}>
-          <Text style={{  fontSize: isMobile ? 16 : 22, fontWeight: "bold", color: "#1a1a1a", marginBottom: 4 }}>
-            {selectedClinicName || "Unnamed Clinic"}
-          </Text>
-          <View
-            style={{
-              backgroundColor: verified ? "#e8f5e9" : "#ffebee",
-              paddingHorizontal: 10,
-              paddingVertical: 4,
-              borderRadius: 12,
-              alignSelf: "flex-start",
-              marginBottom: 6,
-            }}
-          >
-            <Text style={{ fontSize: 11, color: verified ? "#2e7d32" : "#c62828", fontWeight: "600" }}>
-              {verified ? "✅ Verified Clinic" : "❌ Unverified"}
-            </Text>
-          </View>
-          <Text style={{ fontSize: 13, color: "#3c6422ff", marginBottom: 2 }}>
-            {selectedClinicEmail}
-          </Text>
-          {selectedClinicSlogan && (
-            <Text
-              style={{
-                fontSize: 13,
-                color: "#416e5dff",
-                fontStyle: "italic",
-                marginTop: 2,
-              }}
-            >
-              "{selectedClinicSlogan}"
-            </Text>
-          )}
-        </View>
-      </View>
+                            {/* Profile Header */}
+                            <View
+                              style={{
+                                flexDirection: "row",
+                                alignItems: "center",
+                                marginBottom: 20,
+                                paddingRight: 40,
+                              }}
+                            >
+                              {selectedClinicImage ? (
+                                <Image
+                                  source={{ uri: selectedClinicImage }}
+                                  style={{
+                                    width: 80,
+                                    height: 80,
+                                    borderRadius: 40,
+                                    marginRight: 16,
+                                    backgroundColor: "#f2f2f2",
+                                    borderWidth: 3,
+                                    borderColor: "rgba(214, 214, 214, 1)",
+                                  }}
+                                />
+                              ) : (
+                                <View
+                                  style={{
+                                    width: 80,
+                                    height: 80,
+                                    borderRadius: 40,
+                                    marginRight: 16,
+                                    backgroundColor: "#e8f4f5",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    borderWidth: 3,
+                                    borderColor: "rgba(214, 214, 214, 1)",
+                                  }}
+                                >
+                                  <FontAwesome5 name="clinic-medical" size={40} color="#4a878bff" />
+                                </View>
+                              )}
+                              <View style={{ flex: 1 }}>
+                                <Text style={{  fontSize: isMobile ? 16 : 22, fontWeight: "bold", color: "#1a1a1a", marginBottom: 4 }}>
+                                  {selectedClinicName || "Unnamed Clinic"}
+                                </Text>
+                                <View
+                                  style={{
+                                    backgroundColor: verified ? "#e8f5e9" : "#ffebee",
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 4,
+                                    borderRadius: 12,
+                                    alignSelf: "flex-start",
+                                    marginBottom: 6,
+                                  }}
+                                >
+                                  <Text style={{ fontSize: 11, color: verified ? "#2e7d32" : "#c62828", fontWeight: "600" }}>
+                                    {verified ? "✅ Verified Clinic" : "❌ Unverified"}
+                                  </Text>
+                                </View>
+                                <Text style={{ fontSize: 13, color: "#3c6422ff", marginBottom: 2 }}>
+                                  {selectedClinicEmail}
+                                </Text>
+                                {selectedClinicSlogan && (
+                                  <Text
+                                    style={{
+                                      fontSize: 13,
+                                      color: "#416e5dff",
+                                      fontStyle: "italic",
+                                      marginTop: 2,
+                                    }}
+                                  >
+                                    "{selectedClinicSlogan}"
+                                  </Text>
+                                )}
+                              </View>
+                            </View>
 
-      {/* Divider */}
-      <View
-        style={{
-          height: 2,
-          backgroundColor: "#f0f0f0",
-          marginBottom: 20,
-          borderRadius: 1,
-        }}
-      />
+                            {/* Divider */}
+                            <View
+                              style={{
+                                height: 2,
+                                backgroundColor: "#f0f0f0",
+                                marginBottom: 20,
+                                borderRadius: 1,
+                              }}
+                            />
 
-      {/* Info Section */}
-      <View style={{ gap: 12, marginBottom: 20 }}>
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <View
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 16,
-              backgroundColor: "#e8f4f5",
-              alignItems: "center",
-              justifyContent: "center",
-              marginRight: 12,
-            }}
-          >
-            <Text style={{ fontSize: 16 }}>📍</Text>
-          </View>
-          <Text style={{ fontSize: 14, color: "#333", flex: 1 }}>
-            {selectedClinicAddress || "No address provided"}
-          </Text>
-        </View>
+                            {/* Info Section */}
+                            <View style={{ gap: 12, marginBottom: 20 }}>
+                              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                                <View
+                                  style={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: 16,
+                                    backgroundColor: "#e8f4f5",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    marginRight: 12,
+                                  }}
+                                >
+                                  <Text style={{ fontSize: 16 }}>📍</Text>
+                                </View>
+                                <Text style={{ fontSize: 14, color: "#333", flex: 1 }}>
+                                  {selectedClinicAddress || "No address provided"}
+                                </Text>
+                              </View>
 
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <View
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 16,
-              backgroundColor: "#e8f4f5",
-              alignItems: "center",
-              justifyContent: "center",
-              marginRight: 12,
-            }}
-          >
-            <Text style={{ fontSize: 16 }}>📞</Text>
-          </View>
-          <Text style={{ fontSize: 14, color: "#333" }}>
-            {selectedClinicMobile || "No contact"}
-          </Text>
-        </View>
+                              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                                <View
+                                  style={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: 16,
+                                    backgroundColor: "#e8f4f5",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    marginRight: 12,
+                                  }}
+                                >
+                                  <Text style={{ fontSize: 16 }}>📞</Text>
+                                </View>
+                                <Text style={{ fontSize: 14, color: "#333" }}>
+                                  {selectedClinicMobile || "No contact"}
+                                </Text>
+                              </View>
 
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <View
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 16,
-              backgroundColor: "#e8f4f5",
-              alignItems: "center",
-              justifyContent: "center",
-              marginRight: 12,
-            }}
-          >
-            <Text style={{ fontSize: 16 }}>🗓️</Text>
-          </View>
-          <Text style={{ fontSize: 14, color: "#333" }}>
-            Joined: {selectedClinicCreatedAt || "N/A"}
-          </Text>
-        </View>
+                              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                                <View
+                                  style={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: 16,
+                                    backgroundColor: "#e8f4f5",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    marginRight: 12,
+                                  }}
+                                >
+                                  <Text style={{ fontSize: 16 }}>🗓️</Text>
+                                </View>
+                                <Text style={{ fontSize: 14, color: "#333" }}>
+                                  Joined: {selectedClinicCreatedAt || "N/A"}
+                                </Text>
+                              </View>
 
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <View
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 16,
-              backgroundColor: selectedClinicDentist ? "#e8f5e9" : "#ffebee",
-              alignItems: "center",
-              justifyContent: "center",
-              marginRight: 12,
-            }}
-          >
-            <Text style={{ fontSize: 16 }}>🦷</Text>
-          </View>
-          <Text style={{ fontSize: 14, color: "#333" }}>
-            Dentist: {selectedClinicDentist ? "Available" : "Not Available"}
-          </Text>
-        </View>
-      </View>
+                              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                                <View
+                                  style={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: 16,
+                                    backgroundColor: selectedClinicDentist ? "#e8f5e9" : "#ffebee",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    marginRight: 12,
+                                  }}
+                                >
+                                  <Text style={{ fontSize: 16 }}>🦷</Text>
+                                </View>
+                                <Text style={{ fontSize: 14, color: "#333" }}>
+                                  Dentist: {selectedClinicDentist ? "Available" : "Not Available"}
+                                </Text>
+                              </View>
+                            </View>
 
-      {/* Schedule Section */}
-      <View
-        style={{
-          backgroundColor: "#f8f9fa",
-          borderRadius: 12,
-          padding: 16,
-          marginBottom: 20,
-        }}
-      >
-        <Text style={{ fontSize: 16, fontWeight: "600", color: "#1a1a1a", marginBottom: 12 }}>
-          📅 Clinic Schedule
-        </Text>
-        <View style={{ gap: 6 }}>
-          {[
-            { label: "Sunday", time: selectedSunday },
-            { label: "Monday", time: selectedMonday },
-            { label: "Tuesday", time: selectedTuesday },
-            { label: "Wednesday", time: selectedWednesday },
-            { label: "Thursday", time: selectedThursday },
-            { label: "Friday", time: selectedFriday },
-            { label: "Saturday", time: selectedSaturday },
-          ].map((day) => (
-            <DayScheduleView
-              key={day.label}
-              label={day.label}
-              time={
-                day.time
-                  ? {
-                      ...day.time,
-                      from: {
-                        ...day.time.from,
-                        minute: day.time.from?.minute?.toString().padStart(2, "0"),
-                      },
-                      to: {
-                        ...day.time.to,
-                        minute: day.time.to?.minute?.toString().padStart(2, "0"),
-                      },
-                    }
-                  : undefined
-              }
-            />
-          ))}
+                            {/* Schedule Section */}
+                            <View
+                              style={{
+                                backgroundColor: "#f8f9fa",
+                                borderRadius: 12,
+                                padding: 16,
+                                marginBottom: 20,
+                              }}
+                            >
+                              <Text style={{ fontSize: 16, fontWeight: "600", color: "#1a1a1a", marginBottom: 12 }}>
+                                📅 Clinic Schedule
+                              </Text>
+                              <View style={{ gap: 6 }}>
+                                {[
+                                  { label: "Sunday", time: selectedSunday },
+                                  { label: "Monday", time: selectedMonday },
+                                  { label: "Tuesday", time: selectedTuesday },
+                                  { label: "Wednesday", time: selectedWednesday },
+                                  { label: "Thursday", time: selectedThursday },
+                                  { label: "Friday", time: selectedFriday },
+                                  { label: "Saturday", time: selectedSaturday },
+                                ].map((day) => (
+                                  <DayScheduleView
+                                    key={day.label}
+                                    label={day.label}
+                                    time={
+                                      day.time
+                                        ? {
+                                            ...day.time,
+                                            from: {
+                                              ...day.time.from,
+                                              minute: day.time.from?.minute?.toString().padStart(2, "0"),
+                                            },
+                                            to: {
+                                              ...day.time.to,
+                                              minute: day.time.to?.minute?.toString().padStart(2, "0"),
+                                            },
+                                          }
+                                        : undefined
+                                    }
+                                  />
+                                ))}
 
-          {/* If all days have no schedule */}
-          {[
-            selectedSunday,
-            selectedMonday,
-            selectedTuesday,
-            selectedWednesday,
-            selectedThursday,
-            selectedFriday,
-            selectedSaturday,
-          ].every((day) => !day || day.from == null || day.to == null) && (
-            <Text
-              style={{
-                color: "#999",
-                fontSize: 14,
-                textAlign: "center",
-                marginTop: 8,
-                fontStyle: "italic",
-              }}
-            >
-              No schedule available
-            </Text>
-          )}
-        </View>
-      </View>
+                                {/* If all days have no schedule */}
+                                {[
+                                  selectedSunday,
+                                  selectedMonday,
+                                  selectedTuesday,
+                                  selectedWednesday,
+                                  selectedThursday,
+                                  selectedFriday,
+                                  selectedSaturday,
+                                ].every((day) => !day || day.from == null || day.to == null) && (
+                                  <Text
+                                    style={{
+                                      color: "#999",
+                                      fontSize: 14,
+                                      textAlign: "center",
+                                      marginTop: 8,
+                                      fontStyle: "italic",
+                                    }}
+                                  >
+                                    No schedule available
+                                  </Text>
+                                )}
+                              </View>
+                            </View>
 
-      {/* View Full Button */}
-      <TouchableOpacity
-        onPress={() => {
-          setFullProfile(true);
-        }}
-        style={{
-          backgroundColor: "#2ecc71",
-          paddingVertical: 14,
-          borderRadius: 12,
-          alignItems: "center",
-          elevation: 4,
-        }}
-      >
-        <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>
-          View Full Profile
-        </Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-</Modal>
-<Modal
-  visible={fullProfile}
-  transparent={false}
-  onRequestClose={() => setFullProfile(false)}
->
-  <View style={{ flex: 1, backgroundColor: "#f8fafc" }}>
-    
-    {/* Header with Back Button */}
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        paddingTop: 25,
-        paddingHorizontal: 16,
-        paddingBottom: 12,
-        borderBottomWidth: 1,
-        borderColor: "#e0e0e0",
-        backgroundColor: "white",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 3,
-        elevation: 2,
-      }}
-    >
-      <TouchableOpacity 
-        onPress={() => setFullProfile(false)}
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: 20,
-          backgroundColor: "#f1f5f9",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <MaterialIcons
-          name="keyboard-arrow-left"
-          size={28}
-          color="#00505cff"
-        />
-      </TouchableOpacity>
-      <Text
-        style={{
-          fontSize: 22,
-          fontWeight: "bold",
-          marginLeft: 12,
-          color: "#00505cff",
-        }}
-      >
-        Clinic Profile
-      </Text>
-    </View>
+                            {/* View Full Button */}
+                            <TouchableOpacity
+                              onPress={() => {
+                                setFullProfile(true);
+                              }}
+                              style={{
+                                backgroundColor: "#2ecc71",
+                                paddingVertical: 14,
+                                borderRadius: 12,
+                                alignItems: "center",
+                                elevation: 4,
+                              }}
+                            >
+                              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>
+                                View Full Profile
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      </Modal>
+                      <Modal
+                        visible={fullProfile}
+                        transparent={false}
+                        onRequestClose={() => setFullProfile(false)}
+                      >
+                        <View style={{ flex: 1, backgroundColor: "#f8fafc" }}>
+                          
+                          {/* Header with Back Button */}
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              paddingTop: 25,
+                              paddingHorizontal: 16,
+                              paddingBottom: 12,
+                              borderBottomWidth: 1,
+                              borderColor: "#e0e0e0",
+                              backgroundColor: "white",
+                              shadowColor: "#000",
+                              shadowOffset: { width: 0, height: 2 },
+                              shadowOpacity: 0.05,
+                              shadowRadius: 3,
+                              elevation: 2,
+                            }}
+                          >
+                            <TouchableOpacity 
+                              onPress={() => setFullProfile(false)}
+                              style={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: 20,
+                                backgroundColor: "#f1f5f9",
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}
+                            >
+                              <MaterialIcons
+                                name="keyboard-arrow-left"
+                                size={28}
+                                color="#00505cff"
+                              />
+                            </TouchableOpacity>
+                            <Text
+                              style={{
+                                fontSize: 22,
+                                fontWeight: "bold",
+                                marginLeft: 12,
+                                color: "#00505cff",
+                              }}
+                            >
+                              Clinic Profile
+                            </Text>
+                          </View>
 
-    <ScrollView style={{ backgroundColor: '#f8fafc' }}>
+                          <ScrollView style={{ backgroundColor: '#f8fafc' }}>
 
-      {/* Cover Photo and Profile Picture */}
-      <View style={{ position: "relative", marginBottom: 80 }}>
-        {/* Cover Photo */}
-        <View
-          style={{
-            width: isMobile ? "95%" : "60%",
-            height: 200,
-            alignSelf: "center",
-            marginTop: isMobile ? 8 : 26,
-            borderRadius: 16,
-            backgroundColor: "#d9d9d9",
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.1,
-            shadowRadius: 8,
-            elevation: 4,
-          }}
-        />
-        
-        {/* Profile Picture */}
-        <View
-          style={{
-            position: "absolute",
-            top: 125,
-            left: 0,
-            right: 0,
-            alignItems: "center",
-          }}
-        >
-          {selectedClinicImage ? (
-            <Image
-              source={{ uri: selectedClinicImage }}
-              style={{
-                width: 150,
-                height: 150,
-                borderRadius: 75,
-                borderWidth: 5,
-                borderColor: "#fff",
-                backgroundColor: "#e0e0e0",
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.15,
-                shadowRadius: 8,
-                elevation: 5,
-              }}
-            />
-          ) : (
-            <View
-              style={{
-                width: 150,
-                height: 150,
-                borderRadius: 75,
-                borderWidth: 5,
-                borderColor: "#fff",
-                backgroundColor: "#e8f4f5",
-                justifyContent: 'center',
-                alignItems: 'center',
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.15,
-                shadowRadius: 8,
-                elevation: 5,
-              }}
-            >
-              <FontAwesome5 name="clinic-medical" size={70} color="#4a878bff" />
-            </View>
-          )}
-        </View>
-      </View>
+                            {/* Cover Photo and Profile Picture */}
+                            <View style={{ position: "relative", marginBottom: 80 }}>
+                              {/* Cover Photo */}
+                              <View
+                                style={{
+                                  width: isMobile ? "95%" : "60%",
+                                  height: 200,
+                                  alignSelf: "center",
+                                  marginTop: isMobile ? 8 : 26,
+                                  borderRadius: 16,
+                                  backgroundColor: "#d9d9d9",
+                                  shadowColor: "#000",
+                                  shadowOffset: { width: 0, height: 4 },
+                                  shadowOpacity: 0.1,
+                                  shadowRadius: 8,
+                                  elevation: 4,
+                                }}
+                              />
+                              
+                              {/* Profile Picture */}
+                              <View
+                                style={{
+                                  position: "absolute",
+                                  top: 125,
+                                  left: 0,
+                                  right: 0,
+                                  alignItems: "center",
+                                }}
+                              >
+                                {selectedClinicImage ? (
+                                  <Image
+                                    source={{ uri: selectedClinicImage }}
+                                    style={{
+                                      width: 150,
+                                      height: 150,
+                                      borderRadius: 75,
+                                      borderWidth: 5,
+                                      borderColor: "#fff",
+                                      backgroundColor: "#e0e0e0",
+                                      shadowColor: "#000",
+                                      shadowOffset: { width: 0, height: 4 },
+                                      shadowOpacity: 0.15,
+                                      shadowRadius: 8,
+                                      elevation: 5,
+                                    }}
+                                  />
+                                ) : (
+                                  <View
+                                    style={{
+                                      width: 150,
+                                      height: 150,
+                                      borderRadius: 75,
+                                      borderWidth: 5,
+                                      borderColor: "#fff",
+                                      backgroundColor: "#e8f4f5",
+                                      justifyContent: 'center',
+                                      alignItems: 'center',
+                                      shadowColor: "#000",
+                                      shadowOffset: { width: 0, height: 4 },
+                                      shadowOpacity: 0.15,
+                                      shadowRadius: 8,
+                                      elevation: 5,
+                                    }}
+                                  >
+                                    <FontAwesome5 name="clinic-medical" size={70} color="#4a878bff" />
+                                  </View>
+                                )}
+                              </View>
+                            </View>
 
-      {/* Scrollable Content */}
-      <View style={{ paddingHorizontal: 16, paddingLeft: isMobile ? 16 : "20%", paddingRight: isMobile ? 16 : "20%" }}>
+                            {/* Scrollable Content */}
+                            <View style={{ paddingHorizontal: 16, paddingLeft: isMobile ? 16 : "20%", paddingRight: isMobile ? 16 : "20%" }}>
 
-        {/* Clinic Details Section */}
-        <Text
-          style={{
-            fontSize: 24,
-            fontWeight: "bold",
-            color: "#003f30",
-            marginBottom: 12,
-            marginTop: 8,
-          }}
-        >
-          Clinic Details
-        </Text>
+                              {/* Clinic Details Section */}
+                              <Text
+                                style={{
+                                  fontSize: 24,
+                                  fontWeight: "bold",
+                                  color: "#003f30",
+                                  marginBottom: 12,
+                                  marginTop: 8,
+                                }}
+                              >
+                                Clinic Details
+                              </Text>
 
-        <View
-          style={{
-            backgroundColor: "#fff",
-            borderRadius: 16,
-            padding: 20,
-            marginBottom: 24,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.08,
-            shadowRadius: 8,
-            elevation: 3,
-          }}
-        >
-          <Text style={{ fontSize: 22, fontWeight: "bold", marginBottom: 8, color: "#1a1a1a" }}>
-            {selectedClinicName || "Unnamed Clinic"}
-          </Text>
-          
-          <View
-            style={{
-              backgroundColor: verified ? "#e8f5e9" : "#ffebee",
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: 12,
-              alignSelf: "flex-start",
-              marginBottom: 12,
-            }}
-          >
-            <Text style={{ fontSize: 12, color: verified ? "#2e7d32" : "#c62828", fontWeight: "600" }}>
-              {verified ? "✅ Verified Clinic" : "❌ Unverified Clinic"}
-            </Text>
-          </View>
+                              <View
+                                style={{
+                                  backgroundColor: "#fff",
+                                  borderRadius: 16,
+                                  padding: 20,
+                                  marginBottom: 24,
+                                  shadowColor: "#000",
+                                  shadowOffset: { width: 0, height: 2 },
+                                  shadowOpacity: 0.08,
+                                  shadowRadius: 8,
+                                  elevation: 3,
+                                }}
+                              >
+                                <Text style={{ fontSize: 22, fontWeight: "bold", marginBottom: 8, color: "#1a1a1a" }}>
+                                  {selectedClinicName || "Unnamed Clinic"}
+                                </Text>
+                                
+                                <View
+                                  style={{
+                                    backgroundColor: verified ? "#e8f5e9" : "#ffebee",
+                                    paddingHorizontal: 12,
+                                    paddingVertical: 6,
+                                    borderRadius: 12,
+                                    alignSelf: "flex-start",
+                                    marginBottom: 12,
+                                  }}
+                                >
+                                  <Text style={{ fontSize: 12, color: verified ? "#2e7d32" : "#c62828", fontWeight: "600" }}>
+                                    {verified ? "✅ Verified Clinic" : "❌ Unverified Clinic"}
+                                  </Text>
+                                </View>
 
-          <Text style={{ fontSize: 15, color: "#0b5a51", marginBottom: 6 }}>
-            {selectedClinicEmail}
-          </Text>
-          
-          {selectedClinicSlogan && (
-            <Text style={{ fontSize: 15, fontStyle: "italic", color: "#416e5dff", marginBottom: 16, paddingLeft: 4 }}>
-              "{selectedClinicSlogan}"
-            </Text>
-          )}
+                                <Text style={{ fontSize: 15, color: "#0b5a51", marginBottom: 6 }}>
+                                  {selectedClinicEmail}
+                                </Text>
+                                
+                                {selectedClinicSlogan && (
+                                  <Text style={{ fontSize: 15, fontStyle: "italic", color: "#416e5dff", marginBottom: 16, paddingLeft: 4 }}>
+                                    "{selectedClinicSlogan}"
+                                  </Text>
+                                )}
 
-          <View style={{ gap: 10, marginTop: 8 }}>
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <View
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  backgroundColor: "#f1f5f9",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginRight: 10,
-                }}
-              >
-                <Text style={{ fontSize: 16 }}>📍</Text>
-              </View>
-              <Text style={{ fontSize: 14, color: "#333", flex: 1 }}>
-                {selectedClinicAddress || "No address provided"}
-              </Text>
-            </View>
+                                <View style={{ gap: 10, marginTop: 8 }}>
+                                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                                    <View
+                                      style={{
+                                        width: 32,
+                                        height: 32,
+                                        borderRadius: 16,
+                                        backgroundColor: "#f1f5f9",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        marginRight: 10,
+                                      }}
+                                    >
+                                      <Text style={{ fontSize: 16 }}>📍</Text>
+                                    </View>
+                                    <Text style={{ fontSize: 14, color: "#333", flex: 1 }}>
+                                      {selectedClinicAddress || "No address provided"}
+                                    </Text>
+                                  </View>
 
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <View
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  backgroundColor: "#f1f5f9",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginRight: 10,
-                }}
-              >
-                <Text style={{ fontSize: 16 }}>📞</Text>
-              </View>
-              <Text style={{ fontSize: 14, color: "#333" }}>
-                {selectedClinicMobile || "No contact"}
-              </Text>
-            </View>
+                                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                                    <View
+                                      style={{
+                                        width: 32,
+                                        height: 32,
+                                        borderRadius: 16,
+                                        backgroundColor: "#f1f5f9",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        marginRight: 10,
+                                      }}
+                                    >
+                                      <Text style={{ fontSize: 16 }}>📞</Text>
+                                    </View>
+                                    <Text style={{ fontSize: 14, color: "#333" }}>
+                                      {selectedClinicMobile || "No contact"}
+                                    </Text>
+                                  </View>
 
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <View
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  backgroundColor: "#f1f5f9",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginRight: 10,
-                }}
-              >
-                <Text style={{ fontSize: 16 }}>🗓️</Text>
-              </View>
-              <Text style={{ fontSize: 14, color: "#333" }}>
-                Joined: {selectedClinicCreatedAt || "N/A"}
-              </Text>
-            </View>
+                                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                                    <View
+                                      style={{
+                                        width: 32,
+                                        height: 32,
+                                        borderRadius: 16,
+                                        backgroundColor: "#f1f5f9",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        marginRight: 10,
+                                      }}
+                                    >
+                                      <Text style={{ fontSize: 16 }}>🗓️</Text>
+                                    </View>
+                                    <Text style={{ fontSize: 14, color: "#333" }}>
+                                      Joined: {selectedClinicCreatedAt || "N/A"}
+                                    </Text>
+                                  </View>
 
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <View
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  backgroundColor: selectedClinicDentist ? "#e8f5e9" : "#ffebee",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginRight: 10,
-                }}
-              >
-                <Text style={{ fontSize: 16 }}>🦷</Text>
-              </View>
-              <Text style={{ fontSize: 14, color: "#333" }}>
-                Dentist: {selectedClinicDentist ? "Available" : "Not Available"}
-              </Text>
-            </View>
-          </View>
+                                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                                    <View
+                                      style={{
+                                        width: 32,
+                                        height: 32,
+                                        borderRadius: 16,
+                                        backgroundColor: selectedClinicDentist ? "#e8f5e9" : "#ffebee",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        marginRight: 10,
+                                      }}
+                                    >
+                                      <Text style={{ fontSize: 16 }}>🦷</Text>
+                                    </View>
+                                    <Text style={{ fontSize: 14, color: "#333" }}>
+                                      Dentist: {selectedClinicDentist ? "Available" : "Not Available"}
+                                    </Text>
+                                  </View>
+                                </View>
 
-          {!isMobile && (
-            <TouchableOpacity
-              onPress={() => setModalMap(true)}
-              style={{
-                backgroundColor: "#f39c12",
-                paddingVertical: 14,
-                paddingHorizontal: 20,
-                borderRadius: 12,
-                marginTop: 16,
-                alignItems: "center",
-                flexDirection: "row",
-                justifyContent: "center",
-                shadowColor: "#f39c12",
-                shadowOffset: { width: 0, height: 3 },
-                shadowOpacity: 0.3,
-                shadowRadius: 6,
-                elevation: 4,
-              }}
-            >
-              <FontAwesome5 name="map-marker-alt" size={18} color="#fff" style={{ marginRight: 8 }} />
-              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>View in Map</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+                                {!isMobile && (
+                                  <TouchableOpacity
+                                    onPress={() => setModalMap(true)}
+                                    style={{
+                                      backgroundColor: "#f39c12",
+                                      paddingVertical: 14,
+                                      paddingHorizontal: 20,
+                                      borderRadius: 12,
+                                      marginTop: 16,
+                                      alignItems: "center",
+                                      flexDirection: "row",
+                                      justifyContent: "center",
+                                      shadowColor: "#f39c12",
+                                      shadowOffset: { width: 0, height: 3 },
+                                      shadowOpacity: 0.3,
+                                      shadowRadius: 6,
+                                      elevation: 4,
+                                    }}
+                                  >
+                                    <FontAwesome5 name="map-marker-alt" size={18} color="#fff" style={{ marginRight: 8 }} />
+                                    <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>View in Map</Text>
+                                  </TouchableOpacity>
+                                )}
+                              </View>
 
-        {/* Introduction Section */}
-        <Text
-          style={{
-            fontSize: 24,
-            fontWeight: "bold",
-            color: "#003f30",
-            marginBottom: 12,
-          }}
-        >
-          Introduction
-        </Text>
+                              {/* Introduction Section */}
+                              <Text
+                                style={{
+                                  fontSize: 24,
+                                  fontWeight: "bold",
+                                  color: "#003f30",
+                                  marginBottom: 12,
+                                }}
+                              >
+                                Introduction
+                              </Text>
 
-        <View
-          style={{
-            backgroundColor: "#fff",
-            borderRadius: 16,
-            padding: 20,
-            marginBottom: 24,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.08,
-            shadowRadius: 8,
-            elevation: 3,
-          }}
-        >
-          <Text
-            style={{
-              fontSize: selectedCI ? 15 : 14,
-              lineHeight: 22,
-              color: selectedCI ? "#333" : "#999",
-              textAlign: selectedCI ? "left" : "center",
-              fontStyle: selectedCI ? "normal" : "italic",
-            }}
-          >
-            {selectedCI || "Introduction has not yet been set"}
-          </Text>
-        </View>
+                              <View
+                                style={{
+                                  backgroundColor: "#fff",
+                                  borderRadius: 16,
+                                  padding: 20,
+                                  marginBottom: 24,
+                                  shadowColor: "#000",
+                                  shadowOffset: { width: 0, height: 2 },
+                                  shadowOpacity: 0.08,
+                                  shadowRadius: 8,
+                                  elevation: 3,
+                                }}
+                              >
+                                <Text
+                                  style={{
+                                    fontSize: selectedCI ? 15 : 14,
+                                    lineHeight: 22,
+                                    color: selectedCI ? "#333" : "#999",
+                                    textAlign: selectedCI ? "left" : "center",
+                                    fontStyle: selectedCI ? "normal" : "italic",
+                                  }}
+                                >
+                                  {selectedCI || "Introduction has not yet been set"}
+                                </Text>
+                              </View>
 
-        {/* Clinic's Dentist Section */}
-        <Text
-          style={{
-            fontSize: 24,
-            fontWeight: "bold",
-            color: "#003f30",
-            marginBottom: 12,
-          }}
-        >
-          Clinic's Dentists
-        </Text>
+                              {/* Clinic's Dentist Section */}
+                              <Text
+                                style={{
+                                  fontSize: 24,
+                                  fontWeight: "bold",
+                                  color: "#003f30",
+                                  marginBottom: 12,
+                                }}
+                              >
+                                Clinic's Dentists
+                              </Text>
 
-        <View
-          style={{
-            backgroundColor: "#fff",
-            borderRadius: 16,
-            padding: 20,
-            marginBottom: 24,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.08,
-            shadowRadius: 8,
-            elevation: 3,
-          }}
-        >
-          {(() => {
-            try {
-              const dentists = JSON.parse(dentistList);
-              return dentists.map((d, i) => (
-                <View 
-                  key={i} 
-                  style={{ 
-                    marginBottom: 16,
-                    paddingBottom: i < dentists.length - 1 ? 16 : 0,
-                    borderBottomWidth: i < dentists.length - 1 ? 1 : 0,
-                    borderBottomColor: "#f0f0f0",
-                  }}
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-                    <View
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 18,
-                        backgroundColor: "#e8f4f5",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        marginRight: 10,
-                      }}
-                    >
-                      <Text style={{ fontSize: 18 }}>👨‍⚕️</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 16, color: "#1a1a1a", fontWeight: "bold" }}>
-                        Dr. {d.name}
-                      </Text>
-                      <Text style={{ fontSize: 13, color: "#666", marginTop: 2 }}>
-                        {d.specialty}
-                      </Text>
-                    </View>
-                  </View>
+                              <View
+                                style={{
+                                  backgroundColor: "#fff",
+                                  borderRadius: 16,
+                                  padding: 20,
+                                  marginBottom: 24,
+                                  shadowColor: "#000",
+                                  shadowOffset: { width: 0, height: 2 },
+                                  shadowOpacity: 0.08,
+                                  shadowRadius: 8,
+                                  elevation: 3,
+                                }}
+                              >
+                                {(() => {
+                                  try {
+                                    const dentists = JSON.parse(dentistList);
+                                    return dentists.map((d, i) => (
+                                      <View 
+                                        key={i} 
+                                        style={{ 
+                                          marginBottom: 16,
+                                          paddingBottom: i < dentists.length - 1 ? 16 : 0,
+                                          borderBottomWidth: i < dentists.length - 1 ? 1 : 0,
+                                          borderBottomColor: "#f0f0f0",
+                                        }}
+                                      >
+                                        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+                                          <View
+                                            style={{
+                                              width: 36,
+                                              height: 36,
+                                              borderRadius: 18,
+                                              backgroundColor: "#e8f4f5",
+                                              alignItems: "center",
+                                              justifyContent: "center",
+                                              marginRight: 10,
+                                            }}
+                                          >
+                                            <Text style={{ fontSize: 18 }}>👨‍⚕️</Text>
+                                          </View>
+                                          <View style={{ flex: 1 }}>
+                                            <Text style={{ fontSize: 16, color: "#1a1a1a", fontWeight: "bold" }}>
+                                              Dr. {d.name}
+                                            </Text>
+                                            <Text style={{ fontSize: 13, color: "#666", marginTop: 2 }}>
+                                              {d.specialty}
+                                            </Text>
+                                          </View>
+                                        </View>
 
-                  {Object.entries(d.weeklySchedule || {}).map(([day, slots], j) =>
-                    slots.length > 0 ? (
-                      <View key={j} style={{ marginLeft: 46, marginTop: 6 }}>
-                        <Text style={{ fontSize: 13, fontWeight: "600", color: "#444", marginBottom: 2 }}>
-                          {day.charAt(0).toUpperCase() + day.slice(1)}:
-                        </Text>
-                        {slots.map((s, k) => (
-                          <Text key={k} style={{ fontSize: 13, color: "#666", marginLeft: 8, marginTop: 2 }}>
-                            • {s}
-                          </Text>
-                        ))}
+                                        {Object.entries(d.weeklySchedule || {}).map(([day, slots], j) =>
+                                          slots.length > 0 ? (
+                                            <View key={j} style={{ marginLeft: 46, marginTop: 6 }}>
+                                              <Text style={{ fontSize: 13, fontWeight: "600", color: "#444", marginBottom: 2 }}>
+                                                {day.charAt(0).toUpperCase() + day.slice(1)}:
+                                              </Text>
+                                              {slots.map((s, k) => (
+                                                <Text key={k} style={{ fontSize: 13, color: "#666", marginLeft: 8, marginTop: 2 }}>
+                                                  • {s}
+                                                </Text>
+                                              ))}
+                                            </View>
+                                          ) : null
+                                        )}
+                                      </View>
+                                    ));
+                                  } catch {
+                                    return (
+                                      <Text style={{
+                                        fontSize: 14,
+                                        color: "#999",
+                                        textAlign: "center",
+                                        fontStyle: "italic",
+                                      }}>
+                                        Dentist list has not yet been set
+                                      </Text>
+                                    );
+                                  }
+                                })()}
+                              </View>
+
+                              {/* Offers Section */}
+                              <Text
+                                style={{
+                                  fontSize: 24,
+                                  fontWeight: "bold",
+                                  color: "#003f30",
+                                  marginBottom: 12,
+                                }}
+                              >
+                                Offers
+                              </Text>
+
+                              <View
+                                style={{
+                                  backgroundColor: "#fff",
+                                  borderRadius: 16,
+                                  padding: 20,
+                                  marginBottom: 24,
+                                  shadowColor: "#000",
+                                  shadowOffset: { width: 0, height: 2 },
+                                  shadowOpacity: 0.08,
+                                  shadowRadius: 8,
+                                  elevation: 3,
+                                }}
+                              >
+                                {selectedOffers && selectedOffers.trim() !== '' ? (
+                                  <View style={{ gap: 8 }}>
+                                    {selectedOffers
+                                      .split('?')
+                                      .filter(offer => offer.trim() !== '')
+                                      .map((offer, i) => (
+                                        <View key={i} style={{ flexDirection: "row", alignItems: "flex-start" }}>
+                                          <Text style={{ fontSize: 15, color: "#4a878bff", marginRight: 8, marginTop: 2 }}>•</Text>
+                                          <Text style={{ fontSize: 15, color: "#333", flex: 1, lineHeight: 22 }}>
+                                            {offer.trim()}
+                                          </Text>
+                                        </View>
+                                      ))}
+                                  </View>
+                                ) : (
+                                  <Text style={{
+                                    fontSize: 14,
+                                    color: "#999",
+                                    textAlign: "center",
+                                    fontStyle: "italic",
+                                  }}>
+                                    Offers have not yet been set
+                                  </Text>
+                                )}
+                              </View>
+
+                              {/* Clinic Schedule Section */}
+                              <Text
+                                style={{
+                                  fontSize: 24,
+                                  fontWeight: "bold",
+                                  color: "#003f30",
+                                  marginBottom: 12,
+                                }}
+                              >
+                                Clinic Schedule
+                              </Text>
+
+                              <View
+                                style={{
+                                  backgroundColor: "#fff",
+                                  borderRadius: 16,
+                                  padding: 20,
+                                  marginBottom: 200,
+                                  shadowColor: "#000",
+                                  shadowOffset: { width: 0, height: 2 },
+                                  shadowOpacity: 0.08,
+                                  shadowRadius: 8,
+                                  elevation: 3,
+                                }}
+                              >
+                                <View
+                                  style={{
+                                    flexDirection: "row",
+                                    justifyContent: "space-between",
+                                    flexWrap: "wrap",
+                                    gap: 12,
+                                  }}
+                                >
+                                  {[
+                                    { label: "Sun", time: selectedSunday },
+                                    { label: "Mon", time: selectedMonday },
+                                    { label: "Tue", time: selectedTuesday },
+                                    { label: "Wed", time: selectedWednesday },
+                                    { label: "Thu", time: selectedThursday },
+                                    { label: "Fri", time: selectedFriday },
+                                    { label: "Sat", time: selectedSaturday },
+                                  ].map((day) => {
+                                    const hasValidTime = day.time && day.time.from && day.time.to;
+                                    const formattedTime = hasValidTime
+                                      ? {
+                                          ...day.time,
+                                          from: {
+                                            ...day.time.from,
+                                            minute: day.time.from.minute?.toString().padStart(2, "0"),
+                                          },
+                                          to: {
+                                            ...day.time.to,
+                                            minute: day.time.to.minute?.toString().padStart(2, "0"),
+                                          },
+                                        }
+                                      : undefined;
+
+                                    return (
+                                      <View
+                                        key={day.label}
+                                        style={{
+                                          flex: isMobile ? 0 : 1,
+                                          minWidth: isMobile ? "30%" : "auto",
+                                          alignItems: "center",
+                                          backgroundColor: hasValidTime ? "#f8fafc" : "#fff5f5",
+                                          padding: 12,
+                                          borderRadius: 12,
+                                          borderWidth: 1,
+                                          borderColor: hasValidTime ? "#e2e8f0" : "#fee",
+                                        }}
+                                      >
+                                        <Text style={{ fontWeight: "700", fontSize: isMobile ? 13 : 15, marginBottom: 6, color: "#1a1a1a" }}>
+                                          {day.label}
+                                        </Text>
+                                        {formattedTime ? (
+                                          <Text
+                                            style={{
+                                              fontSize: isMobile ? 10 : 13,
+                                              color: "#555",
+                                              textAlign: "center",
+                                              lineHeight: isMobile ? 14 : 18,
+                                            }}
+                                          >
+                                            {`${formattedTime.from.hour.toString().padStart(2, "0")}:${formattedTime.from.minute} ${formattedTime.from.atm}`}
+                                            {'\n'}
+                                            {`${formattedTime.to.hour.toString().padStart(2, "0")}:${formattedTime.to.minute} ${formattedTime.to.atm}`}
+                                          </Text>
+                                        ) : (
+                                          <Text
+                                            style={{
+                                              fontSize: isMobile ? 11 : 13,
+                                              color: "#c62828",
+                                              fontWeight: "600",
+                                              textAlign: "center",
+                                            }}
+                                          >
+                                            Closed
+                                          </Text>
+                                        )}
+                                      </View>
+                                    );
+                                  })}
+                                </View>
+
+                                {[
+                                  selectedSunday,
+                                  selectedMonday,
+                                  selectedTuesday,
+                                  selectedWednesday,
+                                  selectedThursday,
+                                  selectedFriday,
+                                  selectedSaturday,
+                                ].every((day) => !day || !day.from || !day.to) && (
+                                  <Text
+                                    style={{
+                                      color: "#999",
+                                      fontSize: 14,
+                                      textAlign: "center",
+                                      marginTop: 16,
+                                      fontStyle: "italic",
+                                    }}
+                                  >
+                                    No schedule available
+                                  </Text>
+                                )}
+                              </View>
+                            </View>
+                          </ScrollView>
+
+                          {isMobile && (
+                            <View
+                              style={{
+                                paddingHorizontal: 16,
+                                paddingVertical: 12,
+                                borderTopWidth: 1,
+                                borderColor: "#e0e0e0",
+                                backgroundColor: "white",
+                                shadowColor: "#000",
+                                shadowOffset: { width: 0, height: -2 },
+                                shadowOpacity: 0.05,
+                                shadowRadius: 3,
+                                elevation: 5,
+                              }}
+                            >
+                              <TouchableOpacity
+                                onPress={() => setModalMap(true)}
+                                style={{
+                                  backgroundColor: "#f39c12",
+                                  paddingVertical: 14,
+                                  paddingHorizontal: 20,
+                                  borderRadius: 12,
+                                  alignItems: "center",
+                                  flexDirection: "row",
+                                  justifyContent: "center",
+                                  shadowColor: "#f39c12",
+                                  shadowOffset: { width: 0, height: 3 },
+                                  shadowOpacity: 0.3,
+                                  shadowRadius: 6,
+                                  elevation: 4,
+                                }}
+                              >
+                                <FontAwesome5 name="map-marker-alt" size={18} color="#fff" style={{ marginRight: 8 }} />
+                                <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>View in Map</Text>
+                              </TouchableOpacity>
+                            </View>
+                          )}
+                        </View>
+                      </Modal>
+
                       </View>
-                    ) : null
-                  )}
-                </View>
-              ));
-            } catch {
-              return (
-                <Text style={{
-                  fontSize: 14,
-                  color: "#999",
-                  textAlign: "center",
-                  fontStyle: "italic",
-                }}>
-                  Dentist list has not yet been set
-                </Text>
-              );
-            }
-          })()}
-        </View>
-
-        {/* Offers Section */}
-        <Text
-          style={{
-            fontSize: 24,
-            fontWeight: "bold",
-            color: "#003f30",
-            marginBottom: 12,
-          }}
-        >
-          Offers
-        </Text>
-
-        <View
-          style={{
-            backgroundColor: "#fff",
-            borderRadius: 16,
-            padding: 20,
-            marginBottom: 24,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.08,
-            shadowRadius: 8,
-            elevation: 3,
-          }}
-        >
-          {selectedOffers && selectedOffers.trim() !== '' ? (
-            <View style={{ gap: 8 }}>
-              {selectedOffers
-                .split('?')
-                .filter(offer => offer.trim() !== '')
-                .map((offer, i) => (
-                  <View key={i} style={{ flexDirection: "row", alignItems: "flex-start" }}>
-                    <Text style={{ fontSize: 15, color: "#4a878bff", marginRight: 8, marginTop: 2 }}>•</Text>
-                    <Text style={{ fontSize: 15, color: "#333", flex: 1, lineHeight: 22 }}>
-                      {offer.trim()}
-                    </Text>
-                  </View>
-                ))}
-            </View>
-          ) : (
-            <Text style={{
-              fontSize: 14,
-              color: "#999",
-              textAlign: "center",
-              fontStyle: "italic",
-            }}>
-              Offers have not yet been set
-            </Text>
-          )}
-        </View>
-
-        {/* Clinic Schedule Section */}
-        <Text
-          style={{
-            fontSize: 24,
-            fontWeight: "bold",
-            color: "#003f30",
-            marginBottom: 12,
-          }}
-        >
-          Clinic Schedule
-        </Text>
-
-        <View
-          style={{
-            backgroundColor: "#fff",
-            borderRadius: 16,
-            padding: 20,
-            marginBottom: 200,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.08,
-            shadowRadius: 8,
-            elevation: 3,
-          }}
-        >
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: 12,
-            }}
-          >
-            {[
-              { label: "Sun", time: selectedSunday },
-              { label: "Mon", time: selectedMonday },
-              { label: "Tue", time: selectedTuesday },
-              { label: "Wed", time: selectedWednesday },
-              { label: "Thu", time: selectedThursday },
-              { label: "Fri", time: selectedFriday },
-              { label: "Sat", time: selectedSaturday },
-            ].map((day) => {
-              const hasValidTime = day.time && day.time.from && day.time.to;
-              const formattedTime = hasValidTime
-                ? {
-                    ...day.time,
-                    from: {
-                      ...day.time.from,
-                      minute: day.time.from.minute?.toString().padStart(2, "0"),
-                    },
-                    to: {
-                      ...day.time.to,
-                      minute: day.time.to.minute?.toString().padStart(2, "0"),
-                    },
-                  }
-                : undefined;
-
-              return (
-                <View
-                  key={day.label}
-                  style={{
-                    flex: isMobile ? 0 : 1,
-                    minWidth: isMobile ? "30%" : "auto",
-                    alignItems: "center",
-                    backgroundColor: hasValidTime ? "#f8fafc" : "#fff5f5",
-                    padding: 12,
-                    borderRadius: 12,
-                    borderWidth: 1,
-                    borderColor: hasValidTime ? "#e2e8f0" : "#fee",
-                  }}
-                >
-                  <Text style={{ fontWeight: "700", fontSize: isMobile ? 13 : 15, marginBottom: 6, color: "#1a1a1a" }}>
-                    {day.label}
-                  </Text>
-                  {formattedTime ? (
-                    <Text
-                      style={{
-                        fontSize: isMobile ? 10 : 13,
-                        color: "#555",
-                        textAlign: "center",
-                        lineHeight: isMobile ? 14 : 18,
-                      }}
-                    >
-                      {`${formattedTime.from.hour.toString().padStart(2, "0")}:${formattedTime.from.minute} ${formattedTime.from.atm}`}
-                      {'\n'}
-                      {`${formattedTime.to.hour.toString().padStart(2, "0")}:${formattedTime.to.minute} ${formattedTime.to.atm}`}
-                    </Text>
-                  ) : (
-                    <Text
-                      style={{
-                        fontSize: isMobile ? 11 : 13,
-                        color: "#c62828",
-                        fontWeight: "600",
-                        textAlign: "center",
-                      }}
-                    >
-                      Closed
-                    </Text>
-                  )}
-                </View>
-              );
-            })}
-          </View>
-
-          {[
-            selectedSunday,
-            selectedMonday,
-            selectedTuesday,
-            selectedWednesday,
-            selectedThursday,
-            selectedFriday,
-            selectedSaturday,
-          ].every((day) => !day || !day.from || !day.to) && (
-            <Text
-              style={{
-                color: "#999",
-                fontSize: 14,
-                textAlign: "center",
-                marginTop: 16,
-                fontStyle: "italic",
-              }}
-            >
-              No schedule available
-            </Text>
-          )}
-        </View>
-      </View>
-    </ScrollView>
-
-    {isMobile && (
-      <View
-        style={{
-          paddingHorizontal: 16,
-          paddingVertical: 12,
-          borderTopWidth: 1,
-          borderColor: "#e0e0e0",
-          backgroundColor: "white",
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.05,
-          shadowRadius: 3,
-          elevation: 5,
-        }}
-      >
-        <TouchableOpacity
-          onPress={() => setModalMap(true)}
-          style={{
-            backgroundColor: "#f39c12",
-            paddingVertical: 14,
-            paddingHorizontal: 20,
-            borderRadius: 12,
-            alignItems: "center",
-            flexDirection: "row",
-            justifyContent: "center",
-            shadowColor: "#f39c12",
-            shadowOffset: { width: 0, height: 3 },
-            shadowOpacity: 0.3,
-            shadowRadius: 6,
-            elevation: 4,
-          }}
-        >
-          <FontAwesome5 name="map-marker-alt" size={18} color="#fff" style={{ marginRight: 8 }} />
-          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>View in Map</Text>
-        </TouchableOpacity>
-      </View>
-    )}
-  </View>
-</Modal>
-
-</View>
                       <View style={{ flex: 1 }}>
                         <Text
                           style={{
                             fontWeight: "bold",
                             fontSize: isMobile ? 15 : 18,
                             marginBottom: 6,
+                            color: 'black'
                           }}
                         >
                           {clinic.clinic_name || "Unnamed Clinic"}
                         </Text>
-                        <Text style={{ marginBottom: 2, fontSize: isMobile ? 13 : 16 }}>
+                        <Text style={{ marginBottom: 2, fontSize: isMobile ? 13 : 16, color: 'black' }}>
                           {clinic.address || "No address provided"}
                         </Text>
                       </View>
@@ -2624,7 +2724,7 @@ useEffect(() => {
                 </View>
               )}
             </>
-            )}
+          )}
             </ScrollView>
         </View>
 
@@ -3562,131 +3662,75 @@ useEffect(() => {
   {/* Divider */}
   <View style={{ marginVertical: 20, borderBottomWidth: 1, borderBottomColor: "#ccc" }} />
 
-  {/* Privacy Policy Title */}
+  {/* TERMS OF USE Title */}
   <Text style={{ fontSize: 20, fontWeight: "bold", marginBottom: 10, color: "#00505cff" }}>
-    Privacy Policy
+    TERMS OF USE
   </Text>
   <Text style={{ fontSize: 14, marginBottom: 10, color: "#444" }}>
-    <Text style={{ fontWeight: "bold" }}>Last Updated:</Text> May 8, 2025{"\n"}
-    <Text style={{ fontWeight: "bold" }}>Effective Immediately</Text>
+    <Text style={{ fontWeight: "bold" }}>Last Updated:</Text> October 13, 2025{"\n"}
   </Text>
 
   <Text style={{ fontSize: 14, color: "#444", lineHeight: 22 }}>
-    By accessing or using Smile Studio: A Cross-Platform Dental Appointment System with AR Teeth and Braces Filter for Dental Patients in San Jose Del Monte, Bulacan, owned and operated by Scuba Scripter and Pixel Cowboy Team, you agree to be legally bound by these Terms of Use. These Terms govern your use of Smile Studio, a web-based and mobile system designed for managing dental appointments with notification-based follow-up reminders.{"\n\n"}
-
-    If you do not agree with any part of these Terms, you must immediately cease all use of the Platform. Continued access constitutes unconditional acceptance of these Terms and any future modifications.{"\n\n"}
+    By accessing or using Smile Studio: A Cross-Platform Dental Appointment System with AR Teeth and Braces Filter for Dental Patients in San Jose Del Monte, Bulacan, owned and operated by Scuba Scripter and Pixel Cowboy Team, you agree to be legally bound by these Terms of Use. If you do not agree, please stop using the platform immediately.{"\n\n"}
 
     <Text style={{ fontWeight: "bold" }}>1. Definitions{"\n"}</Text>
-    • “Appointment” – A scheduled dental consultation booked through Smile Studio.{"\n"}
-    • “No-Show” – Failure to attend a booked Appointment without prior cancellation.{"\n"}
-    • “Grace Period” – A 15-minute window after a scheduled Appointment time during which a late arrival may still be accommodated.{"\n"}
-    • “Malicious Activity” – Any action that disrupts, exploits, or harms the Platform, its users, or affiliated clinics (e.g., hacking, fake bookings, harassment).{"\n\n"}
+    1.1 Appointment – A scheduled dental consultation booked through Smile Studio..{"\n"}
+    1.2 No-Show – Failure to attend a booked appointment without cancellation..{"\n"}
+    1.3 Grace Period – The allowable late arrival time is determined by each partner dental clinic based on their internal policy.{"\n"}
+    1.4 Malicious Activity – Any action that disrupts, exploits, or harms the system, users, or clinics, such as hacking, spamming, harassment, or impersonation.{"\n\n"}
 
     <Text style={{ fontWeight: "bold" }}>2. Eligibility & Account Registration{"\n"}</Text>
-    <Text style={{ fontWeight: "bold" }}>2.1 Age Requirement</Text>{" "}
-    The Platform is accessible to users of all ages but is currently intended for non-commercial, academic/capstone project use only.{"\n"}
-    Minors (under 18) must obtain parental/guardian consent before booking Appointments.{"\n"}
-    <Text style={{ fontWeight: "bold" }}>2.2 Account Responsibility</Text>{" "}
-    Users must provide accurate, current, and complete information during registration. You are solely responsible for:{"\n"}
-    • Maintaining the confidentiality of your login credentials.{"\n"}
-    • All activities conducted under your account.{"\n"}
-    • Immediately notifying us of any unauthorized account use.{"\n\n"}
+    2.1 The platform is primarily intended for academic and demonstration purposes.{"\n"}
+    2.2 Users under 16 years old must have verified parental or guardian consent before registration.{"\n"}
+    2.3 Users are responsible for maintaining the confidentiality of their login credentials and all activities that occur under their account.{"\n\n"}
 
     <Text style={{ fontWeight: "bold" }}>3. Permitted & Prohibited Use{"\n"}</Text>
-    <Text style={{ fontWeight: "bold" }}>3.1 Acceptable Use</Text>{" "}
-    You may use Smile Studio only for lawful purposes, including:{"\n"}
-    • Booking legitimate dental Appointments at partner clinics in San Jose Del Monte, Bulacan.{"\n"}
-    • Accessing clinic information, availability, location, pricing, services, and notification assistance.{"\n\n"}
-
-    <Text style={{ fontWeight: "bold" }}>3.2 Strictly Prohibited Conduct</Text>{" "}
-    Violations will result in immediate account suspension or termination. You agree NOT to:{"\n"}
-    • Create fake or duplicate Appointments (e.g., under false names).{"\n"}
-    • Engage in hacking, phishing, or data scraping (automated or manual).{"\n"}
-    • Harass clinic staff or other users (e.g., trolling, abusive messages).{"\n"}
-    • Upload malicious software (viruses, spyware) or disrupt server operations.{"\n"}
-    • Misrepresent your identity or medical needs.{"\n"}
-    • Circumvent appointment limits (e.g., creating multiple accounts).{"\n\n"}
+    3.1 Permitted Use – Booking legitimate dental appointments, accessing clinic information, and managing appointment schedules.{"\n"}
+    3.2 Prohibited Use – Creating fake or spam appointments, harassing staff or other users, attempting to hack or damage the system, uploading harmful content, impersonating others, or repeatedly violating platform rules.{"\n\n"}  
 
     <Text style={{ fontWeight: "bold" }}>4. Appointment Policies{"\n"}</Text>
-    <Text style={{ fontWeight: "bold" }}>4.1 Booking & Cancellation</Text>{" "}
-    • Appointments operate on a “First-Appoint, First-Served” basis.{"\n"}
-    • No downpayment is required (“Appoint Now, Pay Later”).{"\n"}
-    • Cancellations must be made at least 24 hours in advance via the Platform.{"\n\n"}
+    4.1 Appointments are handled on a “First-Appoint, First-Served” basis.{"\n"}
+    4.2 No downpayment or online payment is required before appointments.{"\n"}
+    4.3 Cancellations must be made at least 24 hours prior to the scheduled time.{"\n"}
+    4.4 Notification reminders are automatically sent to users before appointments.{"\n"}
+    4.5 The grace period for late arrivals is based on the policy of each respective dental clinic.{"\n"}
+    4.6 Clinics may cancel or reschedule appointments due to emergencies or unavailability, and users will be notified promptly through email.{"\n\n"}
 
-    <Text style={{ fontWeight: "bold" }}>4.2 No-Show & Late Arrival Policy</Text>{" "}
-    • Notification Reminders: Users receive automated alerts before their scheduled Appointment.{"\n"}
-    • Grace Period: A 15-minute late arrival window is permitted. After this:{"\n"}
-      • The Appointment is automatically forfeited.{"\n"}
-      • The slot is released to other patients.{"\n"}
-      • The User must reschedule.{"\n"}
-    Strike System:{"\n"}
-    • 1st No-Show = Warning (User is notified of policy violation).{"\n"}
-    • 2nd No-Show = 1-month Account Suspension.{"\n"}
-    Suspended accounts cannot book new Appointments but may still view clinic information.{"\n\n"}
+    <Text style={{ fontWeight: "bold" }}>5. Conduct, Violations, and Disciplinary Actions{"\n"}</Text>
+    5.1 Superadmin Authority – The Superadmin reserves the right to issue warnings, temporary suspensions, or permanent bans on user accounts based on the severity of misconduct or breach of these Terms of Use.{"\n"}
+    5.2 Clinic Authority – Partner dental clinics have the right to warn or ban patients who engage in disruptive or inappropriate behavior such as spamming appointments, harassing dental staff, trolling, or other unprofessional conduct.{"\n"}
+    5.3 Appeals – Users may submit a written appeal to Smile Studio Email if they believe disciplinary actions were issued in error.{"\n\n"}
 
-    <Text style={{ fontWeight: "bold" }}>4.3 Clinic Cancellations</Text>{" "}
-    Partner clinics reserve the right to reschedule or cancel Appointments due to unforeseen circumstances such as dentist unavailability, equipment failure, or emergencies. Patients will be promptly notified via the Platform’s notification system.{"\n\n"}
+    <Text style={{ fontWeight: "bold" }}>Clinic Verification and DTI Validation{"\n"}</Text>
+    6.1 Verification Requirement – All dental clinics registering with Smile Studio must provide valid business information, including their official Department of Trade and Industry (DTI) registration details.{"\n"}
+    6.2 Superadmin DTI Verification – The Superadmin or authorized developers are permitted to verify the authenticity of a clinic’s DTI registration through the official DTI online verification platform.{"\n"}
+    6.3 Legal Basis – Under Philippine law, any civilian may verify the registration status of a sole proprietorship using the Department of Trade and Industry’s public verification system without requiring special access or authority.{"\n"}
+    6.4 Purpose – This verification process ensures that only legitimate and lawfully registered dental clinics operate within Smile Studio, protecting users from fraudulent or unlicensed establishments.{"\n"}
+    6.5 Revocation – The Superadmin reserves the right to suspend or remove a clinic’s account if its DTI registration cannot be verified or has been found invalid.{"\n\n"}
 
-    <Text style={{ fontWeight: "bold" }}>5. Medical Disclaimer & Patient Responsibilities{"\n"}</Text>
-    <Text style={{ fontWeight: "bold" }}>5.1 Non-Emergency Use</Text>{" "}
-    Smile Studio is not intended for medical emergencies. If you are experiencing severe pain, bleeding, infection, or urgent dental issues, please call 911 (Philippine hotline: 117) or proceed to the nearest emergency facility.{"\n"}
-    <Text style={{ fontWeight: "bold" }}>5.2 Patient Honesty</Text>{" "}
-    Patients must provide truthful and complete medical information when booking and attending Appointments.{"\n"}
-    <Text style={{ fontWeight: "bold" }}>5.3 AR Filter Disclaimer</Text>{" "}
-    The AR Teeth and Braces Filter is for illustrative and educational purposes only. It is not a substitute for professional dental advice or treatment planning.{"\n\n"}
+    <Text style={{ fontWeight: "bold" }}>7. Medical Disclaimer{"\n"}</Text>
+    7.1 Smile Studio is not a healthcare provider and is not to be used for emergency medical concerns.{"\n"}
+    7.2 Patients must provide accurate and complete medical information to ensure proper treatment.{"\n"}
+    7.3 The AR Teeth and Braces Filter is provided for visualization and educational purposes only and does not represent professional dental advice.{"\n\n"}
 
-    <Text style={{ fontWeight: "bold" }}>6. Intellectual Property Rights{"\n"}</Text>
-    <Text style={{ fontWeight: "bold" }}>6.1 Ownership</Text>{" "}
-    All text, graphics, logos, clinic data, AR filters, and notification software are the exclusive property of Smile Studio and its partner clinics.{"\n"}
-    <Text style={{ fontWeight: "bold" }}>6.2 Limited License</Text>{" "}
-    Users are granted a revocable, non-exclusive license to access the Platform for personal, non-commercial healthcare purposes.{"\n\n"}
+    <Text style={{ fontWeight: "bold" }}>8. Intellectual Property{"\n"}</Text>
+    8.1 All platform elements, including the system’s design, graphics, text, and content, are the property of Smile Studio and its developers.{"\n"}
+    8.2 The platform may only be used for personal, non-commercial, and educational purposes. Unauthorized reproduction or redistribution is prohibited.{"\n\n"}
 
-    <Text style={{ fontWeight: "bold" }}>7. Privacy & Data Security{"\n"}</Text>
-    Our Privacy Policy explains how we collect, store, and protect your data. By using the Platform, you agree to its terms.{"\n"}
-    <Text style={{ fontWeight: "bold" }}>7.1 Confidentiality</Text>{" "}
-    All medical information shared during Appointments is protected under the Philippine Data Privacy Act of 2012 (Republic Act No. 10173).{"\n"}
-    <Text style={{ fontWeight: "bold" }}>7.2 Data Retention</Text>{" "}
-    Patient data, including appointment records, is stored for a maximum of 12 months for reporting and scheduling purposes. After this period, data is securely deleted in compliance with Philippine law.{"\n\n"}
+    <Text style={{ fontWeight: "bold" }}>9. Privacy and Security{"\n"}</Text>
+    9.1 All user and clinic data are collected, processed, and stored in compliance with the Philippine Data Privacy Act of 2012 (RA 10173).{"\n"}
+    9.2 The handling of personal and clinic information is further explained in the Smile Studio Privacy Policy.{"\n\n"}
 
-    <Text style={{ fontWeight: "bold" }}>8. Disclaimers & Limitation of Liability{"\n"}</Text>
-    <Text style={{ fontWeight: "bold" }}>8.1 No Medical Guarantees</Text>{" "}
-    Smile Studio is not a healthcare provider. We do not guarantee diagnosis accuracy, treatment outcomes, or clinic availability.{"\n"}
-    <Text style={{ fontWeight: "bold" }}>8.2 Platform “As Is”</Text>{" "}
-    The Platform may experience downtime, bugs, or delays.{"\n"}
-    <Text style={{ fontWeight: "bold" }}>8.3 No Financial Liability</Text>{" "}
-    We do not charge users and do not handle payments, medical services, or clinic operations.{"\n"}
-    We are not liable for:{"\n"}
-    • User misconduct (e.g., no-shows, fake bookings).{"\n"}
-    • Clinic errors (e.g., overbooking, misdiagnosis).{"\n"}
-    • Indirect damages (e.g., lost time, travel costs).{"\n\n"}
+    <Text style={{ fontWeight: "bold" }}>10. Termination{"\n"}</Text>
+    10.1 Smile Studio reserves the right to warn, suspend, or delete accounts that violate these Terms of Use.{"\n"}
+    10.2 Users and clinics may request account deletion or data removal by contacting Smile Studio Support.{"\n\n"}
 
-    <Text style={{ fontWeight: "bold" }}>9. Feedback & Complaints{"\n"}</Text>
-    Users may provide feedback or file complaints regarding clinics, services, or system errors by contacting Smile Studio Support.     Reports of unprofessional conduct by clinics or users will be reviewed, and appropriate action may include warnings, suspensions, or termination of accounts.{"\n\n"}
+    <Text style={{ fontWeight: "bold" }}>11. Updates to Terms{"\n"}</Text>
+    11.1 Smile Studio may revise these Terms of Use at any time to reflect policy changes or system improvements.{"\n"}
+    11.2 Users will be notified of updates, and continued use of the platform constitutes acceptance of the revised terms.{"\n\n"}
 
-    <Text style={{ fontWeight: "bold" }}>10. Termination & Enforcement{"\n"}</Text>
-    <Text style={{ fontWeight: "bold" }}>10.1 By Smile Studio</Text>{" "}
-    We may suspend or terminate accounts for:{"\n"}
-    • Breach of these Terms (e.g., fake Appointments, harassment).{"\n"}
-    • Malicious Activity (e.g., hacking attempts).{"\n"}
-    • Excessive No-Shows (per Section 4.2).{"\n"}
-    <Text style={{ fontWeight: "bold" }}>10.2 By Users</Text>{" "}
-    You may deactivate your account at any time by contacting: (+63) 921-888-1835{"\n\n"}
-
-    <Text style={{ fontWeight: "bold" }}>11. Governing Law & Dispute Resolution{"\n"}</Text>
-    These Terms are governed by Philippine law (Republic Act No. 10173, Data Privacy Act of 2012).{"\n"}
-    Disputes must first undergo mediation in San Jose Del Monte, Bulacan.{"\n"}
-    Unresolved disputes will be settled in Philippine courts.{"\n\n"}
-
-    <Text style={{ fontWeight: "bold" }}>12. Contact Information{"\n"}</Text>
-    Smile Studio Support{"\n"}
-    Scuba Scripter and Pixel Cowboy Team{"\n"}
-    (+63) 921-888-1835{"\n"}
-    San Jose Del Monte, Bulacan, Philippines{"\n\n"}
-
-    <Text style={{ fontWeight: "bold" }}>Acknowledgment{"\n"}</Text>
-    By creating an account or booking an Appointment through Smile Studio, you acknowledge that you have read, understood, and agreed to these Terms of Use.
-  </Text>
-
+    Acknowledgment: By creating an account or booking an appointment through Smile Studio, you acknowledge that you have read, understood, and agreed to these Terms of Use.
+    </Text>
 
         {/* Divider */}
         <View style={{ marginVertical: 20, borderBottomWidth: 1, borderBottomColor: "#ccc" }} />
@@ -3698,73 +3742,58 @@ useEffect(() => {
 
         {/* Full Privacy Policy Content */}
         <Text style={{ fontSize: 14, color: "#444", lineHeight: 22 }}>
-          <Text style={{ fontWeight: "bold" }}>Effective Date:</Text> May 8, 2025{"\n\n"}
+          <Text style={{ fontWeight: "bold" }}>Last Updated:</Text> October 13, 2025{"\n\n"}
 
-          This Privacy Policy outlines how Smile Studio (“we”, “our”, or “us”) collects, uses, stores, and protects your personal information when you access or use our platform.
+          This Privacy Policy explains how Smile Studio collects, uses, and safeguards your personal and clinic information.
 
           {"\n\n"}<Text style={{ fontWeight: "bold" }}>1. Information We Collect</Text>{"\n"}
-          We collect the following types of information from users:{"\n"}
-          • Personal identification (name, age, contact number, address){"\n"}
-          • Appointment data (scheduled date/time, clinic, purpose){"\n"}
-          • Optional medical details you provide{"\n"}
-          • Usage data (device type, IP address, app interactions){"\n"}
-          • AR Filter image interactions (not stored or transmitted)
+          1.1 Personal Information – Name, age, date of birth, contact number, email address, and address (Dental Clinic).{"\n"}
+          1.2 Appointment Information – Clinic and dentist details, appointment dates and times.{"\n"}
+          1.3 Health Information (only if provided) – Relevant medical or dental conditions such as allergies, pregnancy, or ongoing medication.{"\n"}
+          1.4 System Data – Username, password, browser information, device type, and system notifications sent.{"\n"}
+          1.5 Clinic Verification Data – Clinic’s registration info and DTI permit number provided for clinic verification.
 
           {"\n\n"}<Text style={{ fontWeight: "bold" }}>2. How We Use Your Information</Text>{"\n"}
-          Your information is used to:{"\n"}
-          • Schedule and manage dental appointments{"\n"}
-          • Send notifications and reminders{"\n"}
-          • Improve system performance and user experience{"\n"}
-          • Provide academic insights for capstone research (anonymized){"\n"}
-          • Ensure compliance with dental service requirements
+          2.1 To manage dental appointments and clinic scheduling.{"\n"}
+          2.2 To send automated notifications and reminders.{"\n"}
+          2.3 To verify clinic legitimacy through DTI validation.{"\n"}
+          2.4 To ensure compliance with applicable regulations.{"\n"}
+          2.5 To improve platform performance and security.
 
-          {"\n\n"}<Text style={{ fontWeight: "bold" }}>3. Legal Basis for Processing</Text>{"\n"}
-          We process your personal data based on:{"\n"}
-          • Your explicit consent when signing up and booking{"\n"}
-          • Legitimate interest in providing the platform{"\n"}
-          • Compliance with local laws and academic guidelines
+          {"\n\n"}<Text style={{ fontWeight: "bold" }}>3. Data Sharing and Disclosure</Text>{"\n"}
+          3.1 With Partner Clinics – For appointment coordination and service preparation.{"\n"}
+          3.2 With DTI or Authorized Platforms – For validation of clinic verification.{"\n"}
+          3.3 With User Consent – For referrals or optional features.{"\n"}
+          3.4 As Required by Law – When mandated by government or regulatory authorities.{"\n"}
+          3.5 For Security – To prevent fraudulent activities or misuse of the platform.
 
-          {"\n\n"}<Text style={{ fontWeight: "bold" }}>4. Data Sharing & Disclosure</Text>{"\n"}
-          • Your personal data is shared only with authorized dental clinics that you book with.{"\n"}
-          • We do not sell, rent, or disclose your data to third parties.{"\n"}
-          • Data may be accessed by developers strictly for technical support and improvement.
+          {"\n\n"}<Text style={{ fontWeight: "bold" }}>4. Data Security</Text>{"\n"}
+          4.1 Smile Studio implements strong physical, technical, and administrative measures to protect data using Supabase, including encrypted passwords, secure logins, and limited access.{"\n"}
+          4.2 However, no online platform can guarantee absolute security. Use of the system is at the user’s own risk.
 
-          {"\n\n"}<Text style={{ fontWeight: "bold" }}>5. Data Retention Policy</Text>{"\n"}
-          • We retain personal data for 12 months after your last activity.{"\n"}
-          • After this period, data is automatically deleted or anonymized.{"\n"}
-          • You may request earlier deletion at any time.
+          {"\n\n"}<Text style={{ fontWeight: "bold" }}>5. Children’s Privacyy</Text>{"\n"}
+          5.1 Smile Studio allows access to users under 16 only with verified parental or guardian consent.{"\n"}
+          5.2 The system does not intentionally collect data from minors without supervision.
 
-          {"\n\n"}<Text style={{ fontWeight: "bold" }}>6. Security Measures</Text>{"\n"}
-          We protect your data using:{"\n"}
-          • Secure server connections (HTTPS){"\n"}
-          • Encrypted data storage and password protection{"\n"}
-          • Access restrictions for authorized personnel only{"\n"}
-          • Regular app maintenance and data privacy training
+          {"\n\n"}<Text style={{ fontWeight: "bold" }}>6. Patient and Clinic Rights</Text>{"\n"}
+          6.1 Under the Data Privacy Act of 2012 (RA 10173), users and clinics have the right to access, correct, delete, or withdraw their data.{"\n"}
+          6.2 They may also file a complaint with the National Privacy Commission (NPC) if data rights are violated.
 
-          {"\n\n"}<Text style={{ fontWeight: "bold" }}>7. Your Rights Under RA 10173</Text>{"\n"}
-          Under the Philippine Data Privacy Act of 2012, you have the right to:{"\n"}
-          • Be informed about data collection and usage{"\n"}
-          • Access your personal data{"\n"}
-          • Correct inaccurate or outdated information{"\n"}
-          • Object to data processing{"\n"}
-          • Withdraw consent at any time{"\n"}
-          • Lodge a complaint with the National Privacy Commission
+          {"\n\n"}<Text style={{ fontWeight: "bold" }}>7. AR Filter Disclaimer</Text>{"\n"}
+          7.1 The AR Teeth and Braces Filter is for educational and visualization purposes only.{"\n"}
+          7.2 It does not store, process, or analyze facial recognition data, and no images are permanently saved.
 
-          {"\n\n"}<Text style={{ fontWeight: "bold" }}>8. Children’s Privacy</Text>{"\n"}
-          The platform is open to minors with parental or guardian consent. We do not knowingly collect data from users under 13 without verified adult approval.
+          {"\n\n"}<Text style={{ fontWeight: "bold" }}>8. Updates to This Privacy Policyy</Text>{"\n"}
+          8.1 This Privacy Policy may be updated periodically to comply with laws or improve practices.{"\n"}
+          8.2 Continued use of the system after updates signifies agreement with the latest version.
 
-          {"\n\n"}<Text style={{ fontWeight: "bold" }}>9. Third-Party Links & Integrations</Text>{"\n"}
-          Smile Studio may link to third-party clinics or systems. We are not responsible for how those parties handle your data. Always review their own privacy practices.
-
-          {"\n\n"}<Text style={{ fontWeight: "bold" }}>10. Changes to This Privacy Policy</Text>{"\n"}
-          We may revise this policy as needed. Updates will be reflected in the app and are effective immediately upon posting.
-
-          {"\n\n"}<Text style={{ fontWeight: "bold" }}>11. Contact Us</Text>{"\n"}
-          For questions or concerns, contact:{"\n"}
+          {"\n\n"}<Text style={{ fontWeight: "bold" }}>9. Contact Informatios</Text>{"\n"}
           Smile Studio Support{"\n"}
           Scuba Scripter and Pixel Cowboy Team{"\n"}
           (+63) 921-888-1835{"\n"}
-          San Jose Del Monte, Bulacan, Philippines
+          San Jose Del Monte, Bulacan, Philippines{"\n"}{"\n"}
+
+          Acknowledgment: By using Smile Studio, you acknowledge that you have read, understood, and agreed to this Privacy Policy.
         </Text>
 
 </ScrollView>
@@ -4113,6 +4142,232 @@ useEffect(() => {
           </ScrollView>
           )}
         </View>
+
+
+{/* Dashboard Chats/Support --------------------------------------------------------------------------------------- */}
+
+<View style={[styles.dashboard, { 
+  width: !isDesktop ? '95%' : expanded ? '80%' : '95%', 
+  right: dashboardView === 'chats' ? 11 : 20000
+}]}>
+  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+    <Text style={{
+      fontSize: 24,
+      fontWeight: "bold",
+      alignSelf: isMobile ? "center" : "flex-start",
+      color: "#00505cff",
+    }}>
+      Support Requests
+    </Text>
+    
+    <TouchableOpacity
+      onPress={() => fetchSupportMessages()}
+      style={{
+        backgroundColor: "#00bcd4",
+        paddingHorizontal: 15,
+        paddingVertical: 8,
+        borderRadius: 8,
+      }}
+    >
+      <Text style={{ color: "white", fontWeight: "bold" }}>Refresh</Text>
+    </TouchableOpacity>
+  </View>
+
+  {/* Filter Tabs */}
+  <View style={{ flexDirection: 'row', marginBottom: 20, gap: 8, justifyContent: isMobile ? 'center' : 'flex-start', flexWrap: 'wrap' }}>
+    {['all', 'pending', 'in_progress', 'resolved'].map((filter) => (
+      <TouchableOpacity
+        key={filter}
+        onPress={() => setSupportFilter(filter as any)}
+        style={{
+          paddingHorizontal: 15,
+          paddingVertical: 8,
+          borderRadius: 20,
+          backgroundColor: supportFilter === filter ? "#00505cff" : "#e0e0e0",
+        }}
+      >
+        <Text style={{
+          color: supportFilter === filter ? "white" : "#666",
+          fontWeight: supportFilter === filter ? "bold" : "normal",
+          textTransform: 'capitalize',
+        }}>
+          {filter.replace('_', ' ')}
+        </Text>
+      </TouchableOpacity>
+    ))}
+  </View>
+
+  {/* Support Messages List */}
+  <ScrollView>
+    {supportLoading ? (
+      <ActivityIndicator size="large" color="#00505cff" style={{ marginTop: 50 }} />
+    ) : (
+      <>
+        {supportMessages
+          .filter((msg) => supportFilter === 'all' || msg.status === supportFilter)
+          .map((message) => (
+            <View
+              key={message.id}
+              style={{
+                backgroundColor: "white",
+                padding: 15,
+                borderRadius: 12,
+                marginBottom: 15,
+                shadowColor: "#000",
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 3,
+                borderLeftWidth: 4,
+                borderLeftColor:
+                  message.status === 'resolved'
+                    ? '#4caf50'
+                    : message.status === 'in_progress'
+                    ? '#ff9800'
+                    : '#f44336',
+              }}
+            >
+              {/* Header */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                  {message.profiles?.avatar_url ? (
+                    <Image
+                      source={{ uri: message.profiles.avatar_url }}
+                      style={{ width: 40, height: 40, borderRadius: 20 }}
+                    />
+                  ) : (
+                    <View
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 20,
+                        backgroundColor: "#00505cff",
+                        justifyContent: "center",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Text style={{ color: "white", fontWeight: "bold" }}>
+                        {message.user_name?.charAt(0).toUpperCase() || 'U'}
+                      </Text>
+                    </View>
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontWeight: "bold", fontSize: 16 }}>
+                      {message.user_name}
+                    </Text>
+                    <Text style={{ fontSize: 12, color: "#666" }}>
+                      {message.profiles?.role === 'clinic' ? 'Clinic' : 'Patient'}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={{ alignItems: 'flex-end' }}>
+                  <View
+                    style={{
+                      paddingHorizontal: 10,
+                      paddingVertical: 4,
+                      borderRadius: 12,
+                      backgroundColor:
+                        message.status === 'resolved'
+                          ? '#e8f5e9'
+                          : message.status === 'in_progress'
+                          ? '#fff3e0'
+                          : '#ffebee',
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 'bold',
+                        color:
+                          message.status === 'resolved'
+                            ? '#4caf50'
+                            : message.status === 'in_progress'
+                            ? '#ff9800'
+                            : '#f44336',
+                      }}
+                    >
+                      {message.status.toUpperCase()}
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 11, color: "#999", marginTop: 4 }}>
+                    {new Date(message.created_at).toLocaleString()}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Message */}
+              <Text style={{ fontSize: 14, color: "#444", marginBottom: 10, lineHeight: 20 }}>
+                {message.message}
+              </Text>
+
+              {/* Admin Notes */}
+              {message.admin_notes && (
+                <View
+                  style={{
+                    backgroundColor: "#f5f5f5",
+                    padding: 10,
+                    borderRadius: 8,
+                    marginBottom: 10,
+                  }}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: "bold", color: "#00505cff" }}>
+                    Admin Notes:
+                  </Text>
+                  <Text style={{ fontSize: 13, color: "#666" }}>{message.admin_notes}</Text>
+                </View>
+              )}
+
+              {/* Action Buttons */}
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                {message.status !== 'in_progress' && (
+                  <TouchableOpacity
+                    onPress={() => updateSupportStatus(message.id, 'in_progress')}
+                    style={{
+                      flex: 1,
+                      backgroundColor: "#ff9800",
+                      paddingVertical: 8,
+                      borderRadius: 8,
+                    }}
+                  >
+                    <Text style={{ color: "white", textAlign: "center", fontWeight: "bold", fontSize: 12 }}>
+                      In Progress
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                
+                {message.status !== 'resolved' && (
+                  <TouchableOpacity
+                    onPress={() => updateSupportStatus(message.id, 'resolved')}
+                    style={{
+                      flex: 1,
+                      backgroundColor: "#4caf50",
+                      paddingVertical: 8,
+                      borderRadius: 8,
+                    }}
+                  >
+                    <Text style={{ color: "white", textAlign: "center", fontWeight: "bold", fontSize: 12 }}>
+                      Mark Resolved
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          ))}
+
+        {supportMessages.filter((msg) => supportFilter === 'all' || msg.status === supportFilter)
+          .length === 0 && (
+          <View style={{ alignItems: 'center', marginTop: 50 }}>
+            <Text style={{ fontSize: 16, color: "#999" }}>
+              No {supportFilter !== 'all' ? supportFilter : ''} support requests
+            </Text>
+          </View>
+        )}
+      </>
+    )}
+  </ScrollView>
+</View>
+
+
                   {/* ⛔ Denial Modal */}
                   <Modal visible={denialModalVisible} transparent animationType="fade">
                     <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" }}>

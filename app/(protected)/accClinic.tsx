@@ -1,3 +1,4 @@
+import CancelAppointment from "@/components/CancelAppointment";
 import { useSession } from "@/lib/SessionContext";
 import { MaterialIcons } from "@expo/vector-icons";
 import Entypo from '@expo/vector-icons/Entypo';
@@ -43,10 +44,12 @@ type Appointment = {
   message: string;
   clinic_profiles: {
     clinic_name: string;
+    email: string;
   };
   profiles: {
     first_name: string;
     last_name: string;
+    email: string;
   };
   isAccepted: boolean | null;
   rejection_note: string;
@@ -225,6 +228,112 @@ const defaultWeeklySchedule = {
     }
     setRequestViewVisible(true);
   };
+
+
+
+ const [supportModalVisible, setSupportModalVisible] = useState(false);
+const [supportInput, setSupportInput] = useState('');
+const [supportMessages, setSupportMessages] = useState([]);
+
+// STEP 2: Add the useEffect hook for fetching and real-time support messages
+useEffect(() => {
+  if (!session?.user?.id) return;
+
+  // Initial fetch of user's support messages
+  const fetchUserSupportMessages = async () => {
+    const { data, error } = await supabase
+      .from('support_messages')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching support messages:', error);
+      return;
+    }
+
+    setSupportMessages(data || []);
+  };
+
+  fetchUserSupportMessages();
+
+  // Real-time subscription
+  const channel = supabase
+    .channel('support-messages-changes')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'support_messages',
+        filter: `user_id=eq.${session.user.id}`,
+      },
+      (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setSupportMessages((prev) => [payload.new, ...prev]);
+        } else if (payload.eventType === 'UPDATE') {
+          setSupportMessages((prev) =>
+            prev.map((msg) => (msg.id === payload.new.id ? payload.new : msg))
+          );
+        } else if (payload.eventType === 'DELETE') {
+          setSupportMessages((prev) =>
+            prev.filter((msg) => msg.id !== payload.old.id)
+          );
+        }
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, [session?.user?.id]);
+
+// STEP 3: Add the submit function
+const submitSupportMessage = async () => {
+  if (!supportInput.trim()) {
+    Alert.alert('Empty Message', 'Please enter a message before submitting.');
+    return;
+  }
+
+  if (!session?.user?.id) {
+    Alert.alert('Error', 'You must be logged in to submit feedback.');
+    return;
+  }
+
+  try {
+    // Use clinicName instead of firstname/lastname since this is a clinic account
+    const userName = clinicName || username || session.user.email || 'Anonymous User';
+
+    const { data, error } = await supabase
+      .from('support_messages')
+      .insert([
+        {
+          user_id: session.user.id,
+          user_name: userName,
+          message: supportInput.trim(),
+        }
+      ])
+      .select();
+
+    if (error) throw error;
+
+    console.log('Support message submitted:', data);
+    
+    setSupportModalVisible(false);
+    setSupportInput('');
+    Alert.alert(
+      'Success',
+      'Thank you for your feedback! Our team will review it shortly.'
+    );
+  } catch (error) {
+    console.error('Error submitting support message:', error);
+    Alert.alert(
+      'Submission Failed',
+      'Something went wrong. Please try again later.'
+    );
+  }
+};
 
 function openScheduleEditor(dentist, index) {
   setEditingDentistIndex(index);
@@ -429,11 +538,13 @@ const handleResetOffers = async () => {
         `
       *,
       clinic_profiles (
-        clinic_name
+        clinic_name,
+        email
       ),
       profiles (
         first_name,
-        last_name
+        last_name,
+        email
       )
     `
       )
@@ -466,11 +577,13 @@ const handleResetOffers = async () => {
         `
         *,
         clinic_profiles (
-          clinic_name
+          clinic_name,
+          email
         ),
         profiles (
           first_name,
-          last_name
+          last_name,
+          email
         )
       `
       )
@@ -502,11 +615,13 @@ const fetchAppointmentsToday = async () => {
       `
       *,
       clinic_profiles (
-        clinic_name
+        clinic_name,
+        email
       ),
       profiles (
         first_name,
-        last_name
+        last_name,
+        email
       )
     `
     )
@@ -564,11 +679,13 @@ useEffect(() => {
         `
       *,
       clinic_profiles (
-        clinic_name
+        clinic_name,
+        email
       ),
       profiles (
         first_name,
-        last_name
+        last_name,
+        email
       )
     `
       )
@@ -586,7 +703,7 @@ useEffect(() => {
     return data;
   };
 
-const acceptAppointment = async (appointmentId: string) => {
+const acceptAppointment = async (appointmentId: string, item: any) => {
   const { error } = await supabase
     .from("appointments")
     .update({ isAccepted: true })
@@ -596,6 +713,30 @@ const acceptAppointment = async (appointmentId: string) => {
     console.error("Error accepting appointment:", error.message); // See error
     Alert.alert("Error", error.message);
   }
+  
+  const response = await fetch("https://xnzoxtidzexqeymiisis.supabase.co/functions/v1/cancellation-email", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhuem94dGlkemV4cWV5bWlpc2lzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM3Nzk0MDYsImV4cCI6MjA2OTM1NTQwNn0.27zW_CmxYp1npvWlzArMGkn-j0PI8OvCk7Q-t8N7JTs`,
+    },
+    body: JSON.stringify({
+      to: item.profiles.email,
+      subject: "Appointment Request Accepted",
+      message: `<!DOCTYPE html><html><head><style>body{font-family:Arial,sans-serif;line-height:1.6;color:#333}.container{max-width:600px;margin:0 auto;padding:20px}.header{background:#10B981;color:#fff;padding:20px;text-align:center;border-radius:8px 8px 0 0}.content{background:#f9fafb;padding:30px;border:1px solid #e5e7eb}.details{background:#fff;padding:20px;border-radius:8px;margin:20px 0;border-left:4px solid #10B981}.detail-row{margin:10px 0}.footer{text-align:center;padding:20px;color:#6b7280;font-size:14px}.success{background:#DCFCE7;padding:15px;border-radius:8px;margin:15px 0;border:1px solid #BBF7D0}</style></head><body><div class="container"><div class="header"><h1 style="margin:0">✅ Appointment Request Accepted</h1></div><div class="content"><p>Hello ${item.profiles.first_name},</p><p>Great news! Your appointment request has been <strong>accepted</strong> by the clinic.</p><div class="success"><strong>✓ Confirmed:</strong> Your appointment request is approved and scheduled.</div><div class="details"><h2 style="margin-top:0;color:#10B981">📋 Appointment Details</h2><div class="detail-row">🏥 <strong>Clinic:</strong> ${item.clinic_profiles.clinic_name}</div><div class="detail-row">📅 <strong>Date & Time:</strong> ${new Date(item.date_time).toLocaleString()}</div><div class="detail-row">📝 <strong>Request:</strong> ${item.request}</div><div class="detail-row">💬 <strong>Message:</strong> ${item.message}</div></div><p><strong>Please make sure to arrive on time. If you need to reschedule or have any questions, please contact the clinic.</strong></p></div><div class="footer"><p>Thank you,<br><strong>${item.clinic_profiles.clinic_name}</strong></p></div></div></body></html>`,
+    }),
+  });
+
+   console.log('Fetch completed. Status:', response.status, 'StatusText:', response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response body:', errorText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+    console.log(item)
+
 };
 
 const rejectAppointment = async (
@@ -1273,8 +1414,8 @@ type Appointment = {
   patient_id: string;
   date_time: string;
   message: string;
-  clinic_profiles: { clinic_name: string };
-  profiles: { first_name: string; last_name: string };
+  clinic_profiles: { clinic_name: string, email: string };
+  profiles: { first_name: string; last_name: string, email: string };
   isAccepted: boolean | null;
   rejection_note: string;
   isAttended: boolean | null;
@@ -2324,15 +2465,7 @@ const PatientHistoryModalComponent = () => (
                   width: !isMobile ? "30%" : "85%",
                 }}
               >
-                <Text
-                  style={{
-                    fontSize: 18,
-                    marginBottom: 20,
-                    textAlign: "center",
-                  }}
-                >
-                  Do you wanna signout?
-                </Text>
+                <Text style={{ fontSize: 18, marginBottom: 20, textAlign: "center", color: 'black'}} > Do you wanna signout? </Text>
 
                 <View
                   style={{
@@ -2563,7 +2696,7 @@ const PatientHistoryModalComponent = () => (
                               backgroundColor: "white",
                               borderRadius: 12,
                               padding: 20,
-                              width: Platform.OS === "web" ? "25%" : "95%",
+                              width: Platform.OS === "web" ? "300px" : "95%",
                             }}
                           >
                             <TouchableOpacity
@@ -3507,25 +3640,8 @@ const PatientHistoryModalComponent = () => (
                     appointmentsToday.length // Assuming you've fetched and stored it
                   }
                 </Text>
-                <Text
-                  style={{
-                    textAlign: "center",
-                    marginTop: 6,
-                    fontSize: isMobile ? 15 : 25,
-                    color: '#00505cff',
-                  }}
-                >
-                  Appointments
-                </Text>
-                <Text
-                  style={{
-                    textAlign: "center",
-                    fontSize: isMobile ? 15 : 25,
-                    color: '#00505cff',
-                  }}
-                >
-                  Today
-                </Text>
+                <Text style={{ textAlign: "center", marginTop: 6, fontSize: isMobile ? 15 : 25, color: '#00505cff', }} > Appointments </Text>
+                <Text style={{ textAlign: "center", fontSize: isMobile ? 15 : 25, color: '#00505cff', }} > Today </Text>
               </View>
               <View style={styles.card}>
                 <View style={{ flexDirection: "column" }}>
@@ -3590,17 +3706,7 @@ const PatientHistoryModalComponent = () => (
         <Text style={{ fontWeight: "bold", color: "white" }}>X</Text>
       </TouchableOpacity>
 
-        <Text
-          style={{
-            fontSize: 24,
-            fontWeight: "bold",
-            marginBottom: 20,
-            alignSelf: "center",
-            color: "#00505cff",
-          }}
-        >
-          Appointments
-        </Text>
+        <Text style={{ fontSize: 24, fontWeight: "bold", marginBottom: 20, alignSelf: "center", color: "#00505cff", }} > Appointments </Text>
 
       <ScrollView
         contentContainerStyle={{
@@ -3624,14 +3730,14 @@ const PatientHistoryModalComponent = () => (
                   marginBottom: 5,
                 }}
               >
-                <Text style={{ fontWeight: "600", marginBottom: 8 }}>
+                <Text style={{ fontWeight: "600", marginBottom: 8, color: '#555' }}>
                   {`${e.item.profiles.first_name} ${e.item.profiles.last_name}`}
                 </Text>
 
-                <Text style={{ fontWeight: "600" }}>
+                <Text style={{ fontWeight: "600", color: '#555' }}>
                   Requested Dentists/Staff :
                 </Text>
-                <Text>
+                <Text style={{color: '#000'}}>
                   {(() => {
                     try {
                       return JSON.parse(e.item.request).join("\n");
@@ -3646,22 +3752,10 @@ const PatientHistoryModalComponent = () => (
                     <Text style={{ color: "#000" }}>
                       {e.item.message.slice(0, 20) + "..."}
                     </Text>
-                    <Text
-                      onPress={() => {
-                        setSelectedMessage(e.item.message);
-                        setModalMessage(true);
-                        setModalVisible(false);
-                      }}
-                      style={{
-                        color: "blue",
-                        textDecorationLine: "underline",
-                      }}
-                    >
-                      See More
-                    </Text>
+                    <Text onPress={() => { setSelectedMessage(e.item.message); setModalMessage(true); setModalVisible(false); }} style={{ color: "blue", textDecorationLine: "underline", }} > See More </Text>
                   </Text>
                 ) : (
-                  <Text style={{ flex: 1 }}>{e.item.message}</Text>
+                  <Text style={{ flex: 1, color: '#555' }}>{e.item.message}</Text>
                 )}
 
                 <View
@@ -3710,7 +3804,7 @@ const PatientHistoryModalComponent = () => (
                   marginBottom: 5,
                 }}
               >
-                <Text style={{ fontWeight: "600" }}>
+                <Text style={{ fontWeight: "600", color: '#555' }}>
                   - NO APPOINTMENTS -
                 </Text>
               </View>
@@ -3779,11 +3873,11 @@ const PatientHistoryModalComponent = () => (
                         borderRadius: 8,
                       }}
                     >
-                      <Text style={{ fontWeight: "bold" }}>Patient's Name :</Text>
-                      <Text>{`${e.item.profiles.first_name} ${e.item.profiles.last_name}`}</Text>
+                      <Text style={{ fontWeight: "bold", color: '#555'}}>Patient's Name :</Text>
+                      <Text style={{color: '#000'}}>{`${e.item.profiles.first_name} ${e.item.profiles.last_name}`}</Text>
 
-                      <Text style={{ fontWeight: "bold" }}>Date & Time of Appointment :</Text>
-                      <Text>{`Date : ${new Date(e.item.date_time).toLocaleString(undefined, {
+                      <Text style={{ fontWeight: "bold", color: '#555' }}>Date & Time of Appointment :</Text>
+                      <Text style={{color: '#555'}}>{`Date : ${new Date(e.item.date_time).toLocaleString(undefined, {
                               year: "numeric",
                               month: "numeric",
                               day: "numeric",
@@ -3792,10 +3886,8 @@ const PatientHistoryModalComponent = () => (
                               hour12: true,
                             })}`}</Text>
 
-                      <Text style={{ fontWeight: "bold" }}>
-                        Requested Dentists/Staff :
-                      </Text>
-                      <Text>
+                      <Text style={{ fontWeight: "bold", color: '#555' }}> Requested Dentists/Staff : </Text>
+                      <Text style={{color: '#555'}}>
                         {(() => {
                           try {
                             return JSON.parse(e.item.request).join("\n");
@@ -3815,35 +3907,20 @@ const PatientHistoryModalComponent = () => (
                           borderColor: "#ffe680",
                         }}
                       >
-                        <Text style={{ fontWeight: "bold" }}>Message :</Text>
+                        <Text style={{ fontWeight: "bold", color: '#555' }}>Message :</Text>
                         {e.item.message.length > 20 ? (
-                          <Text style={{ textAlign: "left", flex: 1 }}>
+                          <Text style={{ textAlign: "left", flex: 1, color: '#555' }}>
                             <Text style={{ color: "#000" }}>
                               {e.item.message.slice(0, 20) + "..."}
                             </Text>
-                            <Text
-                            onPress={() => {
-                              setSelectedMessage(e.item.message);
-                              setModalMessage(true);
-                            }} style={{ color: "blue", textDecorationLine: "underline" }}>
-                              See More
-                            </Text>
+                            <Text onPress={() => { setSelectedMessage(e.item.message); setModalMessage(true); }} style={{ color: "blue", textDecorationLine: "underline" }}> See More </Text>
                           </Text>
                       ) : (
-                        <Text style={{ flex: 1 }}>
-                          {e.item.message}
-                        </Text>
+                        <Text style={{ flex: 1, color: '#555' }}> {e.item.message} </Text>
                       )}
                       </View>
 
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          justifyContent: "flex-end",
-                          marginTop: 10,
-                          gap: 10,
-                        }}
-                      >
+                      <View style={{ flexDirection: "row", justifyContent: "flex-end", marginTop: 10, gap: 10, }} >
                         <TouchableOpacity
                           onPress={() => acceptAppointment(e.item.id)}
                           style={{
@@ -3853,38 +3930,14 @@ const PatientHistoryModalComponent = () => (
                             borderRadius: 6,
                           }}
                         >
-                          <Text
-                            style={{ color: "white", fontWeight: "600" }}
-                          >
-                            Accept
-                          </Text>
+                          <Text style={{ color: "white", fontWeight: "600" }} > Accept </Text>
                         </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() => {
-                            setRejectAppointmentID(e.item.id);
-                          }}
-                          style={{
-                            backgroundColor: "#F44336",
-                            paddingVertical: 8,
-                            paddingHorizontal: 16,
-                            borderRadius: 6,
-                          }}
-                        >
-                          <Text
-                            style={{ color: "white", fontWeight: "600" }}
-                          >
-                            Reject
-                          </Text>
+                        <TouchableOpacity onPress={() => { setRejectAppointmentID(e.item.id); }} style={{ backgroundColor: "#F44336", paddingVertical: 8, paddingHorizontal: 16, borderRadius: 6, }} >
+                          <Text style={{ color: "white", fontWeight: "600" }} > Reject </Text>
                         </TouchableOpacity>
                       </View>
 
-                      <Text
-                        style={{
-                          textAlign: "right",
-                          color: "#2c2c2cff",
-                          fontSize: 10,
-                        }}
-                      >
+                      <Text style={{ textAlign: "right", color: "#2c2c2cff", fontSize: 10, }} >
                         {`Created at : ${new Date(e.item.created_at || 0).toLocaleString()}`}
                       </Text>
                     </View>
@@ -5542,12 +5595,10 @@ const PatientHistoryModalComponent = () => (
               {/* Patient with clickable clipboard */}
               <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: "700", marginBottom: 6 }}>
+                  <Text style={{ fontWeight: "700", marginBottom: 6, color: '#555' }}>
                     Patient:
                   </Text>
-                  <Text>
-                    {`${item.profiles.first_name} ${item.profiles.last_name}`}
-                  </Text>
+                  <Text style={{color: '#000'}}> {`${item.profiles.first_name} ${item.profiles.last_name}`} </Text>
                 </View>
                 <TouchableOpacity
                   onPress={() => {
@@ -5566,56 +5617,34 @@ const PatientHistoryModalComponent = () => (
                   <FontAwesome5 name="clipboard-list" size={20} color="#fff" />
                 </TouchableOpacity>
               </View>
+                
+              {item.message === '' && 
+                <> 
+                  <Text style={{ fontWeight: "700", marginBottom: 6, color: '#555' }}> Message: </Text>
+                  <Text style={{ marginBottom: 10 }}>
+                    {item.message.length > 40 ? (
+                      <>
+                        {item.message.slice(0, 40)}...
+                        <Text onPress={() => { setSelectedMessage(item.message); setModalMessage(true); }} style={{ color: "blue", textDecorationLine: "underline", }} > {" "} See More </Text>
+                      </>
+                    ) : (
+                      item.message
+                    )}
+                  </Text>
+                </>  
+              }
 
-              <Text style={{ fontWeight: "700", marginBottom: 6 }}>
-                Message:
-              </Text>
-              <Text style={{ marginBottom: 10 }}>
-                {item.message.length > 40 ? (
-                  <>
-                    {item.message.slice(0, 40)}...
-                    <Text
-                      onPress={() => {
-                        setSelectedMessage(item.message);
-                        setModalMessage(true);
-                      }}
-                      style={{
-                        color: "blue",
-                        textDecorationLine: "underline",
-                      }}
-                    >
-                      {" "}
-                      See More
-                    </Text>
-                  </>
-                ) : (
-                  item.message
-                )}
-              </Text>
-
-              <Text style={{ fontWeight: "700", marginBottom: 6 }}>
-                Request:
-              </Text>
+              <Text style={{ fontWeight: "700", marginBottom: 6, color: '#555' }}> Request: </Text>
               <TouchableOpacity
                 onPress={() => {
                   openRequestView(item.request);
                 }}
               >
-                <Text
-                  style={{
-                    color: "blue",
-                    textDecorationLine: "underline",
-                    marginBottom: 10,
-                  }}
-                >
-                  View Request
-                </Text>
+                <Text style={{ color: "blue", textDecorationLine: "underline", marginBottom: 10, }} > View Request </Text>
               </TouchableOpacity>
 
-              <Text style={{ fontWeight: "700", marginBottom: 6 }}>
-                Request Date & Time:
-              </Text>
-              <Text style={{ marginBottom: 10 }}>
+              <Text style={{ fontWeight: "700", marginBottom: 6, color: '#555' }}> Request Date & Time: </Text>
+              <Text style={{ marginBottom: 10, color: '#000' }}>
                 {new Date(item.date_time).toLocaleString(undefined, {
                   year: "numeric",
                   month: "numeric",
@@ -5626,10 +5655,13 @@ const PatientHistoryModalComponent = () => (
                 })}
               </Text>
 
-              <Text style={{ fontWeight: "700", marginBottom: 6 }}>
-                Created At:
-              </Text>
-              <Text>{new Date(item.created_at || 0).toLocaleString()}</Text>
+              <Text style={{ fontWeight: "700", marginBottom: 6, color: '#555' }}> Created At: </Text>
+              <Text style={{color: '#000', marginBottom: 20}}>{new Date(item.created_at || 0).toLocaleString()}</Text>
+              {/* <Text style={{color: 'black'}}>{item.clinic_profiles.email}</Text>
+              <Text style={{color: 'black'}}>{item.profiles.email}</Text>
+              <Text style={{color: 'black'}}>{item.id}</Text> */}
+
+              <CancelAppointment data={item} sender_email={item.clinic_profiles.email} receiver_email={item.profiles.email}/>
             </View>
           ))
         )}
@@ -5735,18 +5767,10 @@ const PatientHistoryModalComponent = () => (
                     openRequestView(item.request);
                   }}
                 >
-                  <Text
-                    style={{
-                      color: "#1976d2",
-                      textDecorationLine: "underline",
-                      fontSize: 15,
-                    }}
-                  >
-                    View Request
-                  </Text>
+                  <Text style={{ color: "#1976d2", textDecorationLine: "underline", fontSize: 15, }} > View Request </Text>
                 </TouchableOpacity>
 
-                <Text style={{ flex: 1 }}>
+                <Text style={{ flex: 1, color: '#000' }}>
                   {new Date(item.date_time).toLocaleString(undefined, {
                     year: "numeric",
                     month: "numeric",
@@ -5760,19 +5784,12 @@ const PatientHistoryModalComponent = () => (
                 <Text style={{ flex: 1 }}>
                   {new Date(item.created_at || 0).toLocaleString()}
                 </Text>
+                <CancelAppointment data={item} sender_email={item.clinic_profiles.email} receiver_email={item.profiles.email}/>
               </View>
             )}
             ListEmptyComponent={() => (
-              <View
-                style={{
-                  width: "100%",
-                  alignItems: "center",
-                  marginTop: 40,
-                }}
-              >
-                <Text style={{ fontSize: 20, color: "gray" }}>
-                  - No Appointments -
-                </Text>
+              <View style={{ width: "100%", alignItems: "center", marginTop: 40, }} >
+                <Text style={{ fontSize: 20, color: "gray" }}> - No Appointments - </Text>
               </View>
             )}
           />
@@ -5898,8 +5915,8 @@ const PatientHistoryModalComponent = () => (
                       >
                       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
                         <View style={{ flex: 1 }}>
-                          <Text style={{ fontWeight: "700", marginBottom: 6 }}>Patient:</Text>
-                          <Text>
+                          <Text style={{ fontWeight: "700", marginBottom: 6, color: 'black' }}>Patient:</Text>
+                          <Text style={{ color: 'black' }}>
                             {wrapText(
                               `${item.profiles.first_name} ${item.profiles.last_name}`,
                               40
@@ -5921,8 +5938,8 @@ const PatientHistoryModalComponent = () => (
                         </TouchableOpacity>
                       </View>
 
-                        <Text style={{ fontWeight: "700", marginBottom: 6 }}>Request Date & Time:</Text>
-                        <Text style={{ marginBottom: 10 }}>
+                        <Text style={{ fontWeight: "700", marginBottom: 6,  color: 'black'  }}>Request Date & Time:</Text>
+                        <Text style={{ marginBottom: 10,  color: 'black'  }}>
                           {`${new Date(item.date_time).toLocaleString(undefined, {
                             year: "numeric",
                             month: "numeric",
@@ -5933,8 +5950,8 @@ const PatientHistoryModalComponent = () => (
                           })}`}
                         </Text>
 
-                        <Text style={{ fontWeight: "700", marginBottom: 6 }}>Message:</Text>
-                        <Text style={{ marginBottom: 10 }}>
+                        <Text style={{ fontWeight: "700", marginBottom: 6,  color: 'black'  }}>Message:</Text>
+                        <Text style={{ marginBottom: 10,  color: 'black'  }}>
                           {item.message.length > 20 ? (
                             <>
                               {item.message.slice(0, 20) + "... "}
@@ -5953,18 +5970,18 @@ const PatientHistoryModalComponent = () => (
                           )}
                         </Text>
 
-                        <Text style={{ fontWeight: "700", marginBottom: 6 }}>Request:</Text>
+                        <Text style={{ fontWeight: "700", marginBottom: 6,  color: 'black'  }}>Request:</Text>
                         <TouchableOpacity
                           onPress={() => openRequestView(item.request)}
                           style={{ marginBottom: 10 }}
                         >
-                          <Text style={{ color: "blue", textDecorationLine: "underline" }}>
+                          <Text style={{ color: "blue", textDecorationLine: "underline",  color: 'black'  }}>
                             View Request
                           </Text>
                         </TouchableOpacity>
 
-                        <Text style={{ fontWeight: "700", marginBottom: 6 }}>Created At:</Text>
-                        <Text style={{ marginBottom: 10 }}>
+                        <Text style={{ fontWeight: "700", marginBottom: 6 ,  color: 'black' }}>Created At:</Text>
+                        <Text style={{ marginBottom: 10 ,  color: 'black' }}>
                           {new Date(item.created_at || 0).toLocaleString()}
                         </Text>
 
@@ -5976,7 +5993,7 @@ const PatientHistoryModalComponent = () => (
                           }}
                         >
                           <TouchableOpacity
-                            onPress={() => acceptAppointment(item.id)}
+                            onPress={() => acceptAppointment(item.id, item)}
                             style={{
                               backgroundColor: "#4CAF50",
                               borderRadius: 8,
@@ -6143,7 +6160,7 @@ const PatientHistoryModalComponent = () => (
                           >
 
                             <TouchableOpacity
-                              onPress={() => acceptAppointment(item.id)}
+                              onPress={() => acceptAppointment(item.id, item)}
                               style={{
                                 backgroundColor: '#4CAF50',
                                 borderRadius: 8,
@@ -7197,8 +7214,231 @@ const PatientHistoryModalComponent = () => (
           Terms of Use
         </Text>
       </TouchableOpacity>
+
+{/* Support/Feedback Section - ADD THIS BEFORE MEET THE TEAM */}
+<View
+  style={{
+    padding: 20,
+    backgroundColor: "#f7f7f7ff",
+    borderRadius: 16,
+    marginTop: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  }}
+>
+  <Text
+    style={{
+      fontSize: 28,
+      fontWeight: "bold",
+      marginBottom: 10,
+      textAlign: "center",
+      color: "#00505cff",
+    }}
+  >
+    We Value Your Feedback
+  </Text>
+
+  <Text
+    style={{
+      fontSize: 16,
+      color: "#555",
+      textAlign: "center",
+      marginBottom: 20,
+      lineHeight: 24,
+    }}
+  >
+    Have a suggestion, found a bug, or experiencing an issue? We'd love to hear from you! Your feedback helps us improve Smile Studio.
+  </Text>
+
+  <TouchableOpacity
+    onPress={() => setSupportModalVisible(true)}
+    style={{
+      backgroundColor: "#00bcd4",
+      paddingVertical: 14,
+      paddingHorizontal: 30,
+      borderRadius: 12,
+      alignSelf: "center",
+      shadowColor: "#00bcd4",
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.3,
+      shadowRadius: 6,
+      elevation: 4,
+    }}
+  >
+    <View style={{ flexDirection: "row", alignItems: "center" }}>
+      <FontAwesome5 name="hand-holding-heart" size={18} color="white" style={{ marginRight: 8 }} />
+      <Text
+        style={{
+          color: "white",
+          fontWeight: "bold",
+          fontSize: 16,
+        }}
+      >
+        Send Feedback
+      </Text>
+    </View>
+  </TouchableOpacity>
+
+  <Text
+    style={{
+      fontSize: 13,
+      color: "#777",
+      textAlign: "center",
+      marginTop: 15,
+      fontStyle: "italic",
+    }}
+  >
+    Or contact us directly at: (+63) 921-888-1835
+  </Text>
+</View>
+
+{/* Support Modal - ADD THIS IN YOUR MODALS SECTION (with other modals) */}
+<Modal
+  visible={supportModalVisible}
+  transparent
+  onRequestClose={() => setSupportModalVisible(false)}
+>
+  <View
+    style={{
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: "rgba(0,0,0,0.5)",
+      padding: 20,
+    }}
+  >
+    <View
+      style={{
+        backgroundColor: "white",
+        width: isMobile ? "95%" : "40%",
+        padding: 20,
+        borderWidth: 2,
+        borderColor: '#00bcd4',
+        borderRadius: 16,
+        maxHeight: "90%",
+      }}
+    >
+      <TouchableOpacity
+        onPress={() => setSupportModalVisible(false)}
+        style={{
+          position: "absolute",
+          top: 15,
+          right: 15,
+          backgroundColor: "#00505cff",
+          width: 30,
+          height: 30,
+          borderRadius: 15,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <Text style={{ color: "white", fontWeight: "bold", fontSize: 18 }}>×</Text>
+      </TouchableOpacity>
+
+      <Text 
+        style={{ 
+          fontSize: 20, 
+          fontWeight: "bold", 
+          color: "#00505cff", 
+          marginBottom: 10,
+          marginTop: 10,
+        }}
+      >
+        Send Us Your Feedback
+      </Text>
+
+      <Text 
+        style={{ 
+          fontSize: 14, 
+          color: "#555", 
+          marginBottom: 15,
+          lineHeight: 20,
+        }}
+      >
+        Tell us about bugs, suggestions, or any issues you've encountered. Your input helps us make Smile Studio better.
+      </Text>
+
+      <TextInput
+        placeholder="Type your message here..."
+        placeholderTextColor={'#bbb'}
+        value={supportInput}
+        onChangeText={setSupportInput}
+        maxLength={500}
+        multiline
+        style={{
+          borderColor: "#00bcd4",
+          borderWidth: 1.5,
+          borderRadius: 8,
+          padding: 12,
+          height: 130,
+          textAlignVertical: "top",
+          marginBottom: 8,
+          fontSize: 14,
+          color: "#333",
+        }}
+      />
+
+      <Text 
+        style={{ 
+          fontSize: 12, 
+          color: "#888", 
+          marginBottom: 15,
+          textAlign: "right",
+        }}
+      >
+        {supportInput.length}/500 characters
+      </Text>
+
+      <TouchableOpacity
+        onPress={submitSupportMessage}
+        disabled={!supportInput.trim()}
+        style={{
+          backgroundColor: supportInput.trim() ? "#00bcd4" : "#ccc",
+          paddingVertical: 12,
+          borderRadius: 8,
+          marginBottom: 10,
+        }}
+      >
+        <Text 
+          style={{ 
+            color: "white", 
+            textAlign: "center", 
+            fontWeight: "bold",
+            fontSize: 16,
+          }}
+        >
+          Submit Feedback
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        onPress={() => {
+          setSupportModalVisible(false);
+          setSupportInput('');
+        }}
+        style={{
+          paddingVertical: 10,
+        }}
+      >
+        <Text 
+          style={{ 
+            textAlign: "center", 
+            color: "#00505cff", 
+            fontWeight: "600",
+            fontSize: 15,
+          }}
+        >
+          Cancel
+        </Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
     </View>
           </ScrollView>
+
         </View>
         )}
 
@@ -7225,221 +7465,150 @@ const PatientHistoryModalComponent = () => (
               maxHeight: "80%",
             }}
           >
-  <ScrollView>
-    <Text style={{ fontSize: 20, fontWeight: "bold", marginBottom: 10, color: "#00505cff" }}>
-      SMILE STUDIO
+<ScrollView>
+  <Text style={{ fontSize: 20, fontWeight: "bold", marginBottom: 10, color: "#00505cff" }}>
+    SMILE STUDIO
+  </Text>
+
+
+  {/* Divider */}
+  <View style={{ marginVertical: 20, borderBottomWidth: 1, borderBottomColor: "#ccc" }} />
+
+  {/* TERMS OF USE Title */}
+  <Text style={{ fontSize: 20, fontWeight: "bold", marginBottom: 10, color: "#00505cff" }}>
+    TERMS OF USE
+  </Text>
+  <Text style={{ fontSize: 14, marginBottom: 10, color: "#444" }}>
+    <Text style={{ fontWeight: "bold" }}>Last Updated:</Text> October 13, 2025{"\n"}
+  </Text>
+
+  <Text style={{ fontSize: 14, color: "#444", lineHeight: 22 }}>
+    By accessing or using Smile Studio: A Cross-Platform Dental Appointment System with AR Teeth and Braces Filter for Dental Patients in San Jose Del Monte, Bulacan, owned and operated by Scuba Scripter and Pixel Cowboy Team, you agree to be legally bound by these Terms of Use. If you do not agree, please stop using the platform immediately.{"\n\n"}
+
+    <Text style={{ fontWeight: "bold" }}>1. Definitions{"\n"}</Text>
+    1.1 Appointment – A scheduled dental consultation booked through Smile Studio..{"\n"}
+    1.2 No-Show – Failure to attend a booked appointment without cancellation..{"\n"}
+    1.3 Grace Period – The allowable late arrival time is determined by each partner dental clinic based on their internal policy.{"\n"}
+    1.4 Malicious Activity – Any action that disrupts, exploits, or harms the system, users, or clinics, such as hacking, spamming, harassment, or impersonation.{"\n\n"}
+
+    <Text style={{ fontWeight: "bold" }}>2. Eligibility & Account Registration{"\n"}</Text>
+    2.1 The platform is primarily intended for academic and demonstration purposes.{"\n"}
+    2.2 Users under 16 years old must have verified parental or guardian consent before registration.{"\n"}
+    2.3 Users are responsible for maintaining the confidentiality of their login credentials and all activities that occur under their account.{"\n\n"}
+
+    <Text style={{ fontWeight: "bold" }}>3. Permitted & Prohibited Use{"\n"}</Text>
+    3.1 Permitted Use – Booking legitimate dental appointments, accessing clinic information, and managing appointment schedules.{"\n"}
+    3.2 Prohibited Use – Creating fake or spam appointments, harassing staff or other users, attempting to hack or damage the system, uploading harmful content, impersonating others, or repeatedly violating platform rules.{"\n\n"}  
+
+    <Text style={{ fontWeight: "bold" }}>4. Appointment Policies{"\n"}</Text>
+    4.1 Appointments are handled on a “First-Appoint, First-Served” basis.{"\n"}
+    4.2 No downpayment or online payment is required before appointments.{"\n"}
+    4.3 Cancellations must be made at least 24 hours prior to the scheduled time.{"\n"}
+    4.4 Notification reminders are automatically sent to users before appointments.{"\n"}
+    4.5 The grace period for late arrivals is based on the policy of each respective dental clinic.{"\n"}
+    4.6 Clinics may cancel or reschedule appointments due to emergencies or unavailability, and users will be notified promptly through email.{"\n\n"}
+
+    <Text style={{ fontWeight: "bold" }}>5. Conduct, Violations, and Disciplinary Actions{"\n"}</Text>
+    5.1 Superadmin Authority – The Superadmin reserves the right to issue warnings, temporary suspensions, or permanent bans on user accounts based on the severity of misconduct or breach of these Terms of Use.{"\n"}
+    5.2 Clinic Authority – Partner dental clinics have the right to warn or ban patients who engage in disruptive or inappropriate behavior such as spamming appointments, harassing dental staff, trolling, or other unprofessional conduct.{"\n"}
+    5.3 Appeals – Users may submit a written appeal to Smile Studio Email if they believe disciplinary actions were issued in error.{"\n\n"}
+
+    <Text style={{ fontWeight: "bold" }}>Clinic Verification and DTI Validation{"\n"}</Text>
+    6.1 Verification Requirement – All dental clinics registering with Smile Studio must provide valid business information, including their official Department of Trade and Industry (DTI) registration details.{"\n"}
+    6.2 Superadmin DTI Verification – The Superadmin or authorized developers are permitted to verify the authenticity of a clinic’s DTI registration through the official DTI online verification platform.{"\n"}
+    6.3 Legal Basis – Under Philippine law, any civilian may verify the registration status of a sole proprietorship using the Department of Trade and Industry’s public verification system without requiring special access or authority.{"\n"}
+    6.4 Purpose – This verification process ensures that only legitimate and lawfully registered dental clinics operate within Smile Studio, protecting users from fraudulent or unlicensed establishments.{"\n"}
+    6.5 Revocation – The Superadmin reserves the right to suspend or remove a clinic’s account if its DTI registration cannot be verified or has been found invalid.{"\n\n"}
+
+    <Text style={{ fontWeight: "bold" }}>7. Medical Disclaimer{"\n"}</Text>
+    7.1 Smile Studio is not a healthcare provider and is not to be used for emergency medical concerns.{"\n"}
+    7.2 Patients must provide accurate and complete medical information to ensure proper treatment.{"\n"}
+    7.3 The AR Teeth and Braces Filter is provided for visualization and educational purposes only and does not represent professional dental advice.{"\n\n"}
+
+    <Text style={{ fontWeight: "bold" }}>8. Intellectual Property{"\n"}</Text>
+    8.1 All platform elements, including the system’s design, graphics, text, and content, are the property of Smile Studio and its developers.{"\n"}
+    8.2 The platform may only be used for personal, non-commercial, and educational purposes. Unauthorized reproduction or redistribution is prohibited.{"\n\n"}
+
+    <Text style={{ fontWeight: "bold" }}>9. Privacy and Security{"\n"}</Text>
+    9.1 All user and clinic data are collected, processed, and stored in compliance with the Philippine Data Privacy Act of 2012 (RA 10173).{"\n"}
+    9.2 The handling of personal and clinic information is further explained in the Smile Studio Privacy Policy.{"\n\n"}
+
+    <Text style={{ fontWeight: "bold" }}>10. Termination{"\n"}</Text>
+    10.1 Smile Studio reserves the right to warn, suspend, or delete accounts that violate these Terms of Use.{"\n"}
+    10.2 Users and clinics may request account deletion or data removal by contacting Smile Studio Support.{"\n\n"}
+
+    <Text style={{ fontWeight: "bold" }}>11. Updates to Terms{"\n"}</Text>
+    11.1 Smile Studio may revise these Terms of Use at any time to reflect policy changes or system improvements.{"\n"}
+    11.2 Users will be notified of updates, and continued use of the platform constitutes acceptance of the revised terms.{"\n\n"}
+
+    Acknowledgment: By creating an account or booking an appointment through Smile Studio, you acknowledge that you have read, understood, and agreed to these Terms of Use.
     </Text>
 
+        {/* Divider */}
+        <View style={{ marginVertical: 20, borderBottomWidth: 1, borderBottomColor: "#ccc" }} />
 
-    {/* Divider */}
-    <View style={{ marginVertical: 20, borderBottomWidth: 1, borderBottomColor: "#ccc" }} />
+        {/* Privacy Policy Title */}
+        <Text style={{ fontSize: 20, fontWeight: "bold", marginBottom: 10, color: "#00505cff" }}>
+          Privacy Policy
+        </Text>
 
-    {/* Privacy Policy Title */}
-    <Text style={{ fontSize: 20, fontWeight: "bold", marginBottom: 10, color: "#00505cff" }}>
-      Privacy Policy
-    </Text>
-    <Text style={{ fontSize: 14, marginBottom: 10, color: "#444" }}>
-      <Text style={{ fontWeight: "bold" }}>Last Updated:</Text> May 8, 2025{"\n"}
-      <Text style={{ fontWeight: "bold" }}>Effective Immediately</Text>
-    </Text>
+        {/* Full Privacy Policy Content */}
+        <Text style={{ fontSize: 14, color: "#444", lineHeight: 22 }}>
+          <Text style={{ fontWeight: "bold" }}>Last Updated:</Text> October 13, 2025{"\n\n"}
 
-    <Text style={{ fontSize: 14, color: "#444", lineHeight: 22 }}>
-      By accessing or using Smile Studio: A Cross-Platform Dental Appointment System with AR Teeth and Braces Filter for Dental Patients in San Jose Del Monte, Bulacan, owned and operated by Scuba Scripter and Pixel Cowboy Team, you agree to be legally bound by these Terms of Use. These Terms govern your use of Smile Studio, a web-based and mobile system designed for managing dental appointments with notification-based follow-up reminders.{"\n\n"}
+          This Privacy Policy explains how Smile Studio collects, uses, and safeguards your personal and clinic information.
 
-      If you do not agree with any part of these Terms, you must immediately cease all use of the Platform. Continued access constitutes unconditional acceptance of these Terms and any future modifications.{"\n\n"}
+          {"\n\n"}<Text style={{ fontWeight: "bold" }}>1. Information We Collect</Text>{"\n"}
+          1.1 Personal Information – Name, age, date of birth, contact number, email address, and address (Dental Clinic).{"\n"}
+          1.2 Appointment Information – Clinic and dentist details, appointment dates and times.{"\n"}
+          1.3 Health Information (only if provided) – Relevant medical or dental conditions such as allergies, pregnancy, or ongoing medication.{"\n"}
+          1.4 System Data – Username, password, browser information, device type, and system notifications sent.{"\n"}
+          1.5 Clinic Verification Data – Clinic’s registration info and DTI permit number provided for clinic verification.
 
-      <Text style={{ fontWeight: "bold" }}>1. Definitions{"\n"}</Text>
-      • “Appointment” – A scheduled dental consultation booked through Smile Studio.{"\n"}
-      • “No-Show” – Failure to attend a booked Appointment without prior cancellation.{"\n"}
-      • “Grace Period” – A 15-minute window after a scheduled Appointment time during which a late arrival may still be accommodated.{"\n"}
-      • “Malicious Activity” – Any action that disrupts, exploits, or harms the Platform, its users, or affiliated clinics (e.g., hacking, fake bookings, harassment).{"\n\n"}
+          {"\n\n"}<Text style={{ fontWeight: "bold" }}>2. How We Use Your Information</Text>{"\n"}
+          2.1 To manage dental appointments and clinic scheduling.{"\n"}
+          2.2 To send automated notifications and reminders.{"\n"}
+          2.3 To verify clinic legitimacy through DTI validation.{"\n"}
+          2.4 To ensure compliance with applicable regulations.{"\n"}
+          2.5 To improve platform performance and security.
 
-      <Text style={{ fontWeight: "bold" }}>2. Eligibility & Account Registration{"\n"}</Text>
-      <Text style={{ fontWeight: "bold" }}>2.1 Age Requirement</Text>{" "}
-      The Platform is accessible to users of all ages but is currently intended for non-commercial, academic/capstone project use only.{"\n"}
-      Minors (under 18) must obtain parental/guardian consent before booking Appointments.{"\n"}
-      <Text style={{ fontWeight: "bold" }}>2.2 Account Responsibility</Text>{" "}
-      Users must provide accurate, current, and complete information during registration. You are solely responsible for:{"\n"}
-      • Maintaining the confidentiality of your login credentials.{"\n"}
-      • All activities conducted under your account.{"\n"}
-      • Immediately notifying us of any unauthorized account use.{"\n\n"}
+          {"\n\n"}<Text style={{ fontWeight: "bold" }}>3. Data Sharing and Disclosure</Text>{"\n"}
+          3.1 With Partner Clinics – For appointment coordination and service preparation.{"\n"}
+          3.2 With DTI or Authorized Platforms – For validation of clinic verification.{"\n"}
+          3.3 With User Consent – For referrals or optional features.{"\n"}
+          3.4 As Required by Law – When mandated by government or regulatory authorities.{"\n"}
+          3.5 For Security – To prevent fraudulent activities or misuse of the platform.
 
-      <Text style={{ fontWeight: "bold" }}>3. Permitted & Prohibited Use{"\n"}</Text>
-      <Text style={{ fontWeight: "bold" }}>3.1 Acceptable Use</Text>{" "}
-      You may use Smile Studio only for lawful purposes, including:{"\n"}
-      • Booking legitimate dental Appointments at partner clinics in San Jose Del Monte, Bulacan.{"\n"}
-      • Accessing clinic information, availability, location, pricing, services, and notification assistance.{"\n\n"}
+          {"\n\n"}<Text style={{ fontWeight: "bold" }}>4. Data Security</Text>{"\n"}
+          4.1 Smile Studio implements strong physical, technical, and administrative measures to protect data using Supabase, including encrypted passwords, secure logins, and limited access.{"\n"}
+          4.2 However, no online platform can guarantee absolute security. Use of the system is at the user’s own risk.
 
-      <Text style={{ fontWeight: "bold" }}>3.2 Strictly Prohibited Conduct</Text>{" "}
-      Violations will result in immediate account suspension or termination. You agree NOT to:{"\n"}
-      • Create fake or duplicate Appointments (e.g., under false names).{"\n"}
-      • Engage in hacking, phishing, or data scraping (automated or manual).{"\n"}
-      • Harass clinic staff or other users (e.g., trolling, abusive messages).{"\n"}
-      • Upload malicious software (viruses, spyware) or disrupt server operations.{"\n"}
-      • Misrepresent your identity or medical needs.{"\n"}
-      • Circumvent appointment limits (e.g., creating multiple accounts).{"\n\n"}
+          {"\n\n"}<Text style={{ fontWeight: "bold" }}>5. Children’s Privacyy</Text>{"\n"}
+          5.1 Smile Studio allows access to users under 16 only with verified parental or guardian consent.{"\n"}
+          5.2 The system does not intentionally collect data from minors without supervision.
 
-      <Text style={{ fontWeight: "bold" }}>4. Appointment Policies{"\n"}</Text>
-      <Text style={{ fontWeight: "bold" }}>4.1 Booking & Cancellation</Text>{" "}
-      • Appointments operate on a “First-Appoint, First-Served” basis.{"\n"}
-      • No downpayment is required (“Appoint Now, Pay Later”).{"\n"}
-      • Cancellations must be made at least 24 hours in advance via the Platform.{"\n\n"}
+          {"\n\n"}<Text style={{ fontWeight: "bold" }}>6. Patient and Clinic Rights</Text>{"\n"}
+          6.1 Under the Data Privacy Act of 2012 (RA 10173), users and clinics have the right to access, correct, delete, or withdraw their data.{"\n"}
+          6.2 They may also file a complaint with the National Privacy Commission (NPC) if data rights are violated.
 
-      <Text style={{ fontWeight: "bold" }}>4.2 No-Show & Late Arrival Policy</Text>{" "}
-      • Notification Reminders: Users receive automated alerts before their scheduled Appointment.{"\n"}
-      • Grace Period: A 15-minute late arrival window is permitted. After this:{"\n"}
-        • The Appointment is automatically forfeited.{"\n"}
-        • The slot is released to other patients.{"\n"}
-        • The User must reschedule.{"\n"}
-      Strike System:{"\n"}
-      • 1st No-Show = Warning (User is notified of policy violation).{"\n"}
-      • 2nd No-Show = 1-month Account Suspension.{"\n"}
-      Suspended accounts cannot book new Appointments but may still view clinic information.{"\n\n"}
+          {"\n\n"}<Text style={{ fontWeight: "bold" }}>7. AR Filter Disclaimer</Text>{"\n"}
+          7.1 The AR Teeth and Braces Filter is for educational and visualization purposes only.{"\n"}
+          7.2 It does not store, process, or analyze facial recognition data, and no images are permanently saved.
 
-      <Text style={{ fontWeight: "bold" }}>4.3 Clinic Cancellations</Text>{" "}
-      Partner clinics reserve the right to reschedule or cancel Appointments due to unforeseen circumstances such as dentist unavailability, equipment failure, or emergencies. Patients will be promptly notified via the Platform’s notification system.{"\n\n"}
+          {"\n\n"}<Text style={{ fontWeight: "bold" }}>8. Updates to This Privacy Policyy</Text>{"\n"}
+          8.1 This Privacy Policy may be updated periodically to comply with laws or improve practices.{"\n"}
+          8.2 Continued use of the system after updates signifies agreement with the latest version.
 
-      <Text style={{ fontWeight: "bold" }}>5. Medical Disclaimer & Patient Responsibilities{"\n"}</Text>
-      <Text style={{ fontWeight: "bold" }}>5.1 Non-Emergency Use</Text>{" "}
-      Smile Studio is not intended for medical emergencies. If you are experiencing severe pain, bleeding, infection, or urgent dental issues, please call 911 (Philippine hotline: 117) or proceed to the nearest emergency facility.{"\n"}
-      <Text style={{ fontWeight: "bold" }}>5.2 Patient Honesty</Text>{" "}
-      Patients must provide truthful and complete medical information when booking and attending Appointments.{"\n"}
-      <Text style={{ fontWeight: "bold" }}>5.3 AR Filter Disclaimer</Text>{" "}
-      The AR Teeth and Braces Filter is for illustrative and educational purposes only. It is not a substitute for professional dental advice or treatment planning.{"\n\n"}
+          {"\n\n"}<Text style={{ fontWeight: "bold" }}>9. Contact Informatios</Text>{"\n"}
+          Smile Studio Support{"\n"}
+          Scuba Scripter and Pixel Cowboy Team{"\n"}
+          (+63) 921-888-1835{"\n"}
+          San Jose Del Monte, Bulacan, Philippines{"\n"}{"\n"}
 
-      <Text style={{ fontWeight: "bold" }}>6. Intellectual Property Rights{"\n"}</Text>
-      <Text style={{ fontWeight: "bold" }}>6.1 Ownership</Text>{" "}
-      All text, graphics, logos, clinic data, AR filters, and notification software are the exclusive property of Smile Studio and its partner clinics.{"\n"}
-      <Text style={{ fontWeight: "bold" }}>6.2 Limited License</Text>{" "}
-      Users are granted a revocable, non-exclusive license to access the Platform for personal, non-commercial healthcare purposes.{"\n\n"}
+          Acknowledgment: By using Smile Studio, you acknowledge that you have read, understood, and agreed to this Privacy Policy.
+        </Text>
 
-      <Text style={{ fontWeight: "bold" }}>7. Privacy & Data Security{"\n"}</Text>
-      Our Privacy Policy explains how we collect, store, and protect your data. By using the Platform, you agree to its terms.{"\n"}
-      <Text style={{ fontWeight: "bold" }}>7.1 Confidentiality</Text>{" "}
-      All medical information shared during Appointments is protected under the Philippine Data Privacy Act of 2012 (Republic Act No. 10173).{"\n"}
-      <Text style={{ fontWeight: "bold" }}>7.2 Data Retention</Text>{" "}
-      Patient data, including appointment records, is stored for a maximum of 12 months for reporting and scheduling purposes. After this period, data is securely deleted in compliance with Philippine law.{"\n\n"}
-
-      <Text style={{ fontWeight: "bold" }}>8. Disclaimers & Limitation of Liability{"\n"}</Text>
-      <Text style={{ fontWeight: "bold" }}>8.1 No Medical Guarantees</Text>{" "}
-      Smile Studio is not a healthcare provider. We do not guarantee diagnosis accuracy, treatment outcomes, or clinic availability.{"\n"}
-      <Text style={{ fontWeight: "bold" }}>8.2 Platform “As Is”</Text>{" "}
-      The Platform may experience downtime, bugs, or delays.{"\n"}
-      <Text style={{ fontWeight: "bold" }}>8.3 No Financial Liability</Text>{" "}
-      We do not charge users and do not handle payments, medical services, or clinic operations.{"\n"}
-      We are not liable for:{"\n"}
-      • User misconduct (e.g., no-shows, fake bookings).{"\n"}
-      • Clinic errors (e.g., overbooking, misdiagnosis).{"\n"}
-      • Indirect damages (e.g., lost time, travel costs).{"\n\n"}
-
-      <Text style={{ fontWeight: "bold" }}>9. Feedback & Complaints{"\n"}</Text>
-      Users may provide feedback or file complaints regarding clinics, services, or system errors by contacting Smile Studio Support.     Reports of unprofessional conduct by clinics or users will be reviewed, and appropriate action may include warnings, suspensions, or termination of accounts.{"\n\n"}
-
-      <Text style={{ fontWeight: "bold" }}>10. Termination & Enforcement{"\n"}</Text>
-      <Text style={{ fontWeight: "bold" }}>10.1 By Smile Studio</Text>{" "}
-      We may suspend or terminate accounts for:{"\n"}
-      • Breach of these Terms (e.g., fake Appointments, harassment).{"\n"}
-      • Malicious Activity (e.g., hacking attempts).{"\n"}
-      • Excessive No-Shows (per Section 4.2).{"\n"}
-      <Text style={{ fontWeight: "bold" }}>10.2 By Users</Text>{" "}
-      You may deactivate your account at any time by contacting: (+63) 921-888-1835{"\n\n"}
-
-      <Text style={{ fontWeight: "bold" }}>11. Governing Law & Dispute Resolution{"\n"}</Text>
-      These Terms are governed by Philippine law (Republic Act No. 10173, Data Privacy Act of 2012).{"\n"}
-      Disputes must first undergo mediation in San Jose Del Monte, Bulacan.{"\n"}
-      Unresolved disputes will be settled in Philippine courts.{"\n\n"}
-
-      <Text style={{ fontWeight: "bold" }}>12. Contact Information{"\n"}</Text>
-      Smile Studio Support{"\n"}
-      Scuba Scripter and Pixel Cowboy Team{"\n"}
-      (+63) 921-888-1835{"\n"}
-      San Jose Del Monte, Bulacan, Philippines{"\n\n"}
-
-      <Text style={{ fontWeight: "bold" }}>Acknowledgment{"\n"}</Text>
-      By creating an account or booking an Appointment through Smile Studio, you acknowledge that you have read, understood, and agreed to these Terms of Use.
-    </Text>
-
-
-          {/* Divider */}
-          <View style={{ marginVertical: 20, borderBottomWidth: 1, borderBottomColor: "#ccc" }} />
-
-          {/* Privacy Policy Title */}
-          <Text style={{ fontSize: 20, fontWeight: "bold", marginBottom: 10, color: "#00505cff" }}>
-            Privacy Policy
-          </Text>
-
-          {/* Full Privacy Policy Content */}
-          <Text style={{ fontSize: 14, color: "#444", lineHeight: 22 }}>
-            <Text style={{ fontWeight: "bold" }}>Effective Date:</Text> May 8, 2025{"\n\n"}
-
-            This Privacy Policy outlines how Smile Studio (“we”, “our”, or “us”) collects, uses, stores, and protects your personal information when you access or use our platform.
-
-            {"\n\n"}<Text style={{ fontWeight: "bold" }}>1. Information We Collect</Text>{"\n"}
-            We collect the following types of information from users:{"\n"}
-            • Personal identification (name, age, contact number, address){"\n"}
-            • Appointment data (scheduled date/time, clinic, purpose){"\n"}
-            • Optional medical details you provide{"\n"}
-            • Usage data (device type, IP address, app interactions){"\n"}
-            • AR Filter image interactions (not stored or transmitted)
-
-            {"\n\n"}<Text style={{ fontWeight: "bold" }}>2. How We Use Your Information</Text>{"\n"}
-            Your information is used to:{"\n"}
-            • Schedule and manage dental appointments{"\n"}
-            • Send notifications and reminders{"\n"}
-            • Improve system performance and user experience{"\n"}
-            • Provide academic insights for capstone research (anonymized){"\n"}
-            • Ensure compliance with dental service requirements
-
-            {"\n\n"}<Text style={{ fontWeight: "bold" }}>3. Legal Basis for Processing</Text>{"\n"}
-            We process your personal data based on:{"\n"}
-            • Your explicit consent when signing up and booking{"\n"}
-            • Legitimate interest in providing the platform{"\n"}
-            • Compliance with local laws and academic guidelines
-
-            {"\n\n"}<Text style={{ fontWeight: "bold" }}>4. Data Sharing & Disclosure</Text>{"\n"}
-            • Your personal data is shared only with authorized dental clinics that you book with.{"\n"}
-            • We do not sell, rent, or disclose your data to third parties.{"\n"}
-            • Data may be accessed by developers strictly for technical support and improvement.
-
-            {"\n\n"}<Text style={{ fontWeight: "bold" }}>5. Data Retention Policy</Text>{"\n"}
-            • We retain personal data for 12 months after your last activity.{"\n"}
-            • After this period, data is automatically deleted or anonymized.{"\n"}
-            • You may request earlier deletion at any time.
-
-            {"\n\n"}<Text style={{ fontWeight: "bold" }}>6. Security Measures</Text>{"\n"}
-            We protect your data using:{"\n"}
-            • Secure server connections (HTTPS){"\n"}
-            • Encrypted data storage and password protection{"\n"}
-            • Access restrictions for authorized personnel only{"\n"}
-            • Regular app maintenance and data privacy training
-
-            {"\n\n"}<Text style={{ fontWeight: "bold" }}>7. Your Rights Under RA 10173</Text>{"\n"}
-            Under the Philippine Data Privacy Act of 2012, you have the right to:{"\n"}
-            • Be informed about data collection and usage{"\n"}
-            • Access your personal data{"\n"}
-            • Correct inaccurate or outdated information{"\n"}
-            • Object to data processing{"\n"}
-            • Withdraw consent at any time{"\n"}
-            • Lodge a complaint with the National Privacy Commission
-
-            {"\n\n"}<Text style={{ fontWeight: "bold" }}>8. Children’s Privacy</Text>{"\n"}
-            The platform is open to minors with parental or guardian consent. We do not knowingly collect data from users under 13 without verified adult approval.
-
-            {"\n\n"}<Text style={{ fontWeight: "bold" }}>9. Third-Party Links & Integrations</Text>{"\n"}
-            Smile Studio may link to third-party clinics or systems. We are not responsible for how those parties handle your data. Always review their own privacy practices.
-
-            {"\n\n"}<Text style={{ fontWeight: "bold" }}>10. Changes to This Privacy Policy</Text>{"\n"}
-            We may revise this policy as needed. Updates will be reflected in the app and are effective immediately upon posting.
-
-            {"\n\n"}<Text style={{ fontWeight: "bold" }}>11. Contact Us</Text>{"\n"}
-            For questions or concerns, contact:{"\n"}
-            Smile Studio Support{"\n"}
-            Scuba Scripter and Pixel Cowboy Team{"\n"}
-            (+63) 921-888-1835{"\n"}
-            San Jose Del Monte, Bulacan, Philippines
-          </Text>
-
-  </ScrollView>
+</ScrollView>
 
             <TouchableOpacity
               onPress={() => setTermsOfUse(false)}
