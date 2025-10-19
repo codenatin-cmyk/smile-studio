@@ -1786,7 +1786,7 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
         color: dashboardView === "profile" ? '#00505cff' : '#ffffff',
         marginLeft: 8,
       }}>
-        Profile
+        Dashboard
       </Text>
     </View>
   )}
@@ -2103,7 +2103,7 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                 color: '#00505cff',
               }}
             >
-              Profile
+              Dashboard
             </Text>
             <View style={styles.proinfo}>
               <Image
@@ -6477,8 +6477,7 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
           marginBottom: 20,
         }}
       >
-        This platform was created to bridge the gap between patients and
-        trusted dental clinics in SJDM, Caloocan, and Metro Manila.
+        This platform was created to bridge the gap between patients and trusted dental clinics in City of San Jose del Monte, Bulacan
       </Text>
 
       <View style={{ alignSelf: "center", marginTop: 20, marginBottom: 20 }}>

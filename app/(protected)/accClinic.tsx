@@ -3044,7 +3044,7 @@ const PatientHistoryModalComponent = () => (
         color: dashboardView === "profile" ? '#00505cff' : '#ffffffff',
         marginLeft: 8,
       }}>
-        Profile
+        Dashboard
       </Text>
     </View>
   )}
@@ -7092,8 +7092,7 @@ const PatientHistoryModalComponent = () => (
           marginBottom: 10,
         }}
       >
-        This platform was created to bridge the gap between patients and
-        trusted dental clinics in SJDM, Caloocan, and Metro Manila.
+        This platform was created to bridge the gap between patients and trusted dental clinics in City of San Jose del Monte, Bulacan
       </Text>
 
       <View style={{ alignSelf: "center", marginTop: 20, marginBottom: 20 }}>

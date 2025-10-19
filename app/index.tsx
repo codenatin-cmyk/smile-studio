@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   Image,
   Linking,
@@ -55,6 +56,23 @@ export default function Index() {
 
   const login = () => {
     router.replace('/login');
+  };
+
+  const downloadAPK = () => {
+    const apkUrl = 'https://github.com/smilestudiohub-gif/smilestudioapkrelease/releases/download/v1/smilestudio.apk';
+    
+    if (Platform.OS === 'web') {
+      // For web, open the GitHub release APK link
+      window.open(apkUrl, '_blank');
+    } else {
+      // For mobile platforms, open the link directly
+      Linking.openURL(apkUrl).catch(err => {
+        Alert.alert(
+          'Download Error',
+          'Unable to open download link. Please try again later.'
+        );
+      });
+    }
   };
 
   const isMobile = width < 768;
@@ -189,7 +207,7 @@ export default function Index() {
                 violating platform rules.{"\n\n"}
       
                 <Text style={{ fontWeight: "bold" }}>4. Appointments{"\n"}</Text>
-                4.1 Appointments are handled on a “First-Appoint, First-Served”
+                4.1 Appointments are handled on a "First-Appoint, First-Served"
                 basis.{"\n"}
                 4.2 No downpayment or online payment is required before appointments.{"\n"}
                 4.3 Cancellations must be made at least 24 hours prior to the scheduled
@@ -213,17 +231,17 @@ export default function Index() {
                 Smile Studio must provide valid business information, including their
                 official Department of Trade and Industry (DTI) registration details.{"\n"}
                 6.2 Superadmin DTI Verification – The Superadmin or authorized
-                developers are permitted to verify the authenticity of a clinic’s DTI
+                developers are permitted to verify the authenticity of a clinic's DTI
                 registration through the official DTI online verification platform.{"\n"}
                 6.3 Legal Basis – Under Philippine law, any civilian may verify the
                 registration status of a sole proprietorship using the Department of
-                Trade and Industry’s public verification system without requiring
+                Trade and Industry's public verification system without requiring
                 special access or authority.{"\n"}
                 6.4 Purpose – This verification process ensures that only legitimate
                 and lawfully registered dental clinics operate within Smile Studio,
                 protecting users from fraudulent or unlicensed establishments.{"\n"}
                 6.5 Revocation – The Superadmin reserves the right to suspend or remove
-                a clinic’s account if its DTI registration cannot be verified or has
+                a clinic's account if its DTI registration cannot be verified or has
                 been found invalid.{"\n\n"}
       
                 <Text style={{ fontWeight: "bold" }}>7. Medical Disclaimer{"\n"}</Text>
@@ -236,7 +254,7 @@ export default function Index() {
                 advice.{"\n\n"}
       
                 <Text style={{ fontWeight: "bold" }}>8. Intellectual Property{"\n"}</Text>
-                8.1 All platform elements, including the system’s design, graphics,
+                8.1 All platform elements, including the system's design, graphics,
                 text, and content, are the property of Smile Studio and its
                 developers.{"\n"}
                 8.2 The platform may only be used for personal, non-commercial, and
@@ -305,7 +323,7 @@ export default function Index() {
                 conditions such as allergies, pregnancy, or ongoing medication.{"\n"}
                 1.4 System Data – Username, password, browser information, device type,
                 and system notifications sent.{"\n"}
-                1.5 Clinic Verification Data – Clinic’s registration info and DTI permit
+                1.5 Clinic Verification Data – Clinic's registration info and DTI permit
                 number provided for clinic verification.{"\n\n"}
       
                 <Text style={{ fontWeight: "bold" }}>2. How We Use Your Information{"\n"}</Text>
@@ -331,9 +349,9 @@ export default function Index() {
                 administrative measures to protect data using Supabase, including
                 encrypted passwords, secure logins, and limited access.{"\n"}
                 5.2 However, no online platform can guarantee absolute security. Use of
-                the system is at the user’s own risk.{"\n\n"}
+                the system is at the user's own risk.{"\n\n"}
       
-                <Text style={{ fontWeight: "bold" }}>5. Children’s Privacy{"\n"}</Text>
+                <Text style={{ fontWeight: "bold" }}>5. Children's Privacy{"\n"}</Text>
                 6.1 Smile Studio allows access to users under 16 only with verified
                 parental or guardian consent.{"\n"}
                 6.2 The system does not intentionally collect data from minors without
@@ -550,6 +568,17 @@ export default function Index() {
             <View style={styles.heroCtas}>
               <TouchableOpacity style={styles.ctaPrimary} onPress={login}>
                 <Text style={styles.ctaPrimaryText}>Get Started Free</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.ctaDownload} 
+                onPress={downloadAPK}
+              >
+                <Image
+                  source={require('../assets/favicon.ico.png')}
+                  style={styles.downloadIcon}
+                  resizeMode="contain"
+                />
+                <Text style={styles.ctaDownloadText}>Download Our App</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.trustBadge}>
@@ -945,6 +974,26 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Bold',
     fontSize: 16,
     color: '#00505c',
+  },
+  ctaDownload: {
+    backgroundColor: '#ffffff',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#80c4c4',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  ctaDownloadText: {
+    fontFamily: 'Poppins-Bold',
+    fontSize: 16,
+    color: '#00505c',
+  },
+  downloadIcon: {
+    width: 24,
+    height: 24,
   },
   trustBadge: {
     paddingVertical: 12,

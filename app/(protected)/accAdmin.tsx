@@ -993,7 +993,7 @@ useEffect(() => {
         color: dashboardView === "profile" ? '#00505cff' : '#ffffff',
         marginLeft: 8,
       }}>
-        Profile
+        Dashboard
       </Text>
     </View>
   )}
@@ -1260,7 +1260,7 @@ useEffect(() => {
 
         <View style={[styles.dashboard, { width: !isDesktop ? '95%' : expanded ? '80%' : '95%', right: dashboardView === 'profile' ? 11 : 20000, backgroundColor: '#f1f5f9',}]}>
           <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 20, alignSelf: isMobile ? 'center' : 'flex-start', color: '#00505cff'}}>
-            Profile
+            Dashboard
           </Text>
                     <View style={styles.proinfo}>
                         <Image
@@ -1329,64 +1329,9 @@ useEffect(() => {
                       SJDM Registered Clinics
                     </Text>
                 </View>
-                <View style={styles.card}>
-                  <View style={{flexDirection: 'column',}}>
-                  <View>
-                      <Text style={{color: '#00505cff', textAlign: 'center', marginTop: 6, fontSize: isMobile ? 15 : 25 }}>
-                        (Not Finished)
-                      </Text>
-                    </View>
-                    <View style={{ marginTop: 20, alignItems: 'center' }}>
-                      <TouchableOpacity
-                        style={{...styles.redButton, backgroundColor: '#00505cff'}}
-                        onPress={() => setModalVisible(true)}
-                      >
-                        <Text style={{...styles.buttonText1, color: '#ffffffff', fontSize: isMobile ? 10 : 25 }}>Overview</Text>
-                      </TouchableOpacity>
-                    </View>
-
-                    <Modal
-                      animationType="fade"
-                      transparent={true}
-                      visible={modalVisible}
-                      onRequestClose={() => setModalVisible(false)} // for Android back button
-                    >
-                      <View style={styles.modalBackground}>
-                        <View style={{...styles.modalContent, width: isMobile ? 350 : '40%'}}>
-                          <Text style={{ fontSize: 20, marginBottom: 20 }}>Suggestion Overview</Text>
-                          <View style={{ padding: 20 }}>
-
-                            {/* Appointment Section */}
-                            <View>
-                              <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 10 }}>Suggestions</Text>
-                              <View style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 10, padding: 15, backgroundColor: '#f1f1f1' }}>
-                                <Text style={{ fontWeight: '600' }}>Mark Ariya</Text>
-                                <Text style={{ color: '#555' }}>Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum</Text>
-                                <Text style={{ color: '#555' }}>8/22/25 - 10:00 AM</Text>
-                              </View>
-
-                              <View style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 10, padding: 15, backgroundColor: '#f1f1f1', marginTop: 10 }}>
-                                <Text style={{ fontWeight: '600' }}>Jenny Rom</Text>
-                                <Text style={{ color: '#555' }}>Lorem Ipsum Lorem Ipsum</Text>
-                                <Text style={{ color: '#555' }}>8/22/25 - 2:30 PM</Text>
-                              </View>
-                            </View>
-                          </View>
-                          <TouchableOpacity
-                            style={styles.closeButton}
-                            onPress={() => setModalVisible(false)}
-                          >
-                            <Text style={styles.closeButtonText}>Close</Text>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    </Modal>
-                  </View>
-                </View>
+              
               </View>
-              <View style={styles.infoSection}>
-                <Text style={styles.infoText}>Further information can go here. (to be designed) </Text>
-              </View>
+              
             </View>
     
             
@@ -3507,8 +3452,7 @@ useEffect(() => {
           marginBottom: 20,
         }}
       >
-        This platform was created to bridge the gap between patients and
-        trusted dental clinics in SJDM, Caloocan, and Metro Manila.
+        This platform was created to bridge the gap between patients and trusted dental clinics in City of San Jose del Monte, Bulacan
       </Text>
 
       <View style={{ alignSelf: "center", marginTop: 20, marginBottom: 20 }}>
