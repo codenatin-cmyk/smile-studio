@@ -59,20 +59,15 @@ export default function Index() {
   };
 
   const downloadAPK = () => {
+    // External GitHub Release link - no local asset needed
     const apkUrl = 'https://github.com/smilestudiohub-gif/smilestudioapkrelease/releases/download/v1/smilestudio.apk';
     
-    if (Platform.OS === 'web') {
-      // For web, open the GitHub release APK link
-      window.open(apkUrl, '_blank');
-    } else {
-      // For mobile platforms, open the link directly
-      Linking.openURL(apkUrl).catch(err => {
-        Alert.alert(
-          'Download Error',
-          'Unable to open download link. Please try again later.'
-        );
-      });
-    }
+    Linking.openURL(apkUrl).catch(err => {
+      Alert.alert(
+        'Download Error',
+        'Unable to open download link. Please try again later.'
+      );
+    });
   };
 
   const isMobile = width < 768;
