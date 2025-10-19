@@ -5667,134 +5667,128 @@ const PatientHistoryModalComponent = () => (
         )}
       </ScrollView>
     ) : (
-      <ScrollView horizontal contentContainerStyle={{ flexGrow: 1 }}>
-        <View style={{ flex: 1, minWidth: 1000 }}>
-          <FlatList
-            data={appointmentsCurrentList}
-            keyExtractor={(e) => e.id.toString()}
-            contentContainerStyle={{
-              alignItems: "stretch",
-              paddingHorizontal: 12,
-            }}
-            ListHeaderComponent={() => (
-              <View
-                style={{
-                  flexDirection: "row",
-                  backgroundColor: "#00505cff",
-                  paddingVertical: 16,
-                  paddingHorizontal: 20,
-                  borderTopLeftRadius: 8,
-                  borderTopRightRadius: 8,
-                  minWidth: "100%",
-                  gap: 16,
-                }}
-              >
-                <Text style={{ flex: 1, fontWeight: "bold", color: "#fff" }}>
-                  Patient
-                </Text>
-                <Text style={{ flex: 1, fontWeight: "bold", color: "#fff" }}>
-                  Message
-                </Text>
-                <Text style={{ flex: 1, fontWeight: "bold", color: "#fff" }}>
-                  Request
-                </Text>
-                <Text style={{ flex: 1, fontWeight: "bold", color: "#fff" }}>
-                  Request Date & Time
-                </Text>
-                <Text style={{ flex: 1, fontWeight: "bold", color: "#fff" }}>
-                  Created At
-                </Text>
-              </View>
-            )}
-            renderItem={({ item, index }) => (
-              <View
-                style={{
-                  flexDirection: "row",
-                  borderBottomWidth: 1,
-                  borderColor: "#ddd",
-                  paddingVertical: 18,
-                  paddingHorizontal: 20,
-                  backgroundColor: index % 2 === 0 ? "#f9f9f9" : "#fff",
-                  gap: 16,
-                }}
-              >
-                <View style={{ flex: 1, flexDirection: "row", alignItems: "center" }}>
-                  <TouchableOpacity
-                    onPress={() => {
-                      // Fetch full patient data including history
-                      openPatientHistory(item.patient_id, {
-                        first_name: item.profiles.first_name,
-                        last_name: item.profiles.last_name,
-                      });
+     <ScrollView horizontal contentContainerStyle={{ flexGrow: 1 }}>
+                <View style={{ flex: 1, minWidth: 1100 }}>
+                  <FlatList
+                    data={appointmentsCurrentList}
+                    keyExtractor={(e) => e.id.toString()}
+                    contentContainerStyle={{
+                      alignItems: "stretch",
+                      paddingHorizontal: 12,
                     }}
-                    style={{
-                      marginRight: 8,
-                      padding: 6,
-                      backgroundColor: "#00505cff",
-                      borderRadius: 6,
-                    }}
-                  >
-                    <FontAwesome5 name="clipboard-list" size={16} color="#fff" />
-                  </TouchableOpacity>
-                  <Text>{`${item.profiles.first_name} ${item.profiles.last_name}`}</Text>
-                </View>
-
-                <Text style={{ flex: 1 }}>
-                  {item.message.length > 20 ? (
-                    <>
-                      {item.message.slice(0, 20) + "... "}
-                      <Text
-                        onPress={() => {
-                          setSelectedMessage(item.message);
-                          setModalMessage(true);
-                        }}
+                    ListHeaderComponent={() => (
+                      <View
                         style={{
-                          color: "#1976d2",
-                          textDecorationLine: "underline",
+                          flexDirection: "row",
+                          backgroundColor: "#00505cff",
+                          paddingVertical: 16,
+                          paddingHorizontal: 20,
+                          borderTopLeftRadius: 8,
+                          borderTopRightRadius: 8,
+                          minWidth: "100%",
+                          alignItems: "center",
+                          gap: 12,
                         }}
                       >
-                        See More
-                      </Text>
-                    </>
-                  ) : (
-                    item.message
-                  )}
-                </Text>
+                        <Text style={{ flex: 1.3, fontWeight: "700", color: 'white' }}>Patient</Text>
+                        <Text style={{ flex: 1, fontWeight: "700", color: 'white' }}>Message</Text>
+                        <Text style={{ flex: 0.9, fontWeight: "700", color: 'white' }}>Request</Text>
+                        <Text style={{ flex: 1.3, fontWeight: "700", color: 'white' }}>Request Date & Time</Text>
+                        <Text style={{ flex: 1, fontWeight: "700", color: 'white' }}>Created At</Text>
+                        <View style={{ width: 110 }} />
+                      </View>
+                    )}
+                    renderItem={({ item, index }) => (
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          borderBottomWidth: 1,
+                          borderColor: "#ccc",
+                          paddingVertical: 16,
+                          paddingHorizontal: 20,
+                          backgroundColor: index % 2 === 0 ? "#f9f9f9" : "#fff",
+                          alignItems: "center",
+                          minHeight: 70,
+                          gap: 12,
+                        }}
+                      >
+                        <View style={{ flex: 1.3, flexDirection: "row", alignItems: "center" }}>
+                          <TouchableOpacity
+                            onPress={() => {
+                              openPatientHistory(item.patient_id, {
+                                first_name: item.profiles.first_name,
+                                last_name: item.profiles.last_name,
+                              });
+                            }}
+                            style={{
+                              marginRight: 8,
+                              padding: 6,
+                              backgroundColor: "#00505cff",
+                              borderRadius: 6,
+                            }}
+                          >
+                            <FontAwesome5 name="clipboard-list" size={16} color="#fff" />
+                          </TouchableOpacity>
+                          <Text style={{ color: "#333" }}>
+                            {`${item.profiles.first_name} ${item.profiles.last_name}`}
+                          </Text>
+                        </View>
 
-                <TouchableOpacity
-                  style={{ flex: 1 }}
-                  onPress={() => {
-                    openRequestView(item.request);
-                  }}
-                >
-                  <Text style={{ color: "#1976d2", textDecorationLine: "underline", fontSize: 15, }} > View Request </Text>
-                </TouchableOpacity>
+                        <Text style={{ flex: 1, color: "#333" }}>
+                          {item.message.length > 20 ? (
+                            <>
+                              {item.message.slice(0, 20) + "... "}
+                              <Text
+                                onPress={() => {
+                                  setSelectedMessage(item.message);
+                                  setModalMessage(true);
+                                }}
+                                style={{ color: "#0056b3", textDecorationLine: "underline" }}
+                              >
+                                See More
+                              </Text>
+                            </>
+                          ) : (
+                            item.message
+                          )}
+                        </Text>
 
-                <Text style={{ flex: 1, color: '#000' }}>
-                  {new Date(item.date_time).toLocaleString(undefined, {
-                    year: "numeric",
-                    month: "numeric",
-                    day: "numeric",
-                    hour: "numeric",
-                    minute: "2-digit",
-                    hour12: true,
-                  })}
-                </Text>
+                        <TouchableOpacity style={{ flex: 0.9 }} onPress={() => openRequestView(item.request)}>
+                          <Text style={{ color: "#0056b3", textDecorationLine: "underline" }}>View Request</Text>
+                        </TouchableOpacity>
 
-                <Text style={{ flex: 1 }}>
-                  {new Date(item.created_at || 0).toLocaleString()}
-                </Text>
-                <CancelAppointment data={item} sender_email={item.clinic_profiles.email} receiver_email={item.profiles.email}/>
-              </View>
-            )}
-            ListEmptyComponent={() => (
-              <View style={{ width: "100%", alignItems: "center", marginTop: 40, }} >
-                <Text style={{ fontSize: 20, color: "gray" }}> - No Appointments - </Text>
-              </View>
-            )}
-          />
-        </View>
-      </ScrollView>
+                        <Text style={{ flex: 1.3, color: "#333" }}>
+                          {new Date(item.date_time).toLocaleString(undefined, {
+                            year: "numeric",
+                            month: "numeric",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          })}
+                        </Text>
+
+                        <Text style={{ flex: 1, color: "#333", fontSize: 13 }}>
+                          {new Date(item.created_at || 0).toLocaleString()}
+                        </Text>
+
+                        <View style={{ width: 110, alignItems: "center", justifyContent: "center" }}>
+                          <CancelAppointment 
+                            data={item} 
+                            sender_email={item.clinic_profiles.email} 
+                            receiver_email={item.profiles.email}
+                          />
+                        </View>
+                      </View>
+                    )}
+                    ListEmptyComponent={() => (
+                      <View style={{ width: "100%", alignItems: "center", marginTop: 40 }}>
+                        <Text style={{ fontSize: 20, color: "gray" }}>- No Appointments -</Text>
+                      </View>
+                    )}
+                  />
+                </View>
+              </ScrollView>
     )}
 
     {/* Add the Patient History Modal Component */}

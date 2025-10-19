@@ -5655,7 +5655,7 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
             ) : (
               // Desktop/table layout
               <ScrollView horizontal contentContainerStyle={{ flexGrow: 1 }}>
-                <View style={{ flex: 1, minWidth: 900 }}>
+                <View style={{ flex: 1, minWidth: 1000 }}>
                   <FlatList
                     data={appointmentsCurrentList}
                     keyExtractor={(e) => e.id.toString()}
@@ -5673,13 +5673,15 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                           borderTopLeftRadius: 8,
                           borderTopRightRadius: 8,
                           minWidth: "100%",
+                          alignItems: "center",
                         }}
                       >
-                        <Text style={{ flex: 1, fontWeight: "700", color: 'white' }}>Clinic Name</Text>
+                        <Text style={{ flex: 1.2, fontWeight: "700", color: 'white' }}>Clinic Name</Text>
                         <Text style={{ flex: 1, fontWeight: "700", color: 'white' }}>Message</Text>
-                        <Text style={{ flex: 1, fontWeight: "700", color: 'white' }}>Request</Text>
-                        <Text style={{ flex: 1, fontWeight: "700", color: 'white' }}>Request Date & Time</Text>
+                        <Text style={{ flex: 0.9, fontWeight: "700", color: 'white' }}>Request</Text>
+                        <Text style={{ flex: 1.3, fontWeight: "700", color: 'white' }}>Request Date & Time</Text>
                         <Text style={{ flex: 1, fontWeight: "700", color: 'white' }}>Created At</Text>
+                        <Text style={{ width: 110, fontWeight: "700", color: 'white', textAlign: "center" }}>Action</Text>
                       </View>
                     )}
                     renderItem={({ item, index }) => (
@@ -5688,15 +5690,18 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                           flexDirection: "row",
                           borderBottomWidth: 1,
                           borderColor: "#ccc",
-                          paddingVertical: 20,
+                          paddingVertical: 16,
                           paddingHorizontal: 20,
                           backgroundColor: index % 2 === 0 ? "#f9f9f9" : "#fff",
                           alignItems: "center",
+                          minHeight: 70,
                         }}
                       >
-                        <Text style={{ flex: 1 }}>{item.clinic_profiles.clinic_name}</Text>
+                        <Text style={{ flex: 1.2, color: "#333" }}>
+                          {item.clinic_profiles.clinic_name}
+                        </Text>
 
-                        <Text style={{ flex: 1 }}>
+                        <Text style={{ flex: 1, color: "#333" }}>
                           {item.message.length > 20 ? (
                             <>
                               {item.message.slice(0, 20) + "... "}
@@ -5715,11 +5720,11 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                           )}
                         </Text>
 
-                        <TouchableOpacity style={{ flex: 1 }} onPress={() => openRequestView(item.request)}>
+                        <TouchableOpacity style={{ flex: 0.9 }} onPress={() => openRequestView(item.request)}>
                           <Text style={{ color: "#0056b3", textDecorationLine: "underline" }}>View Request</Text>
                         </TouchableOpacity>
 
-                        <Text style={{ flex: 1 }}>
+                        <Text style={{ flex: 1.3, color: "#333" }}>
                           {new Date(item.date_time).toLocaleString(undefined, {
                             year: "numeric",
                             month: "numeric",
@@ -5730,10 +5735,18 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                           })}
                         </Text>
 
-                        <Text style={{ flex: 1 }}>{new Date(item.created_at || 0).toLocaleString()}</Text>
-                         <CancelAppointmentUser data={item} sender_email={item.profiles.email} receiver_email={item.clinic_profiles.email}/>
+                        <Text style={{ flex: 1, color: "#333", fontSize: 13 }}>
+                          {new Date(item.created_at || 0).toLocaleString()}
+                        </Text>
+
+                        <View style={{ width: 110, alignItems: "center", justifyContent: "center" }}>
+                          <CancelAppointmentUser 
+                            data={item} 
+                            sender_email={item.profiles.email} 
+                            receiver_email={item.clinic_profiles.email}
+                          />
+                        </View>
                       </View>
-                      
                     )}
                     ListEmptyComponent={() => (
                       <View style={{ width: "100%", alignItems: "center", marginTop: 40 }}>
