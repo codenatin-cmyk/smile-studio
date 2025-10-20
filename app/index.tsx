@@ -560,22 +560,29 @@ export default function Index() {
               Connect with trusted dental clinics in San Jose Del Monte, Bulacan. 
               Book appointments seamlessly and take control of your oral health journey.
             </Text>
-            <View style={styles.heroCtas}>
-              <TouchableOpacity style={styles.ctaPrimary} onPress={login}>
-                <Text style={styles.ctaPrimaryText}>Get Started Free</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.ctaDownload} 
-                onPress={downloadAPK}
-              >
-                <Image
-                  source={require('../assets/favicon.ico.png')}
-                  style={styles.downloadIcon}
-                  resizeMode="contain"
-                />
-                <Text style={styles.ctaDownloadText}>Download Our App</Text>
-              </TouchableOpacity>
-            </View>
+           <View style={styles.heroCtas}>
+  <TouchableOpacity 
+    style={[styles.ctaPrimary, isMobile && styles.ctaPrimaryMobile]} 
+    onPress={login}
+  >
+    <Text style={[styles.ctaPrimaryText, isMobile && styles.ctaPrimaryTextMobile]}>
+      Get Started Free
+    </Text>
+  </TouchableOpacity>
+  <TouchableOpacity 
+    style={[styles.ctaDownload, isMobile && styles.ctaDownloadMobile]} 
+    onPress={downloadAPK}
+  >
+    <Image
+      source={require('../assets/favicon.ico.png')}
+      style={styles.downloadIcon}
+      resizeMode="contain"
+    />
+    <Text style={[styles.ctaDownloadText, isMobile && styles.ctaDownloadTextMobile]}>
+      Download Our App
+    </Text>
+  </TouchableOpacity>
+</View>
             <View style={styles.trustBadge}>
               <Text style={styles.trustText}>
                 ⭐ Trusted by 10+ dental clinics
@@ -939,10 +946,18 @@ const styles = StyleSheet.create({
     lineHeight: 26,
   },
   heroCtas: {
-    flexDirection: 'row',
-    gap: 16,
-    marginBottom: 32,
-  },
+  flexDirection: 'row',
+  gap: 16,
+  marginBottom: 32,
+  flexWrap: 'wrap', // Add this
+  justifyContent: 'center', // Add this
+},
+ctaDownloadMobile: {
+  width: '100%', // Full width on mobile
+  justifyContent: 'center',
+  paddingVertical: 14,
+  paddingHorizontal: 24,
+},
   ctaPrimary: {
     backgroundColor: '#00505c',
     paddingVertical: 16,
@@ -970,17 +985,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#00505c',
   },
-  ctaDownload: {
-    backgroundColor: '#ffffff',
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#80c4c4',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
+ ctaDownload: {
+  backgroundColor: '#ffffff',
+  paddingVertical: 16,
+  paddingHorizontal: 32,
+  borderRadius: 10,
+  borderWidth: 2,
+  borderColor: '#80c4c4',
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 8,
+  minWidth: 200, // Add this to ensure button doesn't get too small
+},
+ctaDownloadTextMobile: {
+  fontSize: 15, // Slightly smaller on mobile
+},
+ctaPrimaryMobile: {
+  width: '100%', // Also make primary button full width on mobile
+  alignItems: 'center',
+  paddingVertical: 14,
+  paddingHorizontal: 24,
+},
+ctaPrimaryTextMobile: {
+  fontSize: 15,
+},
   ctaDownloadText: {
     fontFamily: 'Poppins-Bold',
     fontSize: 16,
