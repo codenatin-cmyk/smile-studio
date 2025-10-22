@@ -1,8 +1,7 @@
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import React, { useEffect, useRef, useState } from 'react';
+import { FlatList, Modal, StyleProp, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, useWindowDimensions, View, ViewStyle } from 'react-native';
 import 'react-native-gesture-handler';
-import { Modal, StyleProp, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View, ViewStyle } from 'react-native'
-import React, { useEffect, useRef, useState } from 'react'
-import MaterialIcons from '@expo/vector-icons/MaterialIcons'
-import { FlatList, TouchableWithoutFeedback } from 'react-native';
 
 interface Props {
   trigger: React.ReactNode;
@@ -13,6 +12,7 @@ interface Props {
   atomicTime?: "AM" | "PM",
   onTimeSelected: (hour: string, minute: string, time: "AM" | "PM") => void,
   onClose?: () => void,
+  disabled?: boolean,
 }
 
 const TimePicker = (props: Props) => {
@@ -53,61 +53,63 @@ const TimePicker = (props: Props) => {
 
   return (
     <View style={{
-      width: "100%",
-      zIndex: 99999,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "flex-start",
     }}>
-      <View style={{
-        flexDirection: "row",
-        gap: 5,
-        zIndex: 999
-      }}>
-        <Dropdown
-          style={{
-            ...(width > 720
-            ? {
-                width: 80,
-            }
-            : {
-                width: 60,
-            }),
-          }}
-          label='Hour' 
-          selected={hour} 
-          items={hours} 
-          onSelect={(value)=>{
-            setHour(value)
-            props.onTimeSelected(value, minute, atomicTime)
-          }} />
-        <Dropdown
-          style={{
-            ...(width > 720
-            ? {
-                width: 80,
-            }
-            : {
-                width: 60,
-            }),
-          }}
-          label='Minute' selected={minute} items={minutes} 
-          onSelect={(value) => {
-            setMinute(value);
-            props.onTimeSelected(hour, value, atomicTime);
-          }} />
-        <Dropdown
-          style={{
-            ...(width > 720
-            ? {
-                width: 80,
-            }
-            : {
-                width: 65,
-            }),
-          }}
-          selected={atomicTime} items={["AM", "PM"]} onSelect={(value) => {
-            setAtomicTime(value)
-            props.onTimeSelected(hour, minute, value)
-          }} />
-      </View>
+      <Dropdown
+        style={{
+          ...(width > 720
+          ? {
+              width: 80,
+              marginRight: 5,
+          }
+          : {
+              width: 60,
+              marginRight: 5,
+          }),
+        }}
+        label='Hour' 
+        selected={hour} 
+        items={hours} 
+        onSelect={(value)=>{
+          setHour(value)
+          props.onTimeSelected(value, minute, atomicTime)
+        }}
+        disabled={props.disabled} />
+      <Dropdown
+        style={{
+          ...(width > 720
+          ? {
+              width: 80,
+              marginRight: 5,
+          }
+          : {
+              width: 60,
+              marginRight: 5,
+          }),
+        }}
+        label='Minute' selected={minute} items={minutes} 
+        onSelect={(value) => {
+          setMinute(value);
+          props.onTimeSelected(hour, value, atomicTime);
+        }}
+        disabled={props.disabled} />
+      <Dropdown
+        style={{
+          ...(width > 720
+          ? {
+              width: 80,
+          }
+          : {
+              width: 65,
+          }),
+        }}
+        selected={atomicTime} items={["AM", "PM"]} onSelect={(value) => {
+          setAtomicTime(value)
+          props.onTimeSelected(hour, minute, value)
+        }}
+        disabled={props.disabled} />
     </View>
   )
 }
@@ -138,23 +140,24 @@ const Dropdown = ({ label, selected, onSelect, items, disabled, style }: DropDow
   }, [visible, width]);
 
   return (
-    <View style={[{ minWidth: 50 }, style]}>
+    <View style={[{ minWidth: 50, flexShrink: 0 }, style]}>
       <TouchableOpacity
         ref={triggerRef}
         disabled={disabled}
         onPress={() => setVisible(!visible)}
         style={{
           height: 48,
-          backgroundColor: '#fff', // changed to white background
+          backgroundColor: '#fff',
           borderRadius: 5,
           paddingHorizontal: 10,
           flexDirection: 'row', 
           alignItems: 'center',
+          justifyContent: 'space-between',
           borderWidth: 1,
-          borderColor: '#ccc', // optional: border for clarity
+          borderColor: '#ccc',
         }}
       >
-        <Text style={{ flex: 1, fontSize: 14, color: disabled ? '#888' : 'black' }}>
+        <Text style={{ fontSize: 14, color: disabled ? '#888' : 'black' }}>
           {selected}
         </Text>
         <MaterialIcons name="arrow-drop-down" size={24} />
@@ -172,7 +175,7 @@ const Dropdown = ({ label, selected, onSelect, items, disabled, style }: DropDow
               top: position.y,
               left: position.x,
               width: position.width,
-              backgroundColor: '#FFF', // dropdown list background stays white
+              backgroundColor: '#FFF',
               borderRadius: 5,
               maxHeight: 200,
               borderWidth: 1,

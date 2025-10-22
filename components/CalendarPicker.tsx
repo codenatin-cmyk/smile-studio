@@ -1,7 +1,7 @@
-import { Modal, ScrollView, StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native'
-import React, { useEffect, useState } from 'react'
-import { Calendar, DateData } from 'react-native-calendars';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import React, { useEffect, useState } from 'react';
+import { Modal, ScrollView, StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { Calendar, DateData } from 'react-native-calendars';
 
 
 export const Locale_US_EN_MONTHS_SHORT = [
@@ -36,11 +36,66 @@ interface Props {
   toYear?: number,
   fromDay?: number,
   toDay?: number,
+  availableDays?: number[],
   onMonthSelect?: (month: number) => void,
   onYearSelect?: (year: number) => void,
   onDaySelect: (day: number, month: number, year: number) => void,
   onClose?: () => void,
 }
+
+const formatMonthOrDate = (num: number) => (num < 10 ? `0${num}` : `${num}`);
+
+const getDisabledDates = (
+  year: number,
+  month: number,
+  availableDays: number[] // 👈 array of day indexes you’re open
+) => {
+  const today = new Date();
+  const disabled: Record<string, any> = {};
+  const daysInMonth = new Date(year, month, 0).getDate();
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(year, month - 1, d);
+    const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+
+    // ❌ Disable if not in availableDays
+    if (!availableDays.includes(dayOfWeek)) {
+      disabled[`${year}-${formatMonthOrDate(month)}-${formatMonthOrDate(d)}`] = {
+        disabled: true,
+        disableTouchEvent: true,
+      };
+      continue;
+    }
+
+    // ⏳ Disable past days in current month
+    if (
+      year === today.getFullYear() &&
+      month === today.getMonth() + 1 &&
+      d < today.getDate()
+    ) {
+      disabled[`${year}-${formatMonthOrDate(month)}-${formatMonthOrDate(d)}`] = {
+        disabled: true,
+        disableTouchEvent: true,
+      };
+    }
+
+    // 📅 Disable all days if month/year is past
+    if (
+      year < today.getFullYear() ||
+      (year === today.getFullYear() && month < today.getMonth() + 1)
+    ) {
+      disabled[`${year}-${formatMonthOrDate(month)}-${formatMonthOrDate(d)}`] = {
+        disabled: true,
+        disableTouchEvent: true,
+      };
+    }
+  }
+
+  return disabled;
+};
+
+
+
 
 export default function CalendarPicker(props: Props) {
   const dateNow = new Date();
@@ -197,31 +252,41 @@ export default function CalendarPicker(props: Props) {
           </View>
         </View>
       </Modal>
-      <Calendar
-        style={{
-          width: "100%",
-        }}
-        theme={{
-          selectedDayBackgroundColor: '#3454D1',
-        }}
-        hideExtraDays={true}
-        initialDate={`${selectedYear.id}-${formatMonthOrDate(Number(selectedMonth.id))}-${formatMonthOrDate(selectedDate)}`}
-        current={new Date().toDateString()}
-        hideArrows={true}
-        onDayPress={(date: DateData) => {
-          //console.log(`[Debug] On press : ${date.dateString}`)
-          setSelectedDate(date.day)
-          props.onDaySelect(date.day, date.month, date.year)
-        }}
-        enableSwipeMonths={true}
-        onMonthChange={(date: DateData) => {
-          setSelectedMonth(parseMonth(date.month))
-        }}
-        markedDates={{
-          [`${selectedYear.id}-${formatMonthOrDate(Number(selectedMonth.id))}-${formatMonthOrDate(selectedDate)}`]: { selected: true, disableTouchEvent: true, selectedColor: '#3454D1' }
-        }}
-        renderHeader={() => (
-          <View style={{
+    <Calendar
+      style={{ width: "100%" }}
+      theme={{
+        selectedDayBackgroundColor: '#3454D1',
+        textDisabledColor: '#ccc', // ✅ correct property
+      }}
+      hideExtraDays={true}
+      initialDate={`${selectedYear.id}-${formatMonthOrDate(Number(selectedMonth.id))}-${formatMonthOrDate(selectedDate)}`}
+      current={new Date().toDateString()}
+      hideArrows={true}
+      enableSwipeMonths={true}
+      onDayPress={(date: DateData) => {
+        const today = new Date();
+        const pressedDate = new Date(date.year, date.month - 1, date.day);
+
+        // 🔒 Prevent selecting past dates
+        if (pressedDate < new Date(today.getFullYear(), today.getMonth(), today.getDate())) return;
+
+        setSelectedDate(date.day);
+        props.onDaySelect(date.day, date.month, date.year);
+      }}
+      onMonthChange={(date: DateData) => {
+        setSelectedMonth(parseMonth(date.month));
+      }}
+    markedDates={{
+        [`${selectedYear.id}-${formatMonthOrDate(Number(selectedMonth.id))}-${formatMonthOrDate(selectedDate)}`]: { 
+          selected: true, 
+          disableTouchEvent: true, 
+          selectedColor: '#3454D1' 
+        },
+        ...getDisabledDates(Number(selectedYear.id), Number(selectedMonth.id), props.availableDays || [])
+      }}
+      renderHeader={() => (
+        <View
+          style={{
             alignSelf: "flex-start",
             height: 50,
             flexDirection: "row",
@@ -229,34 +294,38 @@ export default function CalendarPicker(props: Props) {
             justifyContent: "center",
             gap: 10,
             zIndex: 10,
-          }}>
-            <TouchableOpacity style={{
+          }}
+        >
+          <TouchableOpacity
+            style={{
               paddingHorizontal: 18,
               paddingVertical: 10,
               borderRadius: 24,
-              backgroundColor: "#004F2D"
+              backgroundColor: "#004F2D",
             }}
-              onPress={() => {
-                setShowMonthSelector((prev) => !prev)
-              }}
-            >
-              <Text style={{ ...gstyles.t_semibold_dark, fontSize: 14, color : "white" }}>{selectedMonth.title}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={{
+            onPress={() => setShowMonthSelector((prev) => !prev)}
+          >
+            <Text style={{ ...gstyles.t_semibold_dark, fontSize: 14, color: "white" }}>
+              {selectedMonth.title}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{
               paddingHorizontal: 18,
               paddingVertical: 10,
               borderRadius: 24,
-              backgroundColor: "#004F2D"
+              backgroundColor: "#004F2D",
             }}
-              onPress={() => {
-                setShowYearSelector((prev) => !prev)
-              }}
-            >
-              <Text style={{ ...gstyles.t_semibold_dark, fontSize: 14, color : "white" }}>{selectedYear.title}</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      />
+            onPress={() => setShowYearSelector((prev) => !prev)}
+          >
+            <Text style={{ ...gstyles.t_semibold_dark, fontSize: 14, color: "white" }}>
+              {selectedYear.title}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    />
+
 
     </View>
   )

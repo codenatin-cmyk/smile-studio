@@ -377,59 +377,62 @@ export const ChatRoomsList: React.FC<ChatRoomsListProps> = ({
     }
 
     return (
-      <TouchableOpacity
-        style={styles.roomItem}
-        onPress={() => onRoomSelect(item.id, otherUserName)}
+     <TouchableOpacity
+  style={styles.roomItem}
+  onPress={() => onRoomSelect(item.id, otherUserName)}
+>
+  <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+    {/* Avatar */}
+    {otherUserAvatarUrl ? (
+      <Image
+        source={{ uri: otherUserAvatarUrl }}
+        style={styles.avatar}
+      />
+    ) : (
+      <View
+        style={[
+          styles.avatar,
+          {
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: "#fff",
+          },
+        ]}
       >
-        <View style={styles.roomHeader}>
-        {otherUserAvatarUrl ? (
-          <Image
-            source={{ uri: otherUserAvatarUrl }}
-            style={styles.avatar}
-          />
-        ) : (
-          <View
-            style={[
-              styles.avatar,
-              {
-                justifyContent: "center",
-                alignItems: "center",
-                backgroundColor: "#fff",
-              },
-            ]}
-          >
-            <FontAwesome5 name="clinic-medical" size={24} color="#4a878bff" />
-          </View>
-        )}
-        <View style={{ flex: 1 }}>
-          <Text
-            style={[
-              styles.roomTitle,
-              isMobile
-                ? otherUserName.length > 25
-                  ? { fontSize: 14 }
-                  : { fontSize: 18 }
-                : null,
-            ]}
-          >
-            {isMobile && otherUserName.length > 25
-              ? otherUserName.slice(0, 25) + "..."
-              : otherUserName}
-          </Text>
-        </View>
-        </View>
+        <FontAwesome5 name="clinic-medical" size={24} color="#4a878bff" />
+      </View>
+    )}
 
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          {unreadCount > 0 && (
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
-            </View>
-          )}
-          <Text style={[styles.roomDate, unreadCount > 0 && { marginLeft: 8 }]}>
-            {new Date(displayDate).toLocaleDateString()}
-          </Text>
+    {/* Name and unread badge */}
+    <View style={{ flex: 1, minWidth: 0 }}>
+      <Text
+        style={[
+          styles.roomTitle,
+          isMobile
+            ? otherUserName.length > 25
+              ? { fontSize: 14 }
+              : { fontSize: 18 }
+            : null,
+        ]}
+        numberOfLines={1}
+      >
+        {isMobile && otherUserName.length > 25
+          ? otherUserName.slice(0, 25) + "..."
+          : otherUserName}
+      </Text>
+      {unreadCount > 0 && (
+        <View style={styles.unreadBadge}>
+          <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
         </View>
-      </TouchableOpacity>
+      )}
+    </View>
+
+    {/* Date - fixed on the right */}
+    <Text style={styles.roomDate}>
+      {new Date(displayDate).toLocaleDateString()}
+    </Text>
+  </View>
+</TouchableOpacity>
     );
   };
 

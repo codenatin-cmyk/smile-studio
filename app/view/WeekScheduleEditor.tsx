@@ -1,17 +1,16 @@
+import TimePicker from "@/components/TimePicker";
+import { supabase } from "@/lib/supabase";
+import Checkbox from "expo-checkbox";
+import React, { useEffect, useState } from "react";
 import {
+  Modal,
+  ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   useWindowDimensions,
-  View,
-  ScrollView,
-  Modal,
+  View
 } from "react-native";
-import React, { useEffect, useState } from "react";
-import TimePicker from "@/components/TimePicker";
-import Checkbox from "expo-checkbox";
-import { supabase } from "@/lib/supabase";
 
 type WeekScheduleEditorProps = {
   clinicId: string | undefined;
@@ -177,7 +176,7 @@ const WeekScheduleEditor = (props: WeekScheduleEditorProps) => {
   style={{
     flex: 1,
     width: "100%",
-    padding: 20,
+    padding: 10,
     backgroundColor: "#fff",
     borderRadius: 12,
   }}
@@ -512,45 +511,47 @@ const DayScheduleView = (props: DayScheduleViewProps) => {
           </Text>
         </TouchableOpacity>
 
-        <View style={{ flexDirection: "column", gap: 12 }}>
-          <View>
+      <View>
             <Text style={{ fontSize: 14, fontWeight: "500", color: "#333", marginBottom: 4 }}>
               From
             </Text>
-            <TimePicker
-              hour={fromHour.toString().padStart(2, "0")}
-              minute={fromMinute.toString().padStart(2, "0")}
-              atomicTime={fromAtm}
-              trigger={undefined}
-              minuteSkipBy={1}
-              onTimeSelected={(hh, mm, atm) => {
-                setFromHour(Number(hh));
-                setFromMinute(Number(mm));
-                setFromAtm(atm);
-              }}
-              disabled={!hasSchedule || is24Hours}
-            />
+            <View style={{ flexDirection: "row", alignItems: "center"}}>
+              <TimePicker
+                hour={fromHour.toString().padStart(2, "0")}
+                minute={fromMinute.toString().padStart(2, "0")}
+                atomicTime={fromAtm}
+                trigger={undefined}
+                minuteSkipBy={1}
+                onTimeSelected={(hh, mm, atm) => {
+                  setFromHour(Number(hh));
+                  setFromMinute(Number(mm));
+                  setFromAtm(atm);
+                }}
+                disabled={!hasSchedule || is24Hours}
+              />
+            </View>
           </View>
 
           <View>
             <Text style={{ fontSize: 14, fontWeight: "500", color: "#333", marginBottom: 4 }}>
               To
             </Text>
-            <TimePicker
-              hour={toHour.toString().padStart(2, "0")}
-              minute={toMinute.toString().padStart(2, "0")}
-              atomicTime={toAtm}
-              trigger={undefined}
-              minuteSkipBy={1}
-              onTimeSelected={(hh, mm, atm) => {
-                setToHour(Number(hh));
-                setToMinute(Number(mm));
-                setToAtm(atm);
-              }}
-              disabled={!hasSchedule || is24Hours}
-            />
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <TimePicker
+                hour={toHour.toString().padStart(2, "0")}
+                minute={toMinute.toString().padStart(2, "0")}
+                atomicTime={toAtm}
+                trigger={undefined}
+                minuteSkipBy={1}
+                onTimeSelected={(hh, mm, atm) => {
+                  setToHour(Number(hh));
+                  setToMinute(Number(mm));
+                  setToAtm(atm);
+                }}
+                disabled={!hasSchedule || is24Hours}
+              />
+            </View>
           </View>
-        </View>
       </View>
     </View>
   );

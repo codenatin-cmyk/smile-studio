@@ -1,16 +1,16 @@
+import { Picker } from "@react-native-picker/picker";
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
   Alert,
-  TextInput,
   Modal,
+  ScrollView,
   StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
   useWindowDimensions,
+  View,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker";
 
 const daysOfWeek = [
   "Monday",

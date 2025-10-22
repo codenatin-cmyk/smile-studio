@@ -1,26 +1,26 @@
-import React, { useEffect, useState } from 'react';
+import { useSession } from '@/lib/SessionContext';
 import { supabase } from '@/lib/supabase';
 import { MaterialIcons } from '@expo/vector-icons';
-import Checkbox from 'expo-checkbox';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter, useNavigationContainerRef } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import Fontisto from '@expo/vector-icons/Fontisto';
 import MaterialIcons1 from '@expo/vector-icons/MaterialIcons';
+import Checkbox from 'expo-checkbox';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import React, { useEffect, useState } from 'react';
 import {
   AppState,
   Image,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
-  Modal,
   useWindowDimensions,
+  View,
 } from 'react-native';
-import { useSession } from '@/lib/SessionContext';
 
 // 🔁 Handle Supabase auth refresh on app active/inactive
 AppState.addEventListener('change', (state) => {

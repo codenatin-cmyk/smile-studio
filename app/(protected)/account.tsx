@@ -16,7 +16,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import * as Sharing from 'expo-sharing';
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Image, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from "react-native";
+import Modal from "react-native-modal";
 import * as XLSX from 'xlsx';
 import { supabase } from "../../lib/supabase";
 import ChatView from "../view/ChatView";
@@ -51,6 +52,8 @@ type Dentist = {
 };
 
 export default function Account() {
+  
+
   const { session, isLoading, signOut } = useSession();
   const router = useRouter();
   const date = new Date();
@@ -1044,7 +1047,15 @@ const handleDownloadExcel = async (appointmentsPast: Appointment[]) => {
   }
 };
 
+const availableDays: number[] = [];
 
+if (selectedSunday?.from && selectedSunday?.to) availableDays.push(0);
+if (selectedMonday?.from && selectedMonday?.to) availableDays.push(1);
+if (selectedTuesday?.from && selectedTuesday?.to) availableDays.push(2);
+if (selectedWednesday?.from && selectedWednesday?.to) availableDays.push(3);
+if (selectedThursday?.from && selectedThursday?.to) availableDays.push(4);
+if (selectedFriday?.from && selectedFriday?.to) availableDays.push(5);
+if (selectedSaturday?.from && selectedSaturday?.to) availableDays.push(6);
 
 function getMinutesSinceMidnight(date: Date): number {
   return date.getHours() * 60 + date.getMinutes();
@@ -1074,390 +1085,335 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
         position: "relative",
       }}
     >
-      <Modal
-        visible={viewFirst}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setviewFirst(false)}
-      >
+     <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={viewFirst} onBackdropPress={() => setviewFirst(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>            
         <View
           style={{
-            flex: 1,
-            justifyContent: 'center',
+            width: isMobile ? '90%' : '40%',
+            backgroundColor: '#f1f5f9',
+            padding: 20,
+            borderRadius: 10,
             alignItems: 'center',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
           }}
         >
-          <View
+          <Text
             style={{
-              width: isMobile ? '90%' : '40%',
-              backgroundColor: '#f1f5f9',
-              padding: 20,
-              borderRadius: 10,
-              alignItems: 'center',
+              fontSize: 24,
+              fontWeight: "bold",
+              marginBottom: 20,
+              alignSelf: "center",
+              color: "#00505cff",
             }}
           >
-            <Text
-              style={{
-                fontSize: 24,
-                fontWeight: "bold",
-                marginBottom: 20,
-                alignSelf: "center",
-                color: "#00505cff",
-              }}
-            >
-              Hello! Welcome to Smile Studio!
-            </Text>
-            <FontAwesome5 name="user-edit" size={isMobile ? 75 : 150} color="#59819aff" />
-            <Text
-              style={{
-                fontSize: 16,
-                marginBottom: 20,
-                alignSelf: "center",
-                color: "#1f5474ff",
-                textAlign: 'center',
-              }}
-            >
-              wanna edit/setup your information? let me guide you!
-            </Text>
-          <View
+            Hello! Welcome to Smile Studio!
+          </Text>
+          <FontAwesome5 name="user-edit" size={isMobile ? 75 : 150} color="#59819aff" />
+          <Text
             style={{
-              flexDirection: 'row',
-              width: '48%',
-              gap: 20,
-              alignItems: 'center',
-              justifyContent: 'center',
+              fontSize: 16,
+              marginBottom: 20,
+              alignSelf: "center",
+              color: "#1f5474ff",
+              textAlign: 'center',
             }}
           >
-            <TouchableOpacity
-              style={{
-                backgroundColor: '#fff',
-                padding: 10,
-                borderRadius: 5,
-                marginVertical: 5,
-                width: '100%',
-                alignItems: 'center',
-              }}
-              onPress={async () => {
-                try {
-                  // Update `isFirst` to false in Supabase
-                  const { error } = await supabase
-                    .from('profiles')
-                    .update({ isFirst: false })
-                    .eq('id', session?.user.id); // Use the current user's ID
+            wanna edit/setup your information? let me guide you!
+          </Text>
+        <View
+          style={{
+            flexDirection: 'row',
+            width: '48%',
+            gap: 20,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#fff',
+              padding: 10,
+              borderRadius: 5,
+              marginVertical: 5,
+              width: '100%',
+              alignItems: 'center',
+            }}
+            onPress={async () => {
+              try {
+                // Update `isFirst` to false in Supabase
+                const { error } = await supabase
+                  .from('profiles')
+                  .update({ isFirst: false })
+                  .eq('id', session?.user.id); // Use the current user's ID
 
-                  if (error) {
-                    console.error('Failed to update isFirst:', error.message);
-                    Alert.alert('Error', 'Failed to update your profile.');
-                    return;
-                  }
-
-                  // Close the modal locally
-                  setviewFirst(false);
-                } catch (err) {
-                  console.error('Unexpected error:', err);
-                  Alert.alert('Error', 'Something went wrong.');
+                if (error) {
+                  console.error('Failed to update isFirst:', error.message);
+                  Alert.alert('Error', 'Failed to update your profile.');
+                  return;
                 }
-              }}
-            >
-              <Text style={{ color: '#00505cff', fontWeight: 'bold' }}>I'll pass</Text>
-            </TouchableOpacity>
 
-            <TouchableOpacity
-              style={{
-                backgroundColor: '#00505cff',
-                padding: 10,
-                borderRadius: 5,
-                marginVertical: 5,
-                width: '100%',
-                alignItems: 'center',
-              }}
-              onPress={async () => {
-                try {
-                  // Update `isFirst` to false in Supabase
-                  const { error } = await supabase
-                    .from('profiles')
-                    .update({ isFirst: false })
-                    .eq('id', session?.user.id); // Use the current user's ID
+                // Close the modal locally
+                setviewFirst(false);
+              } catch (err) {
+                console.error('Unexpected error:', err);
+                Alert.alert('Error', 'Something went wrong.');
+              }
+            }}
+          >
+            <Text style={{ color: '#00505cff', fontWeight: 'bold' }}>I'll pass</Text>
+          </TouchableOpacity>
 
-                  if (error) {
-                    console.error('Failed to update isFirst:', error.message);
-                    Alert.alert('Error', 'Failed to update your profile.');
-                    return;
-                  }
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#00505cff',
+              padding: 10,
+              borderRadius: 5,
+              marginVertical: 5,
+              width: '100%',
+              alignItems: 'center',
+            }}
+            onPress={async () => {
+              try {
+                // Update `isFirst` to false in Supabase
+                const { error } = await supabase
+                  .from('profiles')
+                  .update({ isFirst: false })
+                  .eq('id', session?.user.id); // Use the current user's ID
 
-                  // Close the modal locally
-                  setviewFirst(false);
-                  setModalUpdate(true);
-                } catch (err) {
-                  console.error('Unexpected error:', err);
-                  Alert.alert('Error', 'Something went wrong.');
+                if (error) {
+                  console.error('Failed to update isFirst:', error.message);
+                  Alert.alert('Error', 'Failed to update your profile.');
+                  return;
                 }
-              }}
-            >
-              <Text style={{ color: 'white', fontWeight: 'bold' }}>Sure!</Text>
-            </TouchableOpacity>
-          </View>
-          </View>
+
+                // Close the modal locally
+                setviewFirst(false);
+                setModalUpdate(true);
+              } catch (err) {
+                console.error('Unexpected error:', err);
+                Alert.alert('Error', 'Something went wrong.');
+              }
+            }}
+          >
+            <Text style={{ color: 'white', fontWeight: 'bold' }}>Sure!</Text>
+          </TouchableOpacity>
+        </View>
         </View>
       </Modal>
-      <Modal
-        visible={warn}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setWarn(false)}
-      >
+      <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={warn} onBackdropPress={() => setWarn(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>            
         <View
           style={{
-            flex: 1,
-            justifyContent: 'center',
+            width: isMobile ? '90%' : '40%',
+            backgroundColor: '#f1f5f9',
+            padding: 20,
+            borderRadius: 10,
             alignItems: 'center',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
           }}
         >
-          <View
+          <Text
             style={{
-              width: isMobile ? '90%' : '40%',
-              backgroundColor: '#f1f5f9',
-              padding: 20,
-              borderRadius: 10,
-              alignItems: 'center',
+              fontSize: 24,
+              fontWeight: "bold",
+              marginBottom: 20,
+              alignSelf: "center",
+              color: "#00505cff",
             }}
           >
-            <Text
-              style={{
-                fontSize: 24,
-                fontWeight: "bold",
-                marginBottom: 20,
-                alignSelf: "center",
-                color: "#00505cff",
-              }}
-            >
-              WARNING!
-            </Text>
-            <Entypo name="warning" size={isMobile? 75 : 150} color="#d7c41aff" />
-            <Text
-              style={{
-                fontSize: 16,
-                alignSelf: "center",
-                color: "#00505cff",
-                fontWeight: "bold",
-                textAlign: 'center',
-              }}
-            >
-              The reason why you are seeing this is that you have violated our community guidelines.
-            </Text>
-            <Text
-              style={{
-                fontSize: 16,
-                marginBottom: 30,
-                alignSelf: "center",
-                color: "#1f5474ff",
-                textAlign: 'center',
-              }}
-            >
-              Admin: {notifMessage}
-            </Text>
-            <Text
-              style={{
-                fontSize: 16,
-                alignSelf: "center",
-                color: "#1f5474ff",
-                textAlign: 'center',
-              }}
-            >
-              Please read our term of use and privacy policy to avoid getting banned.
-            </Text>
-            <Text
-              style={{
-                fontSize: 16,
-                marginBottom: 20,
-                alignSelf: "center",
-                color: "#2a46ffff",
-              }}
-              onPress={() => setTermsOfUse(true)}
-            >
-              Terms of Use and Privacy Policy
-            </Text>
-          <View
+            WARNING!
+          </Text>
+          <Entypo name="warning" size={isMobile? 75 : 150} color="#d7c41aff" />
+          <Text
             style={{
-              flexDirection: 'row',
-              width: '48%',
-              gap: 20,
-              alignItems: 'center',
-              justifyContent: 'center',
+              fontSize: 16,
+              alignSelf: "center",
+              color: "#00505cff",
+              fontWeight: "bold",
+              textAlign: 'center',
             }}
           >
-
-            <TouchableOpacity
-              style={{
-                backgroundColor: '#00505cff',
-                padding: 10,
-                borderRadius: 5,
-                marginVertical: 5,
-                width: '100%',
-                alignItems: 'center',
-              }}
-              onPress={async () => {
-                  const { error } = await supabase
-                    .from('profiles')
-                    .update({ isWarning: false })
-                    .eq('id', session?.user.id); // Use the current user's ID
-
-                  setWarn(false);
-              }}
-            >
-              <Text style={{ color: 'white', fontWeight: 'bold', textAlign: 'center', }}>Understood and Close</Text>
-            </TouchableOpacity>
-          </View>
-          </View>
-        </View>
-      </Modal>
-      <Modal
-        visible={ban}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setWarn(false)}
-      >
+            The reason why you are seeing this is that you have violated our community guidelines.
+          </Text>
+          <Text
+            style={{
+              fontSize: 16,
+              marginBottom: 30,
+              alignSelf: "center",
+              color: "#1f5474ff",
+              textAlign: 'center',
+            }}
+          >
+            Admin: {notifMessage}
+          </Text>
+          <Text
+            style={{
+              fontSize: 16,
+              alignSelf: "center",
+              color: "#1f5474ff",
+              textAlign: 'center',
+            }}
+          >
+            Please read our term of use and privacy policy to avoid getting banned.
+          </Text>
+          <Text
+            style={{
+              fontSize: 16,
+              marginBottom: 20,
+              alignSelf: "center",
+              color: "#2a46ffff",
+            }}
+            onPress={() => setTermsOfUse(true)}
+          >
+            Terms of Use and Privacy Policy
+          </Text>
         <View
           style={{
-            flex: 1,
-            justifyContent: 'center',
+            flexDirection: 'row',
+            width: '48%',
+            gap: 20,
             alignItems: 'center',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            justifyContent: 'center',
           }}
         >
-          <View
+
+          <TouchableOpacity
             style={{
-              width: isMobile ? '90%' : '40%',
-              backgroundColor: '#f1f5f9',
-              padding: 20,
-              borderRadius: 10,
+              backgroundColor: '#00505cff',
+              padding: 10,
+              borderRadius: 5,
+              marginVertical: 5,
+              width: '100%',
               alignItems: 'center',
             }}
-          >
-            <Text
-              style={{
-                fontSize: 24,
-                fontWeight: "bold",
-                marginBottom: 20,
-                alignSelf: "center",
-                color: "#00505cff",
-                textAlign: 'center',
-              }}
-            >
-              Your account has been banned!
-            </Text>
-            <FontAwesome name="ban" size={isMobile ? 75 : 150} color="#a31b0cff" />
-            <Text
-              style={{
-                fontSize: 16,
-                alignSelf: "center",
-                color: "#00505cff",
-                fontWeight: "bold",
-                textAlign: 'center',
-              }}
-            >
-              The reason why you are seeing this is that you have violated our community guidelines.
-            </Text>
-            <Text
-              style={{
-                fontSize: 16,
-                marginBottom: 30,
-                alignSelf: "center",
-                color: "#1f5474ff",
-                textAlign: 'center',
-              }}
-            >
-              Admin: {notifMessage}
-            </Text>
+            onPress={async () => {
+                const { error } = await supabase
+                  .from('profiles')
+                  .update({ isWarning: false })
+                  .eq('id', session?.user.id); // Use the current user's ID
 
-
-          <View
-            style={{
-              flexDirection: 'row',
-              width: '48%',
-              gap: 20,
-              alignItems: 'center',
-              justifyContent: 'center',
+                setWarn(false);
             }}
           >
-
-            <TouchableOpacity
-              style={{
-                backgroundColor: '#00505cff',
-                padding: 10,
-                borderRadius: 5,
-                marginVertical: 5,
-                width: '100%',
-                alignItems: 'center',
-              }}
-              onPress={async () => {
-                setModalSignout(true)
-              }}
-            >
-              <Text style={{ color: 'white', fontWeight: 'bold' }}>Logout</Text>
-            </TouchableOpacity>
-          </View>
-          </View>
+            <Text style={{ color: 'white', fontWeight: 'bold', textAlign: 'center', }}>Understood and Close</Text>
+          </TouchableOpacity>
+        </View>
         </View>
       </Modal>
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={modalMessage}
-        onRequestClose={() => setModalMessage(false)}
-      >
+      <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={ban} onBackdropPress={() => setWarn(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>            
         <View
           style={{
-            flex: 1,
-            justifyContent: "center",
-            alignItems: "center",
+            width: isMobile ? '90%' : '40%',
+            backgroundColor: '#f1f5f9',
+            padding: 20,
+            borderRadius: 10,
+            alignItems: 'center',
           }}
         >
-          <View
+          <Text
             style={{
-              backgroundColor: "#fff",
-              padding: 20,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: "#f1f5f9",
-              width: "80%",
-              maxWidth: 500,
+              fontSize: 24,
+              fontWeight: "bold",
+              marginBottom: 20,
+              alignSelf: "center",
+              color: "#00505cff",
+              textAlign: 'center',
             }}
           >
-            <Text
-              style={{
-                fontSize: 18,
-                fontWeight: "bold",
-                marginBottom: 10,
-                color: "#00505cff",
-              }}
-            >
-              Message
-            </Text>
-            <Text
-              style={{
-                fontSize: 16,
-                marginBottom: 20,
-                color: "#333",
-              }}
-            >
-              {selectedMessage}
-            </Text>
-            <TouchableOpacity
-              onPress={() => setModalMessage(false)}
-              style={{
-                alignSelf: "flex-end",
-                backgroundColor: "#00505cff",
-                paddingVertical: 8,
-                paddingHorizontal: 16,
-                borderRadius: 5,
-              }}
-            >
-              <Text style={{ color: "#fff", fontWeight: "600" }}>Close</Text>
-            </TouchableOpacity>
-          </View>
+            Your account has been banned!
+          </Text>
+          <FontAwesome name="ban" size={isMobile ? 75 : 150} color="#a31b0cff" />
+          <Text
+            style={{
+              fontSize: 16,
+              alignSelf: "center",
+              color: "#00505cff",
+              fontWeight: "bold",
+              textAlign: 'center',
+            }}
+          >
+            The reason why you are seeing this is that you have violated our community guidelines.
+          </Text>
+          <Text
+            style={{
+              fontSize: 16,
+              marginBottom: 30,
+              alignSelf: "center",
+              color: "#1f5474ff",
+              textAlign: 'center',
+            }}
+          >
+            Admin: {notifMessage}
+          </Text>
+
+
+        <View
+          style={{
+            flexDirection: 'row',
+            width: '48%',
+            gap: 20,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#00505cff',
+              padding: 10,
+              borderRadius: 5,
+              marginVertical: 5,
+              width: '100%',
+              alignItems: 'center',
+            }}
+            onPress={async () => {
+              setModalSignout(true)
+            }}
+          >
+            <Text style={{ color: 'white', fontWeight: 'bold' }}>Logout</Text>
+          </TouchableOpacity>
+        </View>
+        </View>
+      </Modal>
+      <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={modalMessage} onBackdropPress={() => setModalMessage(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>            
+        <View
+          style={{
+            backgroundColor: "#fff",
+            padding: 20,
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: "#f1f5f9",
+            width: "80%",
+            maxWidth: 500,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 18,
+              fontWeight: "bold",
+              marginBottom: 10,
+              color: "#00505cff",
+            }}
+          >
+            Message
+          </Text>
+          <Text
+            style={{
+              fontSize: 16,
+              marginBottom: 20,
+              color: "#333",
+            }}
+          >
+            {selectedMessage}
+          </Text>
+          <TouchableOpacity
+            onPress={() => setModalMessage(false)}
+            style={{
+              alignSelf: "flex-end",
+              backgroundColor: "#00505cff",
+              paddingVertical: 8,
+              paddingHorizontal: 16,
+              borderRadius: 5,
+            }}
+          >
+            <Text style={{ color: "#fff", fontWeight: "600" }}>Close</Text>
+          </TouchableOpacity>
         </View>
       </Modal>
 
@@ -1484,89 +1440,76 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
           colors={['#80c4c4ff', '#009b84ff']}
         >
           <View style={{ flex: 1, width: "100%" }}>
-                <Modal
-                  transparent
-                  animationType="fade"
-                  visible={modalSignout}
-                  onRequestClose={() => setModalSignout(false)}
-                >
+                <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={modalSignout} onBackdropPress={() => setModalSignout(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>            
+                
                   <View
                     style={{
-                      flex: 1,
-                      backgroundColor: "rgba(0,0,0,0.4)",
-                      justifyContent: "center",
+                      backgroundColor: "white",
+                      borderRadius: 12,
+                      padding: 20,
                       alignItems: "center",
-                      padding: 50,
+                      width: !isMobile ? "30%" : "85%",
                     }}
                   >
+                    <Text style={{ fontSize: 18, marginBottom: 20, textAlign: "center", color: 'black'}} > Do you wanna signout? </Text>
+
                     <View
                       style={{
-                        backgroundColor: "white",
-                        borderRadius: 12,
-                        padding: 20,
-                        alignItems: "center",
-                        width: !isMobile ? "30%" : "85%",
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        width: "100%",
                       }}
                     >
-                      <Text style={{ fontSize: 18, marginBottom: 20, textAlign: "center", color: 'black'}} > Do you wanna signout? </Text>
-
-                      <View
+                      {/* CANCEL BUTTON */}
+                      <TouchableOpacity
                         style={{
-                          flexDirection: "row",
-                          justifyContent: "space-between",
-                          width: "100%",
+                          flex: 1,
+                          backgroundColor: "#b32020",
+                          paddingVertical: 12,
+                          borderRadius: 8,
+                          marginRight: 8,
+                        }}
+                        onPress={() => setModalSignout(false)}
+                      >
+                        <Text
+                          style={{
+                            color: "white",
+                            fontWeight: "bold",
+                            textAlign: "center",
+                          }}
+                        >
+                          Cancel
+                        </Text>
+                      </TouchableOpacity>
+
+                      {/* SIGNOUT BUTTON */}
+                      <TouchableOpacity
+                        style={{
+                          flex: 1,
+                          backgroundColor: "#2ecc71",
+                          paddingVertical: 12,
+                          borderRadius: 8,
+                          marginLeft: 8,
+                        }}
+                        onPress={() => {
+                          console.log("Signing out...");
+                          setModalSignout(false);
+                          signOut();
                         }}
                       >
-                        {/* CANCEL BUTTON */}
-                        <TouchableOpacity
+                        <Text
                           style={{
-                            flex: 1,
-                            backgroundColor: "#b32020",
-                            paddingVertical: 12,
-                            borderRadius: 8,
-                            marginRight: 8,
-                          }}
-                          onPress={() => setModalSignout(false)}
-                        >
-                          <Text
-                            style={{
-                              color: "white",
-                              fontWeight: "bold",
-                              textAlign: "center",
-                            }}
-                          >
-                            Cancel
-                          </Text>
-                        </TouchableOpacity>
-
-                        {/* SIGNOUT BUTTON */}
-                        <TouchableOpacity
-                          style={{
-                            flex: 1,
-                            backgroundColor: "#2ecc71",
-                            paddingVertical: 12,
-                            borderRadius: 8,
-                            marginLeft: 8,
-                          }}
-                          onPress={() => {
-                            console.log("Signing out...");
-                            setModalSignout(false);
-                            signOut();
+                            color: "white",
+                            fontWeight: "bold",
+                            textAlign: "center",
                           }}
                         >
-                          <Text
-                            style={{
-                              color: "white",
-                              fontWeight: "bold",
-                              textAlign: "center",
-                            }}
-                          >
-                            Signout
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
+                          Signout
+                        </Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
+         
                 </Modal>
           {(isMobile) && (
             <View style={[{ height: 60}]}>
@@ -1644,109 +1587,94 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                   )}
                 </TouchableOpacity>
 
-                <Modal
-                  transparent
-                  animationType="fade"
-                  visible={modalUpdate}
-                  onRequestClose={() => setModalUpdate(false)}
-                >
+               <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={modalUpdate} onBackdropPress={() => setModalUpdate(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>                        
                   <View
                     style={{
-                      flex: 1,
-                      backgroundColor: "rgba(0,0,0,0.4)",
-                      justifyContent: "center",
+                      backgroundColor: '#f1f5f9',
+                      borderRadius: 12,
+                      padding: 20,
                       alignItems: "center",
-                      padding: 50,
+                      width: !isMobile ? "25%" : "85%",
                     }}
                   >
-                    <View
-                      style={{
-                        backgroundColor: '#f1f5f9',
-                        borderRadius: 12,
-                        padding: 20,
-                        alignItems: "center",
-                        width: !isMobile ? "25%" : "85%",
-                      }}
-                    >
-                      <View style={styles.avatarSection}>
-                        <TouchableOpacity
-                          onPress={() => {
-                            if (Platform.OS === "web") {
-                              pickImageWeb();
-                            } else {
-                              pickImageMobile();
-                            }
-                          }}
-                          style={styles.avatarContainer}
-                        >
-                          {avatarUrl ? (
-                            <Image
-                              source={{
-                                uri: avatarUrl
-                                  ? `${avatarUrl}?t=${Date.now()}`
-                                  : require("../../assets/default.png"),
-                              }} // ✅ Type-safe (fallback empty string)
-                              style={styles.avatar}
-                            />
-                          ) : (
-                            <View style={styles.avatarPlaceholder}>
-                              <MaterialIcons
-                                name="person"
-                                size={50}
-                                color="#ccc"
-                              />
-                            </View>
-                          )}
-                          <View style={styles.cameraIcon}>
+                    <View style={styles.avatarSection}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          if (Platform.OS === "web") {
+                            pickImageWeb();
+                          } else {
+                            pickImageMobile();
+                          }
+                        }}
+                        style={styles.avatarContainer}
+                      >
+                        {avatarUrl ? (
+                          <Image
+                            source={{
+                              uri: avatarUrl
+                                ? `${avatarUrl}?t=${Date.now()}`
+                                : require("../../assets/default.png"),
+                            }} // ✅ Type-safe (fallback empty string)
+                            style={styles.avatar}
+                          />
+                        ) : (
+                          <View style={styles.avatarPlaceholder}>
                             <MaterialIcons
-                              name="camera-alt"
-                              size={20}
-                              color="#007AFF"
+                              name="person"
+                              size={50}
+                              color="#ccc"
                             />
                           </View>
-                        </TouchableOpacity>
+                        )}
+                        <View style={styles.cameraIcon}>
+                          <MaterialIcons
+                            name="camera-alt"
+                            size={20}
+                            color="#007AFF"
+                          />
+                        </View>
+                      </TouchableOpacity>
 
-                        <Text style={styles.avatarText}>
-                          Tap to change profile picture
-                        </Text>
-                      </View>
+                      <Text style={styles.avatarText}>
+                        Tap to change profile picture
+                      </Text>
+                    </View>
 
-                      {/* Rest of your profile content */}
-                      <View>
-                        <Text style={{fontWeight: "bold", fontStyle: "italic", fontSize: 16, textAlign: "center", color: '#00505cff', marginBottom: 20}}>
-                          {firstname} {lastname}
-                        </Text>
-                      </View>
+                    {/* Rest of your profile content */}
+                    <View>
+                      <Text style={{fontWeight: "bold", fontStyle: "italic", fontSize: 16, textAlign: "center", color: '#00505cff', marginBottom: 20}}>
+                        {firstname} {lastname}
+                      </Text>
+                    </View>
 
-                      <View
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        width: "100%",
+                      }}
+                    >
+                      {/* CANCEL BUTTON */}
+                      <TouchableOpacity
                         style={{
-                          flexDirection: "row",
-                          justifyContent: "space-between",
-                          width: "100%",
+                          flex: 1,
+                          backgroundColor: '#00505cff',
+                          paddingVertical: 12,
+                          borderRadius: 8,
+                          marginRight: 8,
                         }}
+                        onPress={() => setModalUpdate(false)}
                       >
-                        {/* CANCEL BUTTON */}
-                        <TouchableOpacity
+                        <Text
                           style={{
-                            flex: 1,
-                            backgroundColor: '#00505cff',
-                            paddingVertical: 12,
-                            borderRadius: 8,
-                            marginRight: 8,
+                            color: '#ffffffff',
+                            fontWeight: "bold",
+                            textAlign: "center",
                           }}
-                          onPress={() => setModalUpdate(false)}
                         >
-                          <Text
-                            style={{
-                              color: '#ffffffff',
-                              fontWeight: "bold",
-                              textAlign: "center",
-                            }}
-                          >
-                            Close
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
+                          Close
+                        </Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
                 </Modal>
@@ -1786,7 +1714,7 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
         color: dashboardView === "profile" ? '#00505cff' : '#ffffff',
         marginLeft: 8,
       }}>
-        Dashboard
+        Profile
       </Text>
     </View>
   )}
@@ -2103,7 +2031,7 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                 color: '#00505cff',
               }}
             >
-              Dashboard
+              Profile
             </Text>
             <View style={styles.proinfo}>
               <Image
@@ -2199,13 +2127,7 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                     </TouchableOpacity>
                   </View>
 
-<Modal
-  animationType="fade"
-  transparent={true}
-  visible={modalVisible}
-  onRequestClose={() => setModalVisible(false)} // for Android back button
->
-  <View style={styles.modalBackground}>
+ <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={modalVisible} onBackdropPress={() => setModalVisible(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}> 
     <View
       style={{
         ...styles.modalContent,
@@ -2351,369 +2273,367 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
       </ScrollView>
 
     </View>
-  </View>
 </Modal>
 
                 </View>
               </View>
             </View>
-            <View
-              style={{
-                width: isMobile ? "98.8%" : "99.3%",
-                marginHorizontal: 8,
-                flexDirection: isMobile ? "column" : "row", // 👈 switch here
-                marginLeft: isMobile ? 0 : 8,
-                flexWrap: "wrap",
-                gap: 15,
-                paddingBottom: 25,
-              }}
-            >
-              <View
-                style={{
-                  flex: 1,
-                  padding: 16,
-                  backgroundColor: "#ffffffff",
-                  borderRadius: 8,
-                  minWidth: 330,
-                  height: isMobile ? null : 400,
-                }}
-              >
-                <Text
-                  style={{
-                    alignSelf: "center",
-                    fontWeight: "bold",
-                    fontSize: 24,
-                    color: '#00505cff',
-                    marginBottom: 10,
-                  }}
-                >
-                  Your Requests
-                </Text>
+          <View
+            style={{
+              width: "100%",
+              paddingHorizontal: 8,
+              flexDirection: isMobile ? "column" : "row",
+              flexWrap: "wrap",
+              gap: 15,
+              paddingBottom: 25,
+              alignItems: "center",
+              justifyContent: "center",
+            
+            }}
+          >
+            {/* Your Requests Section */}
+            <View style={{ 
+              flex: 1, 
+              padding: 16, 
+              backgroundColor: "#ffffffff", 
+              borderRadius: 8, 
+              width: isMobile ? "100%" : "90%",
+              height: isMobile ? null : 400, 
+            }}>
+              <Text style={{ alignSelf: "center", fontWeight: "bold", fontSize: 24, color: '#00505cff', marginBottom: 10, }}> 
+                Your Requests 
+              </Text>
 
-                <FlatList
-                  data={
-                    isMobile
-                      ? (appointmentsList ?? []).slice(0, 3)
-                      : appointmentsList ?? []
-                  } // 👈 safe fallback
-                  keyExtractor={(e) => e.id}
-                  style={{ flex: 1 }}
-                  showsVerticalScrollIndicator={true}
-                  scrollEnabled={true}
-                  contentContainerStyle={{
-                    gap: 10,
-                    paddingBottom: 20,
-                    alignItems:
-                      (appointmentsList?.length ?? 0) === 0
-                        ? "center"
-                        : "stretch",
-                  }}
-                  renderItem={(e) => (
+              <FlatList
+                data={
+                  isMobile
+                    ? (appointmentsList ?? []).slice(0, 3)
+                    : appointmentsList ?? []
+                }
+                keyExtractor={(e) => e.id}
+                style={{ flex: 1 }}
+                showsVerticalScrollIndicator={true}
+                scrollEnabled={true}
+                contentContainerStyle={{
+                  gap: 10,
+                  paddingBottom: 20,
+                  alignItems:
+                    (appointmentsList?.length ?? 0) === 0
+                      ? "center"
+                      : "stretch",
+                }}
+                renderItem={(e) => (
+                  <View
+                    style={{
+                      width: "100%",
+                      gap: 5,
+                      paddingHorizontal: 20,
+                      paddingVertical: 15,
+                      backgroundColor: "#ffffd7ff",
+                      borderRadius: 8,
+                    }}
+                  >
+                    <Text style={{ fontWeight: "bold" }}>Clinic Name :</Text>
+                    <Text>{`${e.item.clinic_profiles.clinic_name}`}</Text>
+
+                    <Text style={{ fontWeight: "bold" }}>
+                      Date & Time of Appointment :
+                    </Text>
+                    <Text>
+                      {`${new Date(e.item.date_time).toLocaleString(undefined, {
+                        year: "numeric",
+                        month: "numeric",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}`}
+                    </Text>
+
+                    <Text style={{ fontWeight: "bold" }}>
+                      Requested Dentists/Staff :
+                    </Text>
+                    <Text>
+                      {(() => {
+                        try {
+                          return JSON.parse(e.item.request).join("\n");
+                        } catch {
+                          return e.item.request;
+                        }
+                      })()}
+                    </Text>
+
                     <View
                       style={{
-                        width: "100%",
-                        gap: 5,
-                        paddingHorizontal: 20,
-                        paddingVertical: 15,
-                        backgroundColor: "#ffffd7ff",
-                        borderRadius: 8,
+                        marginTop: 10,
+                        padding: 8,
+                        borderRadius: 6,
+                        backgroundColor: "#fffce9ff",
+                        borderWidth: 1,
+                        borderColor: "#ffe680",
                       }}
                     >
-                      <Text style={{ fontWeight: "bold" }}>Clinic Name :</Text>
-                      <Text>{`${e.item.clinic_profiles.clinic_name}`}</Text>
-
-                      <Text style={{ fontWeight: "bold" }}>
-                        Date & Time of Appointment :
+                      <Text style={{ fontWeight: "bold", marginBottom: 4 }}>
+                        Patient's Message :
                       </Text>
-                      <Text>
-                        {`${new Date(e.item.date_time).toLocaleString(undefined, {
-                          year: "numeric",
-                          month: "numeric",
-                          day: "numeric",
-                          hour: "numeric",
-                          minute: "2-digit",
-                          hour12: true,
-                        })}`}
-                      </Text>
-
-                      <Text style={{ fontWeight: "bold" }}>
-                        Requested Dentists/Staff :
-                      </Text>
-                      <Text>
-                        {(() => {
-                          try {
-                            return JSON.parse(e.item.request).join("\n");
-                          } catch {
-                            return e.item.request; // fallback: just show raw string if parsing fails
-                          }
-                        })()}
-                      </Text>
-
-
-                      <View
-                        style={{
-                          marginTop: 10,
-                          padding: 8,
-                          borderRadius: 6,
-                          backgroundColor: "#fffce9ff",
-                          borderWidth: 1,
-                          borderColor: "#ffe680",
-                        }}
-                      >
-                        <Text style={{ fontWeight: "bold", marginBottom: 4 }}>
-                          Patient's Message :
-                        </Text>
-                        {e.item.message.length > 20 ? (
-                          <Text style={{ textAlign: "left", flex: 1 }}>
-                            <Text style={{ color: "#000" }}>
-                              {e.item.message.slice(0, 20) + "..."}
-                            </Text>
-                            <Text
+                      {e.item.message.length > 20 ? (
+                        <Text style={{ textAlign: "left", flex: 1 }}>
+                          <Text style={{ color: "#000" }}>
+                            {e.item.message.slice(0, 20) + "..."}
+                          </Text>
+                          <Text
                             onPress={() => {
                               setSelectedMessage(e.item.message);
                               setModalMessage(true);
-                            }} style={{ color: "blue", textDecorationLine: "underline" }}>
-                              See More
-                            </Text>
+                            }} 
+                            style={{ color: "blue", textDecorationLine: "underline" }}
+                          >
+                            See More
                           </Text>
+                        </Text>
                       ) : (
                         <Text style={{ flex: 1 }}>
                           {e.item.message}
                         </Text>
                       )}
-                      </View>
-
-                      <Text
-                        style={{
-                          textAlign: "right",
-                          color: "#2c2c2cff",
-                          fontSize: 10,
-                        }}
-                      >
-                        {`Created at : ${new Date(
-                          e.item.created_at || 0
-                        ).toLocaleString()}`}
-                      </Text>
                     </View>
-                  )}
-                  ListEmptyComponent={
+
                     <Text
-                      style={{ fontSize: 20, color: "gray", marginTop: 40 }}
+                      style={{
+                        textAlign: "right",
+                        color: "#2c2c2cff",
+                        fontSize: 10,
+                      }}
                     >
-                      - No Requests -
+                      {`Created at : ${new Date(
+                        e.item.created_at || 0
+                      ).toLocaleString()}`}
                     </Text>
-                  }
-                />
-                {/* 👇 Show "view all" message only if mobile AND more than 3 */}
-                {isMobile && (appointmentsList?.length ?? 0) > 3 && (
+                  </View>
+                )}
+                ListEmptyComponent={
                   <Text
+                    style={{ fontSize: 20, color: "gray", marginTop: 40 }}
+                  >
+                    - No Requests -
+                  </Text>
+                }
+              />
+              {isMobile && (appointmentsList?.length ?? 0) > 3 && (
+                <Text
                   onPress={() => {
                     setDashboardView("pending");
                   }}
+                  style={{
+                    fontSize: 14,
+                    color: "blue",
+                    marginTop: 10,
+                    textAlign: "center",
+                  }}
+                >
+                  ...navigate to requests to view all
+                </Text>
+              )}
+            </View>
+
+            {/* History Section */}
+            <View
+              style={{
+                flex: 1,
+                padding: 16,
+                backgroundColor: "#ffffffff",
+                borderRadius: 8,
+                width: isMobile ? "100%" : "90%",
+                height: isMobile ? null : 400,
+              }}
+            >
+              <Text style={{ alignSelf: "center", fontWeight: "bold", fontSize: 24, color: '#00505cff', marginBottom: 10, }}> 
+                History 
+              </Text>
+
+              <FlatList
+                data={
+                  isMobile
+                    ? (appointmentsPast ?? []).slice(0, 3)
+                    : appointmentsPast ?? []
+                }
+                keyExtractor={(e) => e.id}
+                style={{ flex: 1 }}
+                showsVerticalScrollIndicator={true}
+                scrollEnabled={true}
+                contentContainerStyle={{
+                  gap: 10,
+                  paddingBottom: 20,
+                  alignItems:
+                    (appointmentsPast?.length ?? 0) === 0
+                      ? "center"
+                      : "stretch",
+                }}
+                renderItem={(e) => (
+                  <View
                     style={{
-                      fontSize: 14,
-                      color: "blue",
-                      marginTop: 10,
-                      textAlign: "center",
+                      width: "100%",
+                      gap: 5,
+                      padding: 5,
+                      backgroundColor: e.item.isAccepted
+                        ? "#e4ffe0ff"
+                        : "#ffe0e0ff",
+                      borderRadius: 8,
+                      paddingHorizontal: 20,
+                      paddingVertical: 15,
                     }}
                   >
-                    ...navigate to requests to view all
-                  </Text>
-                )}
-              </View>
-              <View
-                style={{
-                  flex: 1,
-                  padding: 16,
-                  backgroundColor: "#ffffffff",
-                  borderRadius: 8,
-                  minWidth: 200,
-                  height: isMobile ? null : 400,
-                }}
-              >
-                <Text style={{ alignSelf: "center", fontWeight: "bold", fontSize: 24, color: '#00505cff', marginBottom: 10, }} > History </Text>
+                    <Text style={{ fontWeight: "bold", color: '#555' }}>Clinic Name :</Text>
+                    <Text style={{ color: '#555'}}>{`${e.item.clinic_profiles.clinic_name} ${e.item.profiles.last_name}`}</Text>
 
-                <FlatList
-                  data={
-                    isMobile
-                      ? (appointmentsPast ?? []).slice(0, 3)
-                      : appointmentsPast ?? []
-                  } // 👈 safe fallback
-                  keyExtractor={(e) => e.id}
-                  style={{ flex: 1 }} // allow FlatList to take up remaining height
-                  showsVerticalScrollIndicator={true}
-                  scrollEnabled={true}
-                  contentContainerStyle={{
-                    gap: 10,
-                    paddingBottom: 20,
-                    alignItems:
-                      (appointmentsPast?.length ?? 0) === 0
-                        ? "center"
-                        : "stretch",
-                  }}
-                  renderItem={(e) => (
+                    <Text style={{ fontWeight: "bold",  color: '#555' }}>Date & Time :</Text>
+                    <Text style={{ color: '#555'}}>
+                      {`${new Date(e.item.date_time).toLocaleString(undefined, {
+                        year: "numeric",
+                        month: "numeric",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}`}
+                    </Text>
+
+                    <Text style={{ fontWeight: "bold",  color: '#555' }}>
+                      Requested Dentists/Staff :
+                    </Text>
+                    <Text style={{ color: '#555'}}>
+                      {(() => {
+                        try {
+                          return JSON.parse(e.item.request).join("\n");
+                        } catch {
+                          return e.item.request;
+                        }
+                      })()}
+                    </Text>
+
                     <View
                       style={{
-                        width: "100%",
-                        gap: 5,
-                        padding: 5,
-                        backgroundColor: e.item.isAccepted
-                          ? "#e4ffe0ff"
-                          : "#ffe0e0ff",
-                        borderRadius: 8,
-                        paddingHorizontal: 20,
-                        paddingVertical: 15,
+                        marginTop: 10,
+                        padding: 8,
+                        borderRadius: 6,
+                        backgroundColor: !e.item.isAccepted
+                          ? "#fff3f3"
+                          : "#e9fdecff",
+                        borderWidth: 1,
+                        borderColor: !e.item.isAccepted
+                          ? "#ffcccc"
+                          : "#b6e4beff",
                       }}
                     >
-                      <Text style={{ fontWeight: "bold", color: '#555' }}>Clinic Name :</Text>
-                      <Text style={{ color: '#555'}}>{`${e.item.clinic_profiles.clinic_name} ${e.item.profiles.last_name}`}</Text>
-
-                      <Text style={{ fontWeight: "bold",  color: '#555' }}>Date & Time :</Text>
-                      <Text style={{ color: '#555'}}>
-                        {`${new Date(e.item.date_time).toLocaleString(undefined, {
-                          year: "numeric",
-                          month: "numeric",
-                          day: "numeric",
-                          hour: "numeric",
-                          minute: "2-digit",
-                          hour12: true,
-                        })}`}
-                       </Text>
-
-                      <Text style={{ fontWeight: "bold",  color: '#555' }}>
-                        Requested Dentists/Staff :
+                      <Text style={{ fontWeight: "bold", marginBottom: 4,  color: '#555' }}>
+                        Patient's Message :
                       </Text>
-                      <Text style={{ color: '#555'}}>
-                        {(() => {
-                          try {
-                            return JSON.parse(e.item.request).join("\n");
-                          } catch {
-                            return e.item.request; // fallback: just show raw string if parsing fails
-                          }
-                        })()}
-                      </Text>
-
-                      <View //borderfix
-                        style={{
-                          marginTop: 10,
-                          padding: 8,
-                          borderRadius: 6,
-                          backgroundColor: !e.item.isAccepted
-                            ? "#fff3f3"
-                            : "#e9fdecff",
-                          borderWidth: 1,
-                          borderColor: !e.item.isAccepted
-                            ? "#ffcccc"
-                            : "#b6e4beff",
-                        }}
-                      >
-                        <Text style={{ fontWeight: "bold", marginBottom: 4,  color: '#555' }}>
-                          Patient's Message :
-                        </Text>
-                        {e.item.message.length > 20 ? (
-                          <Text style={{ textAlign: "left", flex: 1,  color: '#555' }}>
-                            <Text style={{ color: "#000" }}>
-                              {e.item.message.slice(0, 20) + "..."}
-                            </Text>
-                            <Text
+                      {e.item.message.length > 20 ? (
+                        <Text style={{ textAlign: "left", flex: 1,  color: '#555' }}>
+                          <Text style={{ color: "#000" }}>
+                            {e.item.message.slice(0, 20) + "..."}
+                          </Text>
+                          <Text
                             onPress={() => {
                               setSelectedMessage(e.item.message);
                               setModalMessage(true);
-                            }} style={{ color: "blue", textDecorationLine: "underline" }}>
-                              See More
-                            </Text>
+                            }} 
+                            style={{ color: "blue", textDecorationLine: "underline" }}
+                          >
+                            See More
                           </Text>
+                        </Text>
                       ) : (
                         <Text style={{ flex: 1,  color: '#555'}}>
                           {e.item.message}
                         </Text>
                       )}
-                      </View>
+                    </View>
 
-                      <Text style={{ fontWeight: "bold", marginTop: 7,  color: '#555' }}> Status : </Text>
-                      <Text style={{ color: '#555'}}>
-                        {e.item.isAccepted
-                          ? "Accepted"
-                          : e.item.isAccepted === false
-                          ? "Rejected"
-                          : "Rejected : past due"}
-                      </Text>
+                    <Text style={{ fontWeight: "bold", marginTop: 7,  color: '#555' }}> 
+                      Status : 
+                    </Text>
+                    <Text style={{ color: '#555'}}>
+                      {e.item.isAccepted
+                        ? "Accepted"
+                        : e.item.isAccepted === false
+                        ? "Rejected"
+                        : "Rejected : past due"}
+                    </Text>
 
-                      {e.item.isAccepted == false && (
-                        <View
-                          style={{
-                            marginTop: 10,
-                            padding: 8,
-                            borderRadius: 6,
-                            backgroundColor: "#fff3f3",
-                            borderWidth: 1,
-                            borderColor: "#ffcccc",
-                          }}
-                        >
-                          <Text style={{ fontWeight: "bold", marginBottom: 4,  color: '#555' }}>
-                            Clinic's Rejection Message :
-                          </Text>
-                          <Text style={{ color: '#555'}}>
-                            {e.item.rejection_note || "No rejection note"}
-                          </Text>
-                        </View>
-                      )}
-
-                      <Text style={{ fontWeight: "bold",  color: '#555' }}>Attendance :</Text>
-                      {/* Attended Status Column */}
-                      <Text style={{ flex: 1,  color: '#555' }}>
-                        {e.item.isAttended === true
-                          ? "Attended"
-                          : e.item.isAttended === false
-                          ? "Not Attended"
-                          : "Not Attended"}
-                      </Text>
-
-                      <Text
+                    {e.item.isAccepted == false && (
+                      <View
                         style={{
-                          textAlign: "right",
-                          color: "#2c2c2cff",
-                          fontSize: 10,
+                          marginTop: 10,
+                          padding: 8,
+                          borderRadius: 6,
+                          backgroundColor: "#fff3f3",
+                          borderWidth: 1,
+                          borderColor: "#ffcccc",
                         }}
                       >
-                        {`Created at : ${new Date(
-                          e.item.created_at || 0
-                        ).toLocaleString()}`}
-                      </Text>
-                    </View>
-                  )}
-                  ListEmptyComponent={
+                        <Text style={{ fontWeight: "bold", marginBottom: 4,  color: '#555' }}>
+                          Clinic's Rejection Message :
+                        </Text>
+                        <Text style={{ color: '#555'}}>
+                          {e.item.rejection_note || "No rejection note"}
+                        </Text>
+                      </View>
+                    )}
+
+                    <Text style={{ fontWeight: "bold",  color: '#555' }}>Attendance :</Text>
+                    <Text style={{ flex: 1,  color: '#555' }}>
+                      {e.item.isAttended === true
+                        ? "Attended"
+                        : e.item.isAttended === false
+                        ? "Not Attended"
+                        : "Not Attended"}
+                    </Text>
+
                     <Text
                       style={{
-                        fontSize: 20,
-                        color: "gray",
-                        marginTop: 40,
-                        marginBottom: 40,
+                        textAlign: "right",
+                        color: "#2c2c2cff",
+                        fontSize: 10,
                       }}
                     >
-                      - No History -
+                      {`Created at : ${new Date(
+                        e.item.created_at || 0
+                      ).toLocaleString()}`}
                     </Text>
-                  }
-                />
-
-                {/* 👇 Show "view all" message only if mobile AND more than 3 */}
-                {isMobile && (appointmentsPast?.length ?? 0) > 3 && (
+                  </View>
+                )}
+                ListEmptyComponent={
                   <Text
-                    onPress={() => {
-                      setDashboardView("history");
-                    }}
                     style={{
-                      fontSize: 14,
-                      color: "blue",
-                      marginTop: 10,
-                      textAlign: "center",
+                      fontSize: 20,
+                      color: "gray",
+                      marginTop: 40,
+                      marginBottom: 40,
                     }}
                   >
-                    ...navigate to history to view all
+                    - No History -
                   </Text>
-                )}
-              </View>
+                }
+              />
+
+              {isMobile && (appointmentsPast?.length ?? 0) > 3 && (
+                <Text
+                  onPress={() => {
+                    setDashboardView("history");
+                  }}
+                  style={{
+                    fontSize: 14,
+                    color: "blue",
+                    marginTop: 10,
+                    textAlign: "center",
+                  }}
+                >
+                  ...navigate to history to view all
+                </Text>
+              )}
             </View>
+          </View>
           </ScrollView>
         </View>
         )}
@@ -2770,19 +2690,9 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                 View All Registered Clinics in Map
               </Text>
             </TouchableOpacity>
-            <Modal
-              transparent
-              animationType="fade"
-              visible={tMap}
-              onRequestClose={() => setTMap(false)}
-            >
-              <View
-                style={{
-                  flex: 1,
-                  justifyContent: "center",
-                  alignItems: "center",
-                }}
-              >
+            <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={tMap} onBackdropPress={() => setTMap(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}> 
+           
+             
                 <View
                   style={{
                     width: isMobile ? "90%" : "80%",
@@ -2864,7 +2774,7 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                     </View>
                   </ScrollView>
                 </View>
-              </View>
+      
             </Modal>
 
 
@@ -2873,1722 +2783,1492 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                 <Text style={{ textAlign: "center" }}>No clinics found.</Text>
               ) : (
                 <>
-              <View
-                style={{
-                  flexDirection: isMobile ? "column" : "row",
-                  flexWrap: isMobile ? "nowrap" : "wrap",
-                  justifyContent: isMobile ? "flex-start" : "center",
-                }}
-              >
-                {clinicList
-                  .filter((clinic) => clinic.isFirst === false)
-                  .slice(0, showAllClinics ? clinicList.length : 8) // Show only 8 clinics unless "showAllClinics" is true
-                  .map((clinic, index) => (
-                    <LinearGradient
-                      colors={["#ffffffff", "#bdeeffff"]}
-                      key={clinic.id || index}
-                      style={{
-                        flexDirection: "row",
-                        backgroundColor: "#fff",
-                        padding: 20,
-                        margin: 8,
-                        borderRadius: 16,
-                        shadowColor: "#000",
-                        shadowOpacity: 0.15,
-                        shadowRadius: 6,
-                        shadowOffset: { width: 0, height: 4 },
-                        elevation: 4,
-                        alignItems: "center",
-                        minHeight: 140,
-                        width: isMobile ? "95%" : "45%",
-                      }}
-                    >
-                    {/* Left side: Image + Info */}
-                    <View
-                      style={{
-                        flex: 7,
-                        flexDirection: "row",
-                        alignItems: "center",
-                        marginLeft: 4,
-                      }}
-                    >
-                      {/* 222 */}
-<View style={{ position: "relative" }}>
-  {clinic.clinic_photo_url ? (
-    <Image
-      source={{ uri: clinic.clinic_photo_url }}
-      style={{
-        width: isMobile ? 70 : 100,
-        height: isMobile ? 70 : 100,
-        borderRadius: 16,
-        marginRight: 16,
-        backgroundColor: "#fff",
-      }}
-      resizeMode="cover"
-    />
-  ) : (
-    <View
-      style={{
-        width: isMobile ? 70 : 100,
-        height: isMobile ? 70 : 100,
-        borderRadius: 16,
-        marginRight: 16,
-        backgroundColor: "#fff",
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <FontAwesome5 name="clinic-medical" size={64} color="#4a878bff" />
-    </View>
-  )}
-
-  {/* Small Button Overlay */}
-  <TouchableOpacity
-    style={{
-      position: "absolute",
-      bottom: -4,
-      backgroundColor: "rgba(0,0,0,0.4)",
-      right: 6,
-      paddingVertical: 4,
-      paddingHorizontal: 8,
-      borderRadius: 8,
-    }}
-    onPress={() => {
-      setSelectedSunday(clinic.clinic_schedule[0]?.sunday || {});
-      setSelectedMonday(clinic.clinic_schedule[0]?.monday || {});
-      setSelectedTuesday(clinic.clinic_schedule[0]?.tuesday || {});
-      setSelectedWednesday(clinic.clinic_schedule[0]?.wednesday || {});
-      setSelectedThursday(clinic.clinic_schedule[0]?.thursday || {});
-      setSelectedFriday(clinic.clinic_schedule[0]?.friday || {});
-      setSelectedSaturday(clinic.clinic_schedule[0]?.saturday || {});
-
-      setSelectedClinicName(clinic.clinic_name);
-      setSelectedClinicEmail(clinic.email);
-      setSelectedClinicSlogan(clinic.bio);
-      setSelectedClinicAddress(clinic.address);
-      setSelectedClinicMobile(clinic.mobile_number);
-      setSelectedClinicCreatedAt(clinic.created_at);
-      setSelectedClinicRole(clinic.role);
-      setSelectedClinicDentist(clinic.isDentistAvailable);
-      setSelectedClinicImage(clinic.clinic_photo_url);
-      setviewClinic(true);
-      setSelectedClinicId(clinic.id);
-      setappointmentName(clinic.clinic_name);
-      setMapView([clinic.longitude, clinic.latitude]);
-      chatWithClinic(clinic.id);
-      setSelectedCI(clinic.introduction);
-      setSelectedOffers(clinic.offers);
-      setOfferList(clinic.offers || []);
-      setVerified(clinic.isVerified);
-      setDentistList(clinic.dentists)
-    }}
-  >
-    <Text style={{ color: "#fff", fontSize: isMobile ? 8 : 10 }}>View Clinic</Text>
-  </TouchableOpacity>
-
-  {/* Modal */}
-<Modal
-  transparent
-  visible={viewClinic}
-  onRequestClose={() => setviewClinic(false)}
->
-  <View
-    style={{
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      padding: 20,
-    }}
-  >
-    <View
-      style={{
-        backgroundColor: "#fff",
-        borderRadius: 20,
-        padding: 24,
-        width: isMobile ? "90%" : "35%",
-        borderWidth: 2,
-        borderColor: "rgba(214, 214, 214, 1)",
-        elevation: 8,
-        position: "relative",
-      }}
-    >
-      {/* ❌ Top-Right Close Button */}
-      <TouchableOpacity
-        onPress={() => setviewClinic(false)}
+                <View
+                  style={{
+                    flexDirection: isMobile ? "column" : "row",
+                    flexWrap: isMobile ? "nowrap" : "wrap",
+                    justifyContent: isMobile ? "flex-start" : "center",
+                  }}
+                >
+                  {clinicList
+                    .filter((clinic) => clinic.isFirst === false)
+                    .slice(0, showAllClinics ? clinicList.length : 8) // Show only 8 clinics unless "showAllClinics" is true
+                    .map((clinic, index) => (
+                      <LinearGradient
+                        colors={["#ffffffff", "#bdeeffff"]}
+                        key={clinic.id || index}
+                        style={{
+                          flexDirection: "row",
+                          backgroundColor: "#fff",
+                          padding: 20,
+                          margin: 8,
+                          borderRadius: 16,
+                          shadowColor: "#000",
+                          shadowOpacity: 0.15,
+                          shadowRadius: 6,
+                          shadowOffset: { width: 0, height: 4 },
+                          elevation: 4,
+                          alignItems: "center",
+                          minHeight: 140,
+                          width: isMobile ? "95%" : "45%",
+                        }}
+                      >
+                      {/* Left side: Image + Info */}
+                      <View
+                        style={{
+                          flex: 7,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          marginLeft: 4,
+                        }}
+                      >
+                        {/* 222 */}
+  <View style={{ position: "relative" }}>
+    {clinic.clinic_photo_url ? (
+      <Image
+        source={{ uri: clinic.clinic_photo_url }}
         style={{
-          position: "absolute",
-          top: 16,
-          right: 16,
-          zIndex: 10,
-          padding: 8,
-          borderRadius: 20,
-          width: 36,
-          height: 36,
-          backgroundColor: "#da3434ff",
-          alignItems: "center",
-          justifyContent: "center",
-          shadowColor: "#da3434ff",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.3,
-          shadowRadius: 4,
-          elevation: 3,
+          width: isMobile ? 70 : 100,
+          height: isMobile ? 70 : 100,
+          borderRadius: 16,
+          marginRight: 16,
+          backgroundColor: "#fff",
         }}
-      >
-        <Text style={{ fontSize: 20, fontWeight: "bold", color: "white" }}>×</Text>
-      </TouchableOpacity>
-
-      {/* Profile Header */}
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          marginBottom: 20,
-          paddingRight: 40,
-        }}
-      >
-        {selectedClinicImage ? (
-          <Image
-            source={{ uri: selectedClinicImage }}
-            style={{
-              width: 80,
-              height: 80,
-              borderRadius: 40,
-              marginRight: 16,
-              backgroundColor: "#f2f2f2",
-              borderWidth: 3,
-              borderColor: "rgba(214, 214, 214, 1)",
-            }}
-          />
-        ) : (
-          <View
-            style={{
-              width: 80,
-              height: 80,
-              borderRadius: 40,
-              marginRight: 16,
-              backgroundColor: "#e8f4f5",
-              alignItems: "center",
-              justifyContent: "center",
-              borderWidth: 3,
-              borderColor: "rgba(214, 214, 214, 1)",
-            }}
-          >
-            <FontAwesome5 name="clinic-medical" size={40} color="#4a878bff" />
-          </View>
-        )}
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: isMobile ? 16 : 22, fontWeight: "bold", color: "#1a1a1a", marginBottom: 4 }}>
-            {selectedClinicName || "Unnamed Clinic"}
-          </Text>
-          <View
-            style={{
-              backgroundColor: verified ? "#e8f5e9" : "#ffebee",
-              paddingHorizontal: 10,
-              paddingVertical: 4,
-              borderRadius: 12,
-              alignSelf: "flex-start",
-              marginBottom: 6,
-            }}
-          >
-            <Text style={{ fontSize: 11, color: verified ? "#2e7d32" : "#c62828", fontWeight: "600" }}>
-              {verified ? "✅ Verified Clinic" : "❌ Unverified"}
-            </Text>
-          </View>
-          <Text style={{ fontSize: 13, color: "#3c6422ff", marginBottom: 2 }}>
-            {selectedClinicEmail}
-          </Text>
-          {selectedClinicSlogan && (
-            <Text
-              style={{
-                fontSize: 13,
-                color: "#416e5dff",
-                fontStyle: "italic",
-                marginTop: 2,
-              }}
-            >
-              "{selectedClinicSlogan}"
-            </Text>
-          )}
-        </View>
-      </View>
-
-      {/* Divider */}
-      <View
-        style={{
-          height: 2,
-          backgroundColor: "#f0f0f0",
-          marginBottom: 20,
-          borderRadius: 1,
-        }}
+        resizeMode="cover"
       />
-
-      {/* Info Section */}
-      <View style={{ gap: 12, marginBottom: 20 }}>
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <View
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 16,
-              backgroundColor: "#e8f4f5",
-              alignItems: "center",
-              justifyContent: "center",
-              marginRight: 12,
-            }}
-          >
-            <Text style={{ fontSize: 16 }}>📍</Text>
-          </View>
-          <Text style={{ fontSize: 14, color: "#333", flex: 1 }}>
-            {selectedClinicAddress || "No address provided"}
-          </Text>
-        </View>
-
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <View
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 16,
-              backgroundColor: "#e8f4f5",
-              alignItems: "center",
-              justifyContent: "center",
-              marginRight: 12,
-            }}
-          >
-            <Text style={{ fontSize: 16 }}>📞</Text>
-          </View>
-          <Text style={{ fontSize: 14, color: "#333" }}>
-            {selectedClinicMobile || "No contact"}
-          </Text>
-        </View>
-
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <View
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 16,
-              backgroundColor: "#e8f4f5",
-              alignItems: "center",
-              justifyContent: "center",
-              marginRight: 12,
-            }}
-          >
-            <Text style={{ fontSize: 16 }}>🗓️</Text>
-          </View>
-          <Text style={{ fontSize: 14, color: "#333" }}>
-            Joined: {selectedClinicCreatedAt || "N/A"}
-          </Text>
-        </View>
-
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <View
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 16,
-              backgroundColor: selectedClinicDentist ? "#e8f5e9" : "#ffebee",
-              alignItems: "center",
-              justifyContent: "center",
-              marginRight: 12,
-            }}
-          >
-            <Text style={{ fontSize: 16 }}>🦷</Text>
-          </View>
-          <Text style={{ fontSize: 14, color: "#333" }}>
-            Dentist: {selectedClinicDentist ? "Available" : "Not Available"}
-          </Text>
-        </View>
-      </View>
-
-      {/* Schedule Section */}
+    ) : (
       <View
         style={{
-          backgroundColor: "#f8f9fa",
-          borderRadius: 12,
-          padding: 16,
-          marginBottom: 20,
+          width: isMobile ? 70 : 100,
+          height: isMobile ? 70 : 100,
+          borderRadius: 16,
+          marginRight: 16,
+          backgroundColor: "#fff",
+          justifyContent: "center",
+          alignItems: "center",
         }}
       >
-        <Text style={{ fontSize: 16, fontWeight: "600", color: "#1a1a1a", marginBottom: 12 }}>
-          📅 Clinic Schedule
-        </Text>
-        <View style={{ gap: 6 }}>
-          {[
-            { label: "Sunday", time: selectedSunday },
-            { label: "Monday", time: selectedMonday },
-            { label: "Tuesday", time: selectedTuesday },
-            { label: "Wednesday", time: selectedWednesday },
-            { label: "Thursday", time: selectedThursday },
-            { label: "Friday", time: selectedFriday },
-            { label: "Saturday", time: selectedSaturday },
-          ].map((day) => (
-            <DayScheduleView
-              key={day.label}
-              label={day.label}
-              time={
-                day.time
-                  ? {
-                      ...day.time,
-                      from: {
-                        ...day.time.from,
-                        minute: day.time.from?.minute?.toString().padStart(2, "0"),
-                      },
-                      to: {
-                        ...day.time.to,
-                        minute: day.time.to?.minute?.toString().padStart(2, "0"),
-                      },
-                    }
-                  : undefined
-              }
-            />
-          ))}
-
-          {/* If all days have no schedule */}
-          {[
-            selectedSunday,
-            selectedMonday,
-            selectedTuesday,
-            selectedWednesday,
-            selectedThursday,
-            selectedFriday,
-            selectedSaturday,
-          ].every((day) => !day || day.from == null || day.to == null) && (
-            <Text
-              style={{
-                color: "#999",
-                fontSize: 14,
-                textAlign: "center",
-                marginTop: 8,
-                fontStyle: "italic",
-              }}
-            >
-              No schedule available
-            </Text>
-          )}
-        </View>
+        <FontAwesome5 name="clinic-medical" size={64} color="#4a878bff" />
       </View>
+    )}
 
-      {/* Buttons Row */}
-      <View
-        style={{
-          flexDirection: "row",
-          gap: 12,
-        }}
-      >
-        {/* Message Button */}
-        <TouchableOpacity
-          onPress={() => {
-            chatWithClinic(clinic.id);
-            setviewClinic(false);
-            setDashboardView("chats");
-          }}
-          style={{
-            flex: 1,
-            backgroundColor: "#3498db",
-            paddingVertical: 14,
-            borderRadius: 12,
-            alignItems: "center",
-            elevation: 4,
-          }}
-        >
-          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>
-            Message
-          </Text>
-        </TouchableOpacity>
-
-        {/* View Full Button */}
-        <TouchableOpacity
-          onPress={() => {
-            setFullProfile(true);
-          }}
-          style={{
-            flex: 1,
-            backgroundColor: "#2ecc71",
-            paddingVertical: 14,
-            borderRadius: 12,
-            alignItems: "center",
-            elevation: 4,
-          }}
-        >
-          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>
-            View Full
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </View>
-</Modal>
-<Modal
-  visible={fullProfile}
-  transparent={false}
-  onRequestClose={() => setFullProfile(false)}
->
-  <View style={{ flex: 1, backgroundColor: "#f8fafc" }}>
-    
-    {/* Header with Back Button */}
-    <View
+    {/* Small Button Overlay */}
+    <TouchableOpacity
       style={{
-        flexDirection: "row",
-        alignItems: "center",
-        paddingTop: 25,
-        paddingHorizontal: 16,
-        paddingBottom: 12,
-        borderBottomWidth: 1,
-        borderColor: "#e0e0e0",
-        backgroundColor: "white",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 3,
-        elevation: 2,
+        position: "absolute",
+        bottom: -4,
+        backgroundColor: "rgba(0,0,0,0.4)",
+        right: 6,
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        borderRadius: 8,
+      }}
+      onPress={() => {
+        setSelectedSunday(clinic.clinic_schedule[0]?.sunday || {});
+        setSelectedMonday(clinic.clinic_schedule[0]?.monday || {});
+        setSelectedTuesday(clinic.clinic_schedule[0]?.tuesday || {});
+        setSelectedWednesday(clinic.clinic_schedule[0]?.wednesday || {});
+        setSelectedThursday(clinic.clinic_schedule[0]?.thursday || {});
+        setSelectedFriday(clinic.clinic_schedule[0]?.friday || {});
+        setSelectedSaturday(clinic.clinic_schedule[0]?.saturday || {});
+
+        setSelectedClinicName(clinic.clinic_name);
+        setSelectedClinicEmail(clinic.email);
+        setSelectedClinicSlogan(clinic.bio);
+        setSelectedClinicAddress(clinic.address);
+        setSelectedClinicMobile(clinic.mobile_number);
+        setSelectedClinicCreatedAt(clinic.created_at);
+        setSelectedClinicRole(clinic.role);
+        setSelectedClinicDentist(clinic.isDentistAvailable);
+        setSelectedClinicImage(clinic.clinic_photo_url);
+        setviewClinic(true);
+        setSelectedClinicId(clinic.id);
+        setappointmentName(clinic.clinic_name);
+        setMapView([clinic.longitude, clinic.latitude]);
+        chatWithClinic(clinic.id);
+        setSelectedCI(clinic.introduction);
+        setSelectedOffers(clinic.offers);
+        setOfferList(clinic.offers || []);
+        setVerified(clinic.isVerified);
+        setDentistList(clinic.dentists)
       }}
     >
-      <TouchableOpacity 
-        onPress={() => setFullProfile(false)}
+      <Text style={{ color: "#fff", fontSize: isMobile ? 8 : 10 }}>View Clinic</Text>
+    </TouchableOpacity>
+
+    {/* Modal */}
+  <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={viewClinic} onBackdropPress={() => setviewClinic(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}> 
+
+
+      <View
         style={{
-          width: 40,
-          height: 40,
+          backgroundColor: "#fff",
           borderRadius: 20,
-          backgroundColor: "#f1f5f9",
-          alignItems: "center",
-          justifyContent: "center",
+          padding: 24,
+          width: isMobile ? "90%" : "35%",
+          borderWidth: 2,
+          borderColor: "rgba(214, 214, 214, 1)",
+          elevation: 8,
+          position: "relative",
         }}
       >
-        <MaterialIcons
-          name="keyboard-arrow-left"
-          size={28}
-          color="#00505cff"
-        />
-      </TouchableOpacity>
-      <Text
-        style={{
-          fontSize: 22,
-          fontWeight: "bold",
-          marginLeft: 12,
-          color: "#00505cff",
-        }}
-      >
-        Clinic Profile
-      </Text>
-    </View>
-
-    <ScrollView style={{ backgroundColor: '#f8fafc' }}>
-
-      {/* Cover Photo and Profile Picture */}
-      <View style={{ position: "relative", marginBottom: 80 }}>
-        {/* Cover Photo */}
-        <View
-          style={{
-            width: isMobile ? "95%" : "60%",
-            height: 200,
-            alignSelf: "center",
-            marginTop: isMobile ? 8 : 26,
-            borderRadius: 16,
-            backgroundColor: "#d9d9d9",
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.1,
-            shadowRadius: 8,
-            elevation: 4,
-          }}
-        />
-        
-        {/* Profile Picture */}
-        <View
+        {/* ❌ Top-Right Close Button */}
+        <TouchableOpacity
+          onPress={() => setviewClinic(false)}
           style={{
             position: "absolute",
-            top: 125,
-            left: 0,
-            right: 0,
+            top: 16,
+            right: 16,
+            zIndex: 10,
+            padding: 8,
+            borderRadius: 20,
+            width: 36,
+            height: 36,
+            backgroundColor: "#da3434ff",
             alignItems: "center",
+            justifyContent: "center",
+            shadowColor: "#da3434ff",
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.3,
+            shadowRadius: 4,
+            elevation: 3,
+          }}
+        >
+          <Text style={{ fontSize: 20, fontWeight: "bold", color: "white" }}>×</Text>
+        </TouchableOpacity>
+
+        {/* Profile Header */}
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            marginBottom: 20,
+            paddingRight: 40,
           }}
         >
           {selectedClinicImage ? (
             <Image
               source={{ uri: selectedClinicImage }}
               style={{
-                width: 150,
-                height: 150,
-                borderRadius: 75,
-                borderWidth: 5,
-                borderColor: "#fff",
-                backgroundColor: "#e0e0e0",
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.15,
-                shadowRadius: 8,
-                elevation: 5,
+                width: 80,
+                height: 80,
+                borderRadius: 40,
+                marginRight: 16,
+                backgroundColor: "#f2f2f2",
+                borderWidth: 3,
+                borderColor: "rgba(214, 214, 214, 1)",
               }}
             />
           ) : (
             <View
               style={{
-                width: 150,
-                height: 150,
-                borderRadius: 75,
-                borderWidth: 5,
-                borderColor: "#fff",
+                width: 80,
+                height: 80,
+                borderRadius: 40,
+                marginRight: 16,
                 backgroundColor: "#e8f4f5",
-                justifyContent: 'center',
-                alignItems: 'center',
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.15,
-                shadowRadius: 8,
-                elevation: 5,
+                alignItems: "center",
+                justifyContent: "center",
+                borderWidth: 3,
+                borderColor: "rgba(214, 214, 214, 1)",
               }}
             >
-              <FontAwesome5 name="clinic-medical" size={70} color="#4a878bff" />
+              <FontAwesome5 name="clinic-medical" size={40} color="#4a878bff" />
             </View>
           )}
-        </View>
-      </View>
-
-      {/* Scrollable Content */}
-      <View style={{ paddingHorizontal: 16, paddingLeft: isMobile ? 16 : "20%", paddingRight: isMobile ? 16 : "20%" }}>
-
-        {/* Clinic Details Section */}
-        <Text
-          style={{
-            fontSize: 24,
-            fontWeight: "bold",
-            color: "#003f30",
-            marginBottom: 12,
-            marginTop: 8,
-          }}
-        >
-          Clinic Details
-        </Text>
-
-        <View
-          style={{
-            backgroundColor: "#fff",
-            borderRadius: 16,
-            padding: 20,
-            marginBottom: 24,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.08,
-            shadowRadius: 8,
-            elevation: 3,
-          }}
-        >
-          <Text style={{ fontSize: 22, fontWeight: "bold", marginBottom: 8, color: "#1a1a1a" }}>
-            {selectedClinicName || "Unnamed Clinic"}
-          </Text>
-          
-          <View
-            style={{
-              backgroundColor: verified ? "#e8f5e9" : "#ffebee",
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: 12,
-              alignSelf: "flex-start",
-              marginBottom: 12,
-            }}
-          >
-            <Text style={{ fontSize: 12, color: verified ? "#2e7d32" : "#c62828", fontWeight: "600" }}>
-              {verified ? "✅ Verified Clinic" : "❌ Unverified Clinic"}
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: isMobile ? 16 : 22, fontWeight: "bold", color: "#1a1a1a", marginBottom: 4 }}>
+              {selectedClinicName || "Unnamed Clinic"}
             </Text>
-          </View>
-
-          <Text style={{ fontSize: 15, color: "#0b5a51", marginBottom: 6 }}>
-            {selectedClinicEmail}
-          </Text>
-          
-          {selectedClinicSlogan && (
-            <Text style={{ fontSize: 15, fontStyle: "italic", color: "#416e5dff", marginBottom: 16, paddingLeft: 4 }}>
-              "{selectedClinicSlogan}"
-            </Text>
-          )}
-
-          <View style={{ gap: 10, marginTop: 8 }}>
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <View
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  backgroundColor: "#f1f5f9",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginRight: 10,
-                }}
-              >
-                <Text style={{ fontSize: 16 }}>📍</Text>
-              </View>
-              <Text style={{ fontSize: 14, color: "#333", flex: 1 }}>
-                {selectedClinicAddress || "No address provided"}
-              </Text>
-            </View>
-
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <View
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  backgroundColor: "#f1f5f9",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginRight: 10,
-                }}
-              >
-                <Text style={{ fontSize: 16 }}>📞</Text>
-              </View>
-              <Text style={{ fontSize: 14, color: "#333" }}>
-                {selectedClinicMobile || "No contact"}
-              </Text>
-            </View>
-
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <View
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  backgroundColor: "#f1f5f9",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginRight: 10,
-                }}
-              >
-                <Text style={{ fontSize: 16 }}>🗓️</Text>
-              </View>
-              <Text style={{ fontSize: 14, color: "#333" }}>
-                Joined: {selectedClinicCreatedAt || "N/A"}
-              </Text>
-            </View>
-
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <View
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  backgroundColor: selectedClinicDentist ? "#e8f5e9" : "#ffebee",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginRight: 10,
-                }}
-              >
-                <Text style={{ fontSize: 16 }}>🦷</Text>
-              </View>
-              <Text style={{ fontSize: 14, color: "#333" }}>
-                Dentist: {selectedClinicDentist ? "Available" : "Not Available"}
-              </Text>
-            </View>
-          </View>
-
-          {!isMobile && (
             <View
               style={{
-                flexDirection: "row",
-                justifyContent: "space-around",
-                marginTop: 16,
-                gap: 8,
+                backgroundColor: verified ? "#e8f5e9" : "#ffebee",
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+                borderRadius: 12,
+                alignSelf: "flex-start",
+                marginBottom: 6,
               }}
             >
-              <TouchableOpacity
-                onPress={() => {
-                  setFullProfile(false);
-                  setviewClinic(false);
-                  setDashboardView("chats");
-                }}
-                style={{
-                  backgroundColor: "#3498db",
-                  paddingVertical: 14,
-                  paddingHorizontal: 20,
-                  borderRadius: 12,
-                  flex: 1,
-                  alignItems: "center",
-                  flexDirection: "row",
-                  justifyContent: "center",
-                  shadowColor: "#3498db",
-                  shadowOffset: { width: 0, height: 3 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 6,
-                  elevation: 4,
-                }}
-              >
-                <FontAwesome5 name="comments" size={18} color="#fff" style={{ marginRight: 8 }} />
-                <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>Message</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => {
-                  setModalAppoint(true);
-                }}
-                style={{
-                  backgroundColor: "#34db6cff",
-                  paddingVertical: 14,
-                  paddingHorizontal: 20,
-                  borderRadius: 12,
-                  flex: 1,
-                  alignItems: "center",
-                  flexDirection: "row",
-                  justifyContent: "center",
-                  shadowColor: "#34db6cff",
-                  shadowOffset: { width: 0, height: 3 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 6,
-                  elevation: 4,
-                }}
-              >
-                <FontAwesome5 name="calendar-check" size={18} color="#fff" style={{ marginRight: 8 }} />
-                <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>Appoint</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => setModalMap(true)}
-                style={{
-                  backgroundColor: "#f39c12",
-                  paddingVertical: 14,
-                  paddingHorizontal: 20,
-                  borderRadius: 12,
-                  flex: 1,
-                  alignItems: "center",
-                  flexDirection: "row",
-                  justifyContent: "center",
-                  shadowColor: "#f39c12",
-                  shadowOffset: { width: 0, height: 3 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 6,
-                  elevation: 4,
-                }}
-              >
-                <FontAwesome5 name="map-marker-alt" size={18} color="#fff" style={{ marginRight: 8 }} />
-                <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>View in Map</Text>
-              </TouchableOpacity>
+              <Text style={{ fontSize: 11, color: verified ? "#2e7d32" : "#c62828", fontWeight: "600" }}>
+                {verified ? "✅ Verified Clinic" : "❌ Unverified"}
+              </Text>
             </View>
-          )}
-        </View>
-
-        {/* Introduction Section */}
-        <Text
-          style={{
-            fontSize: 24,
-            fontWeight: "bold",
-            color: "#003f30",
-            marginBottom: 12,
-          }}
-        >
-          Introduction
-        </Text>
-
-        <View
-          style={{
-            backgroundColor: "#fff",
-            borderRadius: 16,
-            padding: 20,
-            marginBottom: 24,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.08,
-            shadowRadius: 8,
-            elevation: 3,
-          }}
-        >
-          <Text
-            style={{
-              fontSize: selectedCI ? 15 : 14,
-              lineHeight: 22,
-              color: selectedCI ? "#333" : "#999",
-              textAlign: selectedCI ? "left" : "center",
-              fontStyle: selectedCI ? "normal" : "italic",
-            }}
-          >
-            {selectedCI || "Introduction has not yet been set"}
-          </Text>
-        </View>
-
-        {/* Clinic's Dentist Section */}
-        <Text
-          style={{
-            fontSize: 24,
-            fontWeight: "bold",
-            color: "#003f30",
-            marginBottom: 12,
-          }}
-        >
-          Clinic's Dentists
-        </Text>
-
-        <View
-          style={{
-            backgroundColor: "#fff",
-            borderRadius: 16,
-            padding: 20,
-            marginBottom: 24,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.08,
-            shadowRadius: 8,
-            elevation: 3,
-          }}
-        >
-          {(() => {
-            try {
-              const dentists = JSON.parse(dentistList);
-              return dentists.map((d, i) => (
-                <View 
-                  key={i} 
-                  style={{ 
-                    marginBottom: 16,
-                    paddingBottom: i < dentists.length - 1 ? 16 : 0,
-                    borderBottomWidth: i < dentists.length - 1 ? 1 : 0,
-                    borderBottomColor: "#f0f0f0",
-                  }}
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-                    <View
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 18,
-                        backgroundColor: "#e8f4f5",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        marginRight: 10,
-                      }}
-                    >
-                      <Text style={{ fontSize: 18 }}>👨‍⚕️</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 16, color: "#1a1a1a", fontWeight: "bold" }}>
-                        Dr. {d.name}
-                      </Text>
-                      <Text style={{ fontSize: 13, color: "#666", marginTop: 2 }}>
-                        {d.specialty}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {Object.entries(d.weeklySchedule || {}).map(([day, slots], j) =>
-                    slots.length > 0 ? (
-                      <View key={j} style={{ marginLeft: 46, marginTop: 6 }}>
-                        <Text style={{ fontSize: 13, fontWeight: "600", color: "#444", marginBottom: 2 }}>
-                          {day.charAt(0).toUpperCase() + day.slice(1)}:
-                        </Text>
-                        {slots.map((s, k) => (
-                          <Text key={k} style={{ fontSize: 13, color: "#666", marginLeft: 8, marginTop: 2 }}>
-                            • {s}
-                          </Text>
-                        ))}
-                      </View>
-                    ) : null
-                  )}
-                </View>
-              ));
-            } catch {
-              return (
-                <Text style={{
-                  fontSize: 14,
-                  color: "#999",
-                  textAlign: "center",
-                  fontStyle: "italic",
-                }}>
-                  Dentist list has not yet been set
-                </Text>
-              );
-            }
-          })()}
-        </View>
-
-        {/* Offers Section */}
-        <Text
-          style={{
-            fontSize: 24,
-            fontWeight: "bold",
-            color: "#003f30",
-            marginBottom: 12,
-          }}
-        >
-          Offers
-        </Text>
-
-        <View
-          style={{
-            backgroundColor: "#fff",
-            borderRadius: 16,
-            padding: 20,
-            marginBottom: 24,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.08,
-            shadowRadius: 8,
-            elevation: 3,
-          }}
-        >
-          {selectedOffers && selectedOffers.trim() !== '' ? (
-            <View style={{ gap: 8 }}>
-              {selectedOffers
-                .split('?')
-                .filter(offer => offer.trim() !== '')
-                .map((offer, i) => (
-                  <View key={i} style={{ flexDirection: "row", alignItems: "flex-start" }}>
-                    <Text style={{ fontSize: 15, color: "#4a878bff", marginRight: 8, marginTop: 2 }}>•</Text>
-                    <Text style={{ fontSize: 15, color: "#333", flex: 1, lineHeight: 22 }}>
-                      {offer.trim()}
-                    </Text>
-                  </View>
-                ))}
-            </View>
-          ) : (
-            <Text style={{
-              fontSize: 14,
-              color: "#999",
-              textAlign: "center",
-              fontStyle: "italic",
-            }}>
-              Offers have not yet been set
+            <Text style={{ fontSize: 13, color: "#3c6422ff", marginBottom: 2 }}>
+              {selectedClinicEmail}
             </Text>
-          )}
+            {selectedClinicSlogan && (
+              <Text
+                style={{
+                  fontSize: 13,
+                  color: "#416e5dff",
+                  fontStyle: "italic",
+                  marginTop: 2,
+                }}
+              >
+                "{selectedClinicSlogan}"
+              </Text>
+            )}
+          </View>
         </View>
 
-        {/* Clinic Schedule Section */}
-        <Text
-          style={{
-            fontSize: 24,
-            fontWeight: "bold",
-            color: "#003f30",
-            marginBottom: 12,
-          }}
-        >
-          Clinic Schedule
-        </Text>
-
+        {/* Divider */}
         <View
           style={{
-            backgroundColor: "#fff",
-            borderRadius: 16,
-            padding: 20,
-            marginBottom: 200,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.08,
-            shadowRadius: 8,
-            elevation: 3,
+            height: 2,
+            backgroundColor: "#f0f0f0",
+            marginBottom: 20,
+            borderRadius: 1,
           }}
-        >
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: 12,
-            }}
-          >
-            {[
-              { label: "Sun", time: selectedSunday },
-              { label: "Mon", time: selectedMonday },
-              { label: "Tue", time: selectedTuesday },
-              { label: "Wed", time: selectedWednesday },
-              { label: "Thu", time: selectedThursday },
-              { label: "Fri", time: selectedFriday },
-              { label: "Sat", time: selectedSaturday },
-            ].map((day) => {
-              const hasValidTime = day.time && day.time.from && day.time.to;
-              const formattedTime = hasValidTime
-                ? {
-                    ...day.time,
-                    from: {
-                      ...day.time.from,
-                      minute: day.time.from.minute?.toString().padStart(2, "0"),
-                    },
-                    to: {
-                      ...day.time.to,
-                      minute: day.time.to.minute?.toString().padStart(2, "0"),
-                    },
-                  }
-                : undefined;
+        />
 
-              return (
-                <View
-                  key={day.label}
-                  style={{
-                    flex: isMobile ? 0 : 1,
-                    minWidth: isMobile ? "30%" : "auto",
-                    alignItems: "center",
-                    backgroundColor: hasValidTime ? "#f8fafc" : "#fff5f5",
-                    padding: 12,
-                    borderRadius: 12,
-                    borderWidth: 1,
-                    borderColor: hasValidTime ? "#e2e8f0" : "#fee",
-                  }}
-                >
-                  <Text style={{ fontWeight: "700", fontSize: isMobile ? 13 : 15, marginBottom: 6, color: "#1a1a1a" }}>
-                    {day.label}
-                  </Text>
-                  {formattedTime ? (
-                    <Text
-                      style={{
-                        fontSize: isMobile ? 10 : 13,
-                        color: "#555",
-                        textAlign: "center",
-                        lineHeight: isMobile ? 14 : 18,
-                      }}
-                    >
-                      {`${formattedTime.from.hour.toString().padStart(2, "0")}:${formattedTime.from.minute} ${formattedTime.from.atm}`}
-                      {'\n'}
-                      {`${formattedTime.to.hour.toString().padStart(2, "0")}:${formattedTime.to.minute} ${formattedTime.to.atm}`}
-                    </Text>
-                  ) : (
-                    <Text
-                      style={{
-                        fontSize: isMobile ? 11 : 13,
-                        color: "#c62828",
-                        fontWeight: "600",
-                        textAlign: "center",
-                      }}
-                    >
-                      Closed
-                    </Text>
-                  )}
-                </View>
-              );
-            })}
+        {/* Info Section */}
+        <View style={{ gap: 12, marginBottom: 20 }}>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <View
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                backgroundColor: "#e8f4f5",
+                alignItems: "center",
+                justifyContent: "center",
+                marginRight: 12,
+              }}
+            >
+              <Text style={{ fontSize: 16 }}>📍</Text>
+            </View>
+            <Text style={{ fontSize: 14, color: "#333", flex: 1 }}>
+              {selectedClinicAddress || "No address provided"}
+            </Text>
           </View>
 
-          {[
-            selectedSunday,
-            selectedMonday,
-            selectedTuesday,
-            selectedWednesday,
-            selectedThursday,
-            selectedFriday,
-            selectedSaturday,
-          ].every((day) => !day || !day.from || !day.to) && (
-            <Text
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <View
               style={{
-                color: "#999",
-                fontSize: 14,
-                textAlign: "center",
-                marginTop: 16,
-                fontStyle: "italic",
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                backgroundColor: "#e8f4f5",
+                alignItems: "center",
+                justifyContent: "center",
+                marginRight: 12,
               }}
             >
-              No schedule available
+              <Text style={{ fontSize: 16 }}>📞</Text>
+            </View>
+            <Text style={{ fontSize: 14, color: "#333" }}>
+              {selectedClinicMobile || "No contact"}
             </Text>
-          )}
-        </View>
-      </View>
-    </ScrollView>
+          </View>
 
-    {isMobile && (
-      <View
-        style={{
-          paddingHorizontal: 16,
-          paddingVertical: 12,
-          borderTopWidth: 1,
-          borderColor: "#e0e0e0",
-          backgroundColor: "white",
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.05,
-          shadowRadius: 3,
-          elevation: 5,
-        }}
-      >
-        <View style={{ flexDirection: "row", gap: 8 }}>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <View
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                backgroundColor: "#e8f4f5",
+                alignItems: "center",
+                justifyContent: "center",
+                marginRight: 12,
+              }}
+            >
+              <Text style={{ fontSize: 16 }}>🗓️</Text>
+            </View>
+            <Text style={{ fontSize: 14, color: "#333", width: '90%' }}>
+              Joined: {selectedClinicCreatedAt || "N/A"}
+            </Text>
+          </View>
+
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <View
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                backgroundColor: selectedClinicDentist ? "#e8f5e9" : "#ffebee",
+                alignItems: "center",
+                justifyContent: "center",
+                marginRight: 12,
+              }}
+            >
+              <Text style={{ fontSize: 16 }}>🦷</Text>
+            </View>
+            <Text style={{ fontSize: 14, color: "#333" }}>
+              Dentist: {selectedClinicDentist ? "Available" : "Not Available"}
+            </Text>
+          </View>
+        </View>
+
+        {/* Schedule Section */}
+        <View
+          style={{
+            backgroundColor: "#f8f9fa",
+            borderRadius: 12,
+            padding: 16,
+            marginBottom: 20,
+          }}
+        >
+          <Text style={{ fontSize: 16, fontWeight: "600", color: "#1a1a1a", marginBottom: 12 }}>
+            📅 Clinic Schedule
+          </Text>
+          <View style={{ gap: 6 }}>
+            {[
+              { label: "Sunday", time: selectedSunday },
+              { label: "Monday", time: selectedMonday },
+              { label: "Tuesday", time: selectedTuesday },
+              { label: "Wednesday", time: selectedWednesday },
+              { label: "Thursday", time: selectedThursday },
+              { label: "Friday", time: selectedFriday },
+              { label: "Saturday", time: selectedSaturday },
+            ].map((day) => (
+              <DayScheduleView
+                key={day.label}
+                label={day.label}
+                time={
+                  day.time
+                    ? {
+                        ...day.time,
+                        from: {
+                          ...day.time.from,
+                          minute: day.time.from?.minute?.toString().padStart(2, "0"),
+                        },
+                        to: {
+                          ...day.time.to,
+                          minute: day.time.to?.minute?.toString().padStart(2, "0"),
+                        },
+                      }
+                    : undefined
+                }
+              />
+            ))}
+
+            {/* If all days have no schedule */}
+            {[
+              selectedSunday,
+              selectedMonday,
+              selectedTuesday,
+              selectedWednesday,
+              selectedThursday,
+              selectedFriday,
+              selectedSaturday,
+            ].every((day) => !day || day.from == null || day.to == null) && (
+              <Text
+                style={{
+                  color: "#999",
+                  fontSize: 14,
+                  textAlign: "center",
+                  marginTop: 8,
+                  fontStyle: "italic",
+                }}
+              >
+                No schedule available
+              </Text>
+            )}
+          </View>
+        </View>
+
+        {/* Buttons Row */}
+        <View
+          style={{
+            flexDirection: "row",
+            gap: 12,
+          }}
+        >
+          {/* Message Button */}
           <TouchableOpacity
             onPress={() => {
-              setFullProfile(false);
+              chatWithClinic(clinic.id);
               setviewClinic(false);
               setDashboardView("chats");
             }}
             style={{
+              flex: 1,
               backgroundColor: "#3498db",
               paddingVertical: 14,
-              paddingHorizontal: 20,
               borderRadius: 12,
-              flex: 1,
               alignItems: "center",
-              flexDirection: "row",
-              justifyContent: "center",
-              shadowColor: "#3498db",
-              shadowOffset: { width: 0, height: 3 },
-              shadowOpacity: 0.3,
-              shadowRadius: 6,
               elevation: 4,
             }}
           >
-            <FontAwesome5 name="comments" size={18} color="#fff" style={{ marginRight: 8 }} />
-            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>Message</Text>
+            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>
+              Message
+            </Text>
           </TouchableOpacity>
 
+          {/* View Full Button */}
           <TouchableOpacity
             onPress={() => {
-              setModalAppoint(true);
+              setFullProfile(true);
             }}
             style={{
-              backgroundColor: "#34db6cff",
-              paddingVertical: 14,
-              paddingHorizontal: 20,
-              borderRadius: 12,
               flex: 1,
+              backgroundColor: "#2ecc71",
+              paddingVertical: 14,
+              borderRadius: 12,
               alignItems: "center",
-              flexDirection: "row",
-              justifyContent: "center",
-              shadowColor: "#34db6cff",
-              shadowOffset: { width: 0, height: 3 },
-              shadowOpacity: 0.3,
-              shadowRadius: 6,
               elevation: 4,
             }}
           >
-            <FontAwesome5 name="calendar-check" size={18} color="#fff" style={{ marginRight: 8 }} />
-            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>Appoint</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setModalMap(true)}
-            style={{
-              backgroundColor: "#f39c12",
-              paddingVertical: 14,
-              paddingHorizontal: 20,
-              borderRadius: 12,
-              flex: 1,
-              alignItems: "center",
-              flexDirection: "row",
-              justifyContent: "center",
-              shadowColor: "#f39c12",
-              shadowOffset: { width: 0, height: 3 },
-              shadowOpacity: 0.3,
-              shadowRadius: 6,
-              elevation: 4,
-            }}
-          >
-            <FontAwesome5 name="map-marker-alt" size={18} color="#fff" style={{ marginRight: 8 }} />
-            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>View in Map</Text>
+            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>
+              View Full
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
-    )}
-  </View>
-</Modal>
 
-</View>
+  </Modal>
+  <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={fullProfile} onBackdropPress={() => setFullProfile(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}> 
 
+    <View style={{ flex: 1, backgroundColor: "#f8fafc" }}>
+      
+      {/* Header with Back Button */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          paddingTop: 25,
+          paddingHorizontal: 16,
+          paddingBottom: 12,
+          borderBottomWidth: 1,
+          borderColor: "#e0e0e0",
+          backgroundColor: "white",
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 3,
+          elevation: 2,
+        }}
+      >
+        <TouchableOpacity 
+          onPress={() => setFullProfile(false)}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: "#f1f5f9",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <MaterialIcons
+            name="keyboard-arrow-left"
+            size={28}
+            color="#00505cff"
+          />
+        </TouchableOpacity>
+        <Text
+          style={{
+            fontSize: 22,
+            fontWeight: "bold",
+            marginLeft: 12,
+            color: "#00505cff",
+          }}
+        >
+          Clinic Profile
+        </Text>
+      </View>
+
+      <ScrollView style={{ backgroundColor: '#f8fafc' }}>
+
+        {/* Cover Photo and Profile Picture */}
+        <View style={{ position: "relative", marginBottom: 80 }}>
+          {/* Cover Photo */}
+          <View
+            style={{
+              width: isMobile ? "95%" : "60%",
+              height: 200,
+              alignSelf: "center",
+              marginTop: isMobile ? 8 : 26,
+              borderRadius: 16,
+              backgroundColor: "#d9d9d9",
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.1,
+              shadowRadius: 8,
+              elevation: 4,
+            }}
+          />
+          
+          {/* Profile Picture */}
+          <View
+            style={{
+              position: "absolute",
+              top: 125,
+              left: 0,
+              right: 0,
+              alignItems: "center",
+            }}
+          >
+            {selectedClinicImage ? (
+              <Image
+                source={{ uri: selectedClinicImage }}
+                style={{
+                  width: 150,
+                  height: 150,
+                  borderRadius: 75,
+                  borderWidth: 5,
+                  borderColor: "#fff",
+                  backgroundColor: "#e0e0e0",
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 8,
+                  elevation: 5,
+                }}
+              />
+            ) : (
+              <View
+                style={{
+                  width: 150,
+                  height: 150,
+                  borderRadius: 75,
+                  borderWidth: 5,
+                  borderColor: "#fff",
+                  backgroundColor: "#e8f4f5",
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 8,
+                  elevation: 5,
+                }}
+              >
+                <FontAwesome5 name="clinic-medical" size={70} color="#4a878bff" />
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Scrollable Content */}
+        <View style={{ paddingHorizontal: 16, paddingLeft: isMobile ? 16 : "20%", paddingRight: isMobile ? 16 : "20%" }}>
+
+          {/* Clinic Details Section */}
+          <Text
+            style={{
+              fontSize: 24,
+              fontWeight: "bold",
+              color: "#003f30",
+              marginBottom: 12,
+              marginTop: 8,
+            }}
+          >
+            Clinic Details
+          </Text>
+
+          <View
+            style={{
+              backgroundColor: "#fff",
+              borderRadius: 16,
+              padding: 20,
+              marginBottom: 24,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.08,
+              shadowRadius: 8,
+              elevation: 3,
+            }}
+          >
+            <Text style={{ fontSize: 22, fontWeight: "bold", marginBottom: 8, color: "#1a1a1a" }}>
+              {selectedClinicName || "Unnamed Clinic"}
+            </Text>
+            
+            <View
+              style={{
+                backgroundColor: verified ? "#e8f5e9" : "#ffebee",
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 12,
+                alignSelf: "flex-start",
+                marginBottom: 12,
+              }}
+            >
+              <Text style={{ fontSize: 12, color: verified ? "#2e7d32" : "#c62828", fontWeight: "600" }}>
+                {verified ? "✅ Verified Clinic" : "❌ Unverified Clinic"}
+              </Text>
+            </View>
+
+            <Text style={{ fontSize: 15, color: "#0b5a51", marginBottom: 6 }}>
+              {selectedClinicEmail}
+            </Text>
+            
+            {selectedClinicSlogan && (
+              <Text style={{ fontSize: 15, fontStyle: "italic", color: "#416e5dff", marginBottom: 16, paddingLeft: 4 }}>
+                "{selectedClinicSlogan}"
+              </Text>
+            )}
+
+            <View style={{ gap: 10, marginTop: 8 }}>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <View
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    backgroundColor: "#f1f5f9",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginRight: 10,
+                  }}
+                >
+                  <Text style={{ fontSize: 16 }}>📍</Text>
+                </View>
+                <Text style={{ fontSize: 14, color: "#333", flex: 1 }}>
+                  {selectedClinicAddress || "No address provided"}
+                </Text>
+              </View>
+
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <View
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    backgroundColor: "#f1f5f9",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginRight: 10,
+                  }}
+                >
+                  <Text style={{ fontSize: 16 }}>📞</Text>
+                </View>
+                <Text style={{ fontSize: 14, color: "#333" }}>
+                  {selectedClinicMobile || "No contact"}
+                </Text>
+              </View>
+
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <View
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    backgroundColor: "#f1f5f9",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginRight: 10,
+                  }}
+                >
+                  <Text style={{ fontSize: 16 }}>🗓️</Text>
+                </View>
+                <Text style={{ fontSize: 14, color: "#333", width: '90%' }}>
+                  Joined: {selectedClinicCreatedAt || "N/A"}
+                </Text>
+              </View>
+
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <View
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    backgroundColor: selectedClinicDentist ? "#e8f5e9" : "#ffebee",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginRight: 10,
+                  }}
+                >
+                  <Text style={{ fontSize: 16 }}>🦷</Text>
+                </View>
+                <Text style={{ fontSize: 14, color: "#333" }}>
+                  Dentist: {selectedClinicDentist ? "Available" : "Not Available"}
+                </Text>
+              </View>
+            </View>
+
+            {!isMobile && (
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-around",
+                  marginTop: 16,
+                  gap: 8,
+                }}
+              >
+                <TouchableOpacity
+                  onPress={() => {
+                    setFullProfile(false);
+                    setviewClinic(false);
+                    setDashboardView("chats");
+                  }}
+                  style={{
+                    backgroundColor: "#3498db",
+                    paddingVertical: 14,
+                    paddingHorizontal: 20,
+                    borderRadius: 12,
+                    flex: 1,
+                    alignItems: "center",
+                    flexDirection: "row",
+                    justifyContent: "center",
+                    shadowColor: "#3498db",
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 6,
+                    elevation: 4,
+                  }}
+                >
+                  <FontAwesome5 name="comments" size={18} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>Message</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    setModalAppoint(true);
+                  }}
+                  style={{
+                    backgroundColor: "#34db6cff",
+                    paddingVertical: 14,
+                    paddingHorizontal: 20,
+                    borderRadius: 12,
+                    flex: 1,
+                    alignItems: "center",
+                    flexDirection: "row",
+                    justifyContent: "center",
+                    shadowColor: "#34db6cff",
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 6,
+                    elevation: 4,
+                  }}
+                >
+                  <FontAwesome5 name="calendar-check" size={18} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>Appoint</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => setModalMap(true)}
+                  style={{
+                    backgroundColor: "#f39c12",
+                    paddingVertical: 14,
+                    paddingHorizontal: 20,
+                    borderRadius: 12,
+                    flex: 1,
+                    alignItems: "center",
+                    flexDirection: "row",
+                    justifyContent: "center",
+                    shadowColor: "#f39c12",
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 6,
+                    elevation: 4,
+                  }}
+                >
+                  <FontAwesome5 name="map-marker-alt" size={18} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>View in Map</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+          {/* Introduction Section */}
+          <Text
+            style={{
+              fontSize: 24,
+              fontWeight: "bold",
+              color: "#003f30",
+              marginBottom: 12,
+            }}
+          >
+            Introduction
+          </Text>
+
+          <View
+            style={{
+              backgroundColor: "#fff",
+              borderRadius: 16,
+              padding: 20,
+              marginBottom: 24,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.08,
+              shadowRadius: 8,
+              elevation: 3,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: selectedCI ? 15 : 14,
+                lineHeight: 22,
+                color: selectedCI ? "#333" : "#999",
+                textAlign: selectedCI ? "left" : "center",
+                fontStyle: selectedCI ? "normal" : "italic",
+              }}
+            >
+              {selectedCI || "Introduction has not yet been set"}
+            </Text>
+          </View>
+
+          {/* Clinic's Dentist Section */}
+          <Text
+            style={{
+              fontSize: 24,
+              fontWeight: "bold",
+              color: "#003f30",
+              marginBottom: 12,
+            }}
+          >
+            Clinic's Dentists
+          </Text>
+
+          <View
+            style={{
+              backgroundColor: "#fff",
+              borderRadius: 16,
+              padding: 20,
+              marginBottom: 24,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.08,
+              shadowRadius: 8,
+              elevation: 3,
+            }}
+          >
+            {(() => {
+              try {
+                const dentists = JSON.parse(dentistList);
+                return dentists.map((d, i) => (
+                  <View 
+                    key={i} 
+                    style={{ 
+                      marginBottom: 16,
+                      paddingBottom: i < dentists.length - 1 ? 16 : 0,
+                      borderBottomWidth: i < dentists.length - 1 ? 1 : 0,
+                      borderBottomColor: "#f0f0f0",
+                    }}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+                      <View
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 18,
+                          backgroundColor: "#e8f4f5",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          marginRight: 10,
+                        }}
+                      >
+                        <Text style={{ fontSize: 18 }}>👨‍⚕️</Text>
+                      </View>
                       <View style={{ flex: 1 }}>
-                        <Text
-                          style={{
-                            fontWeight: "bold",
-                            fontSize: isMobile ? 15 : 18,
-                            marginBottom: 6,
-                            color: 'black'
-                          }}
-                        >
-                          {clinic.clinic_name || "Unnamed Clinic"}
+                        <Text style={{ fontSize: 16, color: "#1a1a1a", fontWeight: "bold" }}>
+                          Dr. {d.name}
                         </Text>
-                        <Text style={{ color: 'black', marginBottom: 2, fontSize: isMobile ? 13 : 16 }}>
-                          {clinic.address || "No address provided"}
+                        <Text style={{ fontSize: 13, color: "#666", marginTop: 2 }}>
+                          {d.specialty}
                         </Text>
-
                       </View>
                     </View>
 
-                    {/* Right side: Buttons */}
-                    <View style={{ flex: 3, justifyContent: "space-around" }}>
-                      {/* Create Appointment */}
-                      <TouchableOpacity
-                        onPress={() => {
-                          setSelectedSunday(clinic.clinic_schedule[0]?.sunday || {});
-                          setSelectedMonday(clinic.clinic_schedule[0]?.monday || {});
-                          setSelectedTuesday(clinic.clinic_schedule[0]?.tuesday || {});
-                          setSelectedWednesday(clinic.clinic_schedule[0]?.wednesday || {});
-                          setSelectedThursday(clinic.clinic_schedule[0]?.thursday || {});
-                          setSelectedFriday(clinic.clinic_schedule[0]?.friday || {});
-                          setSelectedSaturday(clinic.clinic_schedule[0]?.saturday || {});
-                          setSelectedClinicId(clinic.id);
-                          setappointmentName(clinic.clinic_name);
-                          setOfferList(clinic.offers || []);
-                          setModalAppoint(true);
-                          setDentistList(clinic.dentists)
-                        }}
-                        style={{
-                          backgroundColor: "#00aa55",
-                          paddingVertical: 12,
-                          paddingHorizontal: 10,
-                          borderRadius: 10,
-                          alignItems: "center",
-                          marginBottom: 2,
-                        }}
-                      >
-                        <Text
-                          style={{
-                            color: "#fff",
-                            fontWeight: "bold",
-                            fontSize: isMobile ? 9 : 14,
-                            textAlign: "center",
-                          }}
-                        >
-                          Create an Appointment
-                        </Text>
-                      </TouchableOpacity>
+                    {Object.entries(d.weeklySchedule || {}).map(([day, slots], j) =>
+                      slots.length > 0 ? (
+                        <View key={j} style={{ marginLeft: 46, marginTop: 6 }}>
+                          <Text style={{ fontSize: 13, fontWeight: "600", color: "#444", marginBottom: 2 }}>
+                            {day.charAt(0).toUpperCase() + day.slice(1)}:
+                          </Text>
+                          {slots.map((s, k) => (
+                            <Text key={k} style={{ fontSize: 13, color: "#666", marginLeft: 8, marginTop: 2 }}>
+                              • {s}
+                            </Text>
+                          ))}
+                        </View>
+                      ) : null
+                    )}
+                  </View>
+                ));
+              } catch {
+                return (
+                  <Text style={{
+                    fontSize: 14,
+                    color: "#999",
+                    textAlign: "center",
+                    fontStyle: "italic",
+                  }}>
+                    Dentist list has not yet been set
+                  </Text>
+                );
+              }
+            })()}
+          </View>
 
-                      {/* Appointment Modal */}
-                      <Modal
-                        transparent
-                        animationType="fade"
-                        visible={modalAppoint}
-                        onRequestClose={() => {
-                          setModalAppoint(false);
+          {/* Offers Section */}
+          <Text
+            style={{
+              fontSize: 24,
+              fontWeight: "bold",
+              color: "#003f30",
+              marginBottom: 12,
+            }}
+          >
+            Offers
+          </Text>
+
+          <View
+            style={{
+              backgroundColor: "#fff",
+              borderRadius: 16,
+              padding: 20,
+              marginBottom: 24,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.08,
+              shadowRadius: 8,
+              elevation: 3,
+            }}
+          >
+            {selectedOffers && selectedOffers.trim() !== '' ? (
+              <View style={{ gap: 8 }}>
+                {selectedOffers
+                  .split('?')
+                  .filter(offer => offer.trim() !== '')
+                  .map((offer, i) => (
+                    <View key={i} style={{ flexDirection: "row", alignItems: "flex-start" }}>
+                      <Text style={{ fontSize: 15, color: "#4a878bff", marginRight: 8, marginTop: 2 }}>•</Text>
+                      <Text style={{ fontSize: 15, color: "#333", flex: 1, lineHeight: 22 }}>
+                        {offer.trim()}
+                      </Text>
+                    </View>
+                  ))}
+              </View>
+            ) : (
+              <Text style={{
+                fontSize: 14,
+                color: "#999",
+                textAlign: "center",
+                fontStyle: "italic",
+              }}>
+                Offers have not yet been set
+              </Text>
+            )}
+          </View>
+
+          {/* Clinic Schedule Section */}
+          <Text
+            style={{
+              fontSize: 24,
+              fontWeight: "bold",
+              color: "#003f30",
+              marginBottom: 12,
+            }}
+          >
+            Clinic Schedule
+          </Text>
+
+          <View
+            style={{
+              backgroundColor: "#fff",
+              borderRadius: 16,
+              padding: 20,
+              marginBottom: 200,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.08,
+              shadowRadius: 8,
+              elevation: 3,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: 12,
+              }}
+            >
+              {[
+                { label: "Sun", time: selectedSunday },
+                { label: "Mon", time: selectedMonday },
+                { label: "Tue", time: selectedTuesday },
+                { label: "Wed", time: selectedWednesday },
+                { label: "Thu", time: selectedThursday },
+                { label: "Fri", time: selectedFriday },
+                { label: "Sat", time: selectedSaturday },
+              ].map((day) => {
+                const hasValidTime = day.time && day.time.from && day.time.to;
+                const formattedTime = hasValidTime
+                  ? {
+                      ...day.time,
+                      from: {
+                        ...day.time.from,
+                        minute: day.time.from.minute?.toString().padStart(2, "0"),
+                      },
+                      to: {
+                        ...day.time.to,
+                        minute: day.time.to.minute?.toString().padStart(2, "0"),
+                      },
+                    }
+                  : undefined;
+
+                return (
+                  <View
+                    key={day.label}
+                    style={{
+                      flex: isMobile ? 0 : 1,
+                      minWidth: isMobile ? "30%" : "auto",
+                      alignItems: "center",
+                      backgroundColor: hasValidTime ? "#f8fafc" : "#fff5f5",
+                      padding: 12,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: hasValidTime ? "#e2e8f0" : "#fee",
+                    }}
+                  >
+                    <Text style={{ fontWeight: "700", fontSize: isMobile ? 13 : 15, marginBottom: 6, color: "#1a1a1a" }}>
+                      {day.label}
+                    </Text>
+                    {formattedTime ? (
+                      <Text
+                        style={{
+                          fontSize: isMobile ? 10 : 13,
+                          color: "#555",
+                          textAlign: "center",
+                          lineHeight: isMobile ? 14 : 18,
                         }}
                       >
-                        <View
-                          style={{
-                            flex: 1,
-                            justifyContent: "center",
-                            alignItems: "center",
-                            padding: 20,
-                          }}
-                        >
-                          <View
+                        {`${formattedTime.from.hour.toString().padStart(2, "0")}:${formattedTime.from.minute} ${formattedTime.from.atm}`}
+                        {'\n'}
+                        {`${formattedTime.to.hour.toString().padStart(2, "0")}:${formattedTime.to.minute} ${formattedTime.to.atm}`}
+                      </Text>
+                    ) : (
+                      <Text
+                        style={{
+                          fontSize: isMobile ? 11 : 13,
+                          color: "#c62828",
+                          fontWeight: "600",
+                          textAlign: "center",
+                        }}
+                      >
+                        Closed
+                      </Text>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+
+            {[
+              selectedSunday,
+              selectedMonday,
+              selectedTuesday,
+              selectedWednesday,
+              selectedThursday,
+              selectedFriday,
+              selectedSaturday,
+            ].every((day) => !day || !day.from || !day.to) && (
+              <Text
+                style={{
+                  color: "#999",
+                  fontSize: 14,
+                  textAlign: "center",
+                  marginTop: 16,
+                  fontStyle: "italic",
+                }}
+              >
+                No schedule available
+              </Text>
+            )}
+          </View>
+        </View>
+      </ScrollView>
+
+      {isMobile && (
+        <View
+          style={{
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+            borderTopWidth: 1,
+            borderColor: "#e0e0e0",
+            backgroundColor: "white",
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.05,
+            shadowRadius: 3,
+            elevation: 5,
+          }}
+        >
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <TouchableOpacity
+              onPress={() => {
+                setFullProfile(false);
+                setviewClinic(false);
+                setDashboardView("chats");
+              }}
+              style={{
+                backgroundColor: "#3498db",
+                paddingVertical: 14,
+                paddingHorizontal: 20,
+                borderRadius: 12,
+                flex: 1,
+                alignItems: "center",
+                flexDirection: "row",
+                justifyContent: "center",
+                shadowColor: "#3498db",
+                shadowOffset: { width: 0, height: 3 },
+                shadowOpacity: 0.3,
+                shadowRadius: 6,
+                elevation: 4,
+              }}
+            >
+              <FontAwesome5 name="comments" size={18} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>Message</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => {
+                setModalAppoint(true);
+              }}
+              style={{
+                backgroundColor: "#34db6cff",
+                paddingVertical: 14,
+                paddingHorizontal: 20,
+                borderRadius: 12,
+                flex: 1,
+                alignItems: "center",
+                flexDirection: "row",
+                justifyContent: "center",
+                shadowColor: "#34db6cff",
+                shadowOffset: { width: 0, height: 3 },
+                shadowOpacity: 0.3,
+                shadowRadius: 6,
+                elevation: 4,
+              }}
+            >
+              <FontAwesome5 name="calendar-check" size={18} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>Appoint</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setModalMap(true)}
+              style={{
+                backgroundColor: "#f39c12",
+                paddingVertical: 14,
+                paddingHorizontal: 20,
+                borderRadius: 12,
+                flex: 1,
+                alignItems: "center",
+                flexDirection: "row",
+                justifyContent: "center",
+                shadowColor: "#f39c12",
+                shadowOffset: { width: 0, height: 3 },
+                shadowOpacity: 0.3,
+                shadowRadius: 6,
+                elevation: 4,
+              }}
+            >
+              <FontAwesome5 name="map-marker-alt" size={18} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>View in Map</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+    </View>
+  </Modal>
+
+  </View>
+
+                        <View style={{ flex: 1 }}>
+                          <Text
                             style={{
-                              backgroundColor: "white",
-                              borderRadius: 12,
-                              borderWidth: 1,
-                              borderColor: "#ccc",
-                              width: !isMobile ? "30%" : "90%",
-                              maxHeight: "90%",
+                              fontWeight: "bold",
+                              fontSize: isMobile ? 15 : 18,
+                              marginBottom: 6,
+                              color: 'black'
                             }}
                           >
-                            <ScrollView
-                              contentContainerStyle={{
-                                padding: 20,
-                                flexGrow: 1,
-                                alignItems: "center",
+                            {clinic.clinic_name || "Unnamed Clinic"}
+                          </Text>
+                          <Text style={{ color: 'black', marginBottom: 2, fontSize: isMobile ? 13 : 16 }}>
+                            {clinic.address || "No address provided"}
+                          </Text>
+
+                        </View>
+                      </View>
+
+                      {/* Right side: Buttons */}
+                      <View style={{ flex: 3, justifyContent: "space-around" }}>
+                        {/* Create Appointment */}
+                        <TouchableOpacity
+                          onPress={() => {
+                            setSelectedSunday(clinic.clinic_schedule[0]?.sunday || {});
+                            setSelectedMonday(clinic.clinic_schedule[0]?.monday || {});
+                            setSelectedTuesday(clinic.clinic_schedule[0]?.tuesday || {});
+                            setSelectedWednesday(clinic.clinic_schedule[0]?.wednesday || {});
+                            setSelectedThursday(clinic.clinic_schedule[0]?.thursday || {});
+                            setSelectedFriday(clinic.clinic_schedule[0]?.friday || {});
+                            setSelectedSaturday(clinic.clinic_schedule[0]?.saturday || {});
+                            setSelectedClinicId(clinic.id);
+                            setappointmentName(clinic.clinic_name);
+                            setOfferList(clinic.offers || []);
+                            setModalAppoint(true);
+                            setDentistList(clinic.dentists)
+                          }}
+                          style={{
+                            backgroundColor: "#00aa55",
+                            paddingVertical: 12,
+                            paddingHorizontal: 10,
+                            borderRadius: 10,
+                            alignItems: "center",
+                            marginBottom: 2,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: "#fff",
+                              fontWeight: "bold",
+                              fontSize: isMobile ? 9 : 14,
+                              textAlign: "center",
+                            }}
+                          >
+                            Create an Appointment
+                          </Text>
+                        </TouchableOpacity>
+
+                        {/* Appointment Modal */}
+                        <Modal animationIn="fadeIn" animationOut="fadeOut" isVisible={modalAppoint} backdropColor="#000" backdropOpacity={0.1}  onBackdropPress={() => setModalAppoint(false)} style={{alignItems: "center", justifyContent: "center"}}>
+                        
+                            <View
+                              style={{
+                                backgroundColor: "white",
+                                borderRadius: 12,
+                                borderWidth: 1,
+                                borderColor: "#ccc",
+                                width: !isMobile ? "30%" : "90%",
+                                maxHeight: "90%",
                               }}
                             >
-                              <Text
-                                style={{
-                                  fontSize: 24,
-                                  fontWeight: "bold",
-                                  marginBottom: 20,
-                                  alignSelf: "center",
-                                  color: "#00505cff",
+                              <ScrollView
+                                contentContainerStyle={{
+                                  padding: 20,
+                                  flexGrow: 1,
+                                  alignItems: "center",
                                 }}
                               >
-                                APPOINTMENT
-                              </Text>
-
-                              <Text
-                                style={{
-                                  fontSize: 18,
-                                  marginBottom: 20,
-                                  textAlign: "center",
-                                }}
-                              >
-                                {appointmentName}
-                              </Text>
-
-                              {/* View Clinic Schedule Button */}
-                              <TouchableOpacity
-                                style={{
-                                  width: "100%",
-                                  padding: 12,
-                                  backgroundColor: "#e2e8f0",
-                                  borderRadius: 6,
-                                  marginBottom: 10,
-                                }}
-                                onPress={() => setShowScheduleModal(true)}
-                              >
-                                <Text style={{ textAlign: "center", color: "#333", fontWeight: "bold" }}>
-                                  View Clinic Schedule
+                                <Text
+                                  style={{
+                                    fontSize: 24,
+                                    fontWeight: "bold",
+                                    marginBottom: 20,
+                                    alignSelf: "center",
+                                    color: "#00505cff",
+                                  }}
+                                >
+                                  APPOINTMENT
                                 </Text>
-                              </TouchableOpacity>
 
-                              {/* Schedule Modal */}
-                              <Modal
-                                visible={showScheduleModal}
-                                transparent
-                                animationType="fade"
-                                onRequestClose={() => setShowScheduleModal(false)}
-                              >
-                                <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 20 }}>
-                                  <View
-                                    style={{
-                                      backgroundColor: "white",
-                                      borderRadius: 12,
-                                      padding: 20,
-                                      width: isMobile ? "90%" : "40%",
-                                      maxHeight: "80%",
-                                      borderWidth: 1,
-                                      borderColor: "#ccc",
-                                    }}
-                                  >
-                                    <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 15, textAlign: "center", color: '#00505cff' }}>
-                                      Clinic Schedule
-                                    </Text>
-
-                                    <ScrollView style={{ maxHeight: 400 }}>
-                                      <View style={{ gap: 1 }}>
-                                        {[
-                                          { label: "Sunday", time: selectedSunday },
-                                          { label: "Monday", time: selectedMonday },
-                                          { label: "Tuesday", time: selectedTuesday },
-                                          { label: "Wednesday", time: selectedWednesday },
-                                          { label: "Thursday", time: selectedThursday },
-                                          { label: "Friday", time: selectedFriday },
-                                          { label: "Saturday", time: selectedSaturday },
-                                        ].map((day) => (
-                                          <DayScheduleView
-                                            key={day.label}
-                                            label={day.label}
-                                            time={
-                                              day.time
-                                                ? {
-                                                    ...day.time,
-                                                    from: {
-                                                      ...day.time.from,
-                                                      minute: day.time.from?.minute?.toString().padStart(2, "0"),
-                                                    },
-                                                    to: {
-                                                      ...day.time.to,
-                                                      minute: day.time.to?.minute?.toString().padStart(2, "0"),
-                                                    },
-                                                  }
-                                                : undefined
-                                            }
-                                          />
-                                        ))}
-
-                                        {[
-                                          selectedSunday,
-                                          selectedMonday,
-                                          selectedTuesday,
-                                          selectedWednesday,
-                                          selectedThursday,
-                                          selectedFriday,
-                                          selectedSaturday,
-                                        ].every((day) => !day || day.from == null || day.to == null) && (
-                                          <Text
-                                            style={{
-                                              color: "#999",
-                                              fontSize: 14,
-                                              textAlign: "center",
-                                              marginTop: 8,
-                                            }}
-                                          >
-                                            No schedule available
-                                          </Text>
-                                        )}
+                                <Text
+                                  style={{
+                                    fontSize: 18,
+                                    marginBottom: 20,
+                                    textAlign: "center",
+                                  }}
+                                >
+                                  {appointmentName}
+                                </Text>
+                              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, justifyContent: "center", paddingHorizontal: 10, }} >
+                                  {[
+                                    { label: "Sunday", time: selectedSunday },
+                                    { label: "Monday", time: selectedMonday },
+                                    { label: "Tuesday", time: selectedTuesday },
+                                    { label: "Wednesday", time: selectedWednesday },
+                                    { label: "Thursday", time: selectedThursday },
+                                    { label: "Friday", time: selectedFriday },
+                                    { label: "Saturday", time: selectedSaturday },
+                                  ]
+                                    .filter((day) => day.time && day.time.from && day.time.to)
+                                    .map((day) => (
+                                      <View
+                                        key={day.label}
+                                        style={{
+                                          backgroundColor: "#fff",
+                                          borderRadius: 10,
+                                          paddingVertical: 6,
+                                          paddingHorizontal: 12,
+                                          shadowColor: "#000",
+                                          shadowOpacity: 0.05,
+                                          shadowOffset: { width: 0, height: 1 },
+                                          shadowRadius: 2,
+                                          elevation: 1,
+                                          alignItems: "center",
+                                          justifyContent: "center",
+                                          minWidth: 90,
+                                        }}
+                                      >
+                                        <Text style={{ fontWeight: "600", fontSize: 13, color: "#1f2937" }}>
+                                          {day.label}
+                                        </Text>
+                                        <Text style={{ color: "#2563eb", fontWeight: "500", fontSize: 12 }}>
+                                          {`${day.time.from.hour}:${day.time.from.minute
+                                            ?.toString()
+                                            .padStart(2, "0")} - ${day.time.to.hour}:${day.time.to.minute
+                                            ?.toString()
+                                            .padStart(2, "0")}`}
+                                        </Text>
                                       </View>
-                                    </ScrollView>
+                                    ))}
 
-                                    {/* Close Button */}
-                                    <TouchableOpacity
-                                      onPress={() => setShowScheduleModal(false)}
+                                  {[
+                                    selectedSunday,
+                                    selectedMonday,
+                                    selectedTuesday,
+                                    selectedWednesday,
+                                    selectedThursday,
+                                    selectedFriday,
+                                    selectedSaturday,
+                                  ].every((day) => !day || day.from == null || day.to == null) && (
+                                    <Text
                                       style={{
-                                        marginTop: 20,
-                                        backgroundColor: "#2e7dccff",
-                                        paddingVertical: 12,
-                                        borderRadius: 6,
+                                        color: "#999",
+                                        fontSize: 13,
+                                        textAlign: "center",
+                                        marginTop: 8,
                                       }}
                                     >
-                                      <Text style={{ color: "white", fontWeight: "bold", textAlign: "center" }}>
+                                      No schedule available
+                                    </Text>
+                                  )}
+                              </View>
+
+                              {[
+                                  selectedSunday,
+                                  selectedMonday,
+                                  selectedTuesday,
+                                  selectedWednesday,
+                                  selectedThursday,
+                                  selectedFriday,
+                                  selectedSaturday,
+                                ].every((day) => !day || day.from == null || day.to == null) ? (
+                                  // Show only message if no schedule available
+                                  <View style={{ marginTop: 20, marginBottom: 20, width: '100%' }}>
+                                    <TouchableOpacity
+                                      style={{
+                                        backgroundColor: "#b32020",
+                                        paddingVertical: 12,
+                                        borderRadius: 8,
+                                        width: "100%",
+                                      }}
+                                      onPress={() => {
+                                        setModalAppoint(false);
+                                        setMessageToClinic("");
+                                        setIsOthersChecked(false);
+                                        setTempMessage("");
+                                        setSelectedReasons([]);
+                                      }}
+                                    >
+                                      <Text
+                                        style={{
+                                          color: "white",
+                                          fontWeight: "bold",
+                                          textAlign: "center",
+                                        }}
+                                      >
                                         Close
                                       </Text>
                                     </TouchableOpacity>
                                   </View>
-                                </View>
-                              </Modal>
-
-
-                              {/* Date */}
-                              <Text style={{ alignSelf: "flex-start", marginBottom: 5 }}>*Date</Text>
-                              <CalendarPicker
-                                day={date.getDate()}
-                                month={date.getMonth() + 1}
-                                year={date.getFullYear()}
-                                onDaySelect={(day, month, year) => {
-                                  setAppointmentDate((prev) => {
-                                    const time = new Date(prev);
-                                    time.setDate(day);
-                                    time.setMonth(month - 1);
-                                    time.setFullYear(year);
-                                    return time;
-                                  });
-                                }}
-                              />
-
-                              {/* Time */}
-                              <Text style={{ alignSelf: "flex-start", marginBottom: 5 }}>*Time</Text>
-                              <TimePicker
-                                minuteSkipBy={1}
-                                onTimeSelected={(hh, mm, atm) => {
-                                  setAppointmentDate((prev) => {
-                                    const time = new Date(prev);
-                                    const hourNum = Number(hh);
-                                    const formatHour =
-                                      atm === "AM"
-                                        ? hourNum === 12 ? 0 : hourNum
-                                        : hourNum === 12 ? 12 : hourNum + 12;
-
-                                    time.setHours(formatHour);
-                                    time.setMinutes(Number(mm));
-                                    return time;
-                                  });
-                                }}
-                                trigger={undefined}
-                              />
-
-
-{/* Choose Dentist */}
-<Text style={{ alignSelf: "flex-start", marginBottom: 5, marginTop: 10 }}>
-  *Choose Dentist/Staff
-</Text>                  
-
-{/* Trigger Button to open Dentist Modal */}
-<TouchableOpacity
-  style={{
-    width: "100%",
-    padding: 12,
-    backgroundColor: "#e2e8f0",
-    borderRadius: 6,
-    marginBottom: 10,
-  }}
-  onPress={() => {
-    setTempSelectedDentists([...selectedDentists]);
-    setShowDentistModal(true);
-  }}
->
-  <Text style={{ textAlign: "center", color: "#333", fontWeight: "bold" }}>
-    Select Dentist/s, Staff...
-  </Text>
-</TouchableOpacity>
-
-{/* Modal to select Dentists */}
-<Modal
-  visible={showDentistModal}
-  transparent
-  animationType="fade"
-  onRequestClose={() => setShowDentistModal(false)}
->
-  <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 20 }}>
-    <View
-      style={{
-        backgroundColor: "white",
-        borderRadius: 12,
-        padding: 20,
-        width: isMobile ? "90%" : "40%",
-        maxHeight: "80%",
-        borderWidth: 1,
-        borderColor: "#ccc",
-      }}
-    >
-      <ScrollView>
-        <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 15, color: '#00505cff' }}>
-          Select Available Dentists and Staff
-        </Text>
-
-{(() => {
-
-  return (
-    <View>
-      {/* Fixed Roles */}
-      {fixedRoles.map((role, index) => {
-        const selected = tempSelectedDentists.includes(role);
-        return (
-          <View key={`fixed-${index}`} style={{ marginBottom: 15 }}>
-            <TouchableOpacity
-              onPress={() => toggleTempDentist(role)}
-              style={{ flexDirection: "row", alignItems: "center", marginBottom: 6 }}
-            >
-              <View style={{
-                height: 20,
-                width: 20,
-                borderRadius: 4,
-                borderWidth: 1,
-                borderColor: "#888",
-                justifyContent: "center",
-                alignItems: "center",
-                marginRight: 10,
-                backgroundColor: selected ? "#007bff" : "#fff",
-              }}>
-                {selected && <View style={{ width: 10, height: 10, backgroundColor: "#fff" }} />}
-              </View>
-              <Text style={{ fontWeight: "bold", color: 'black' }}>{role}</Text>
-            </TouchableOpacity>
-          </View>
-        );
-      })}
-
-      {/* Dentists List */}
-      {parsedDentistList.map((dentist, index) => {
-        const name = `Dr. ${dentist.name} (${dentist.specialty})`;
-        const selected = tempSelectedDentists.includes(name);
-        const todaySchedule = dentist?.weeklySchedule?.[today] ?? [];
-        const hasTodaySchedule = todaySchedule.length > 0;
-
-        return (
-          <View key={`dentist-${index}`} style={{ marginBottom: 15 }}>
-            {/* Dentist Row */}
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <TouchableOpacity
-                onPress={() => toggleTempDentist(name)}
-                style={{ flexDirection: "row", alignItems: "center", flex: 1 }}
-              >
-                <View style={{
-                  height: 20,
-                  width: 20,
-                  borderRadius: 4,
-                  borderWidth: 1,
-                  borderColor: "#888",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  marginRight: 10,
-                  backgroundColor: selected ? "#007bff" : "#fff",
-                }}>
-                  {selected && <View style={{ width: 10, height: 10, backgroundColor: "#fff" }} />}
-                </View>
-                <Text style={{ fontWeight: "bold", color: 'black' }}>{name}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity onPress={() => toggleSchedule(index)}>
-                <Text style={{ fontSize: 12, color: "#007bff" }}>
-                  {expandedDentistIndex === index ? "Hide" : "View"} Schedule
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Today’s Schedule or Warning */}
-            {hasTodaySchedule ? (
-              todaySchedule.map((time, i) => (
-                <Text key={i} style={{ marginLeft: 30, fontSize: 12, color: "#444" }}>
-                  🕒 {time}
-                </Text>
-              ))
-            ) : (
-              <Text style={{ marginLeft: 30, fontSize: 12, color: "#e67300" }}>
-                ⚠️ No schedule today
-              </Text>
-            )}
-
-            {/* Full Weekly Schedule */}
-            {expandedDentistIndex === index && (
-              <View style={{ marginTop: 6 }}>
-                {daysOfWeek.map((day, i) => {
-                  const schedule = dentist.weeklySchedule?.[day] || [];
-                  return (
-                    <Text key={i} style={{ marginLeft: 30, fontSize: 12, color: schedule.length ? "#444" : "#999" }}>
-                      {day}: {schedule.length ? schedule.join(", ") : "No schedule"}
-                    </Text>
-                  );
-                })}
-              </View>
-            )}
-          </View>
-        );
-      })}
-    </View>
-  );
-})()}
-
-
-
-      </ScrollView>
-
-      {/* Buttons */}
-      <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 20 }}>
-        <TouchableOpacity
-          style={{
-            flex: 1,
-            backgroundColor: "#b32020",
-            paddingVertical: 12,
-            borderRadius: 6,
-            marginRight: 8,
-          }}
-          onPress={() => setShowDentistModal(false)}
-        >
-          <Text style={{ color: "white", textAlign: "center", fontWeight: "bold" }}>
-            Cancel
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={{
-            flex: 1,
-            backgroundColor: "#2e7dccff",
-            paddingVertical: 12,
-            borderRadius: 6,
-            marginLeft: 8,
-          }}
-          onPress={() => {
-            setSelectedDentists(tempSelectedDentists);
-            setShowDentistModal(false);
-          }}
-        >
-          <Text style={{ color: "white", textAlign: "center", fontWeight: "bold" }}>
-            Save
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </View>
-</Modal>
-
-                              {/* Message */}
-                              <Text style={{ alignSelf: "flex-start", marginBottom: 5, marginTop: 10 }}>
-                                *Message to clinic: Reason of Appointment
-                              </Text>
-
-                              {/* Trigger Button to open Offer Modal */}
-                              <TouchableOpacity
-                                style={{
-                                  width: "100%",
-                                  padding: 12,
-                                  backgroundColor: "#e2e8f0",
-                                  borderRadius: 6,
-                                  marginBottom: 10,
-                                }}
-                                onPress={() => {
-                                  setTempSelectedReasons([...selectedReasons]);
-                                  setShowOfferModal(true);
-                                }}
-                              >
-                                <Text style={{ textAlign: "center", color: "#333", fontWeight: "bold" }}>
-                                  Select Appointment Offer/s
-                                </Text>
-                              </TouchableOpacity>
-
-                              <Modal
-                                visible={showOfferModal}
-                                transparent
-                                animationType="fade"
-                                onRequestClose={() => setShowOfferModal(false)}
-                              >
-                                <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 20 }}>
-                                  <View
-                                    style={{
-                                      backgroundColor: "white",
-                                      borderRadius: 12,
-                                      padding: 20,
-                                      width: isMobile ? "90%" : "40%",
-                                      maxHeight: "80%",
-                                      borderWidth: 1,
-                                      borderColor: "#ccc",
+                                ) : (
+                                  <>
+                                  <CalendarPicker
+                                    day={date.getDate()}
+                                    month={date.getMonth() + 1}
+                                    year={date.getFullYear()}
+                                    availableDays={availableDays}
+                                    onDaySelect={(day, month, year) => {
+                                      setAppointmentDate((prev) => {
+                                        const time = new Date(prev);
+                                        time.setDate(day);
+                                        time.setMonth(month - 1);
+                                        time.setFullYear(year);
+                                        return time;
+                                      });
                                     }}
-                                  >
-                                    <ScrollView>
-                                      <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 15, color: '#00505cff'}}>
-                                        Select Offer/s
-                                      </Text>
+                                  />
 
-                                      {(Array.isArray(offerList) ? offerList : offerList ? offerList.split("?") : []).map((offer) => {
-                                        const trimmedOffer = offer.trim();
-                                        if (!trimmedOffer) return null;
+                                  {/* Time */}
+                                  <Text style={{ alignSelf: "flex-start", marginBottom: 5 }}>*Time</Text>
+                                  <TimePicker
+                                    minuteSkipBy={1}
+                                    onTimeSelected={(hh, mm, atm) => {
+                                      setAppointmentDate((prev) => {
+                                        const time = new Date(prev);
+                                        const hourNum = Number(hh);
+                                        const formatHour =
+                                          atm === "AM"
+                                            ? hourNum === 12 ? 0 : hourNum
+                                            : hourNum === 12 ? 12 : hourNum + 12;
 
+                                        time.setHours(formatHour);
+                                        time.setMinutes(Number(mm));
+                                        return time;
+                                      });
+                                    }}
+                                    trigger={undefined}
+                                  />
+
+
+                                {/* Choose Dentist */}
+                                <Text style={{ alignSelf: "flex-start", marginBottom: 5, marginTop: 10 }}>
+                                  *Choose Dentist/Staff
+                                </Text>                  
+
+                                {/* Trigger Button to open Dentist Modal */}
+                                <TouchableOpacity
+                                  style={{
+                                    width: "100%",
+                                    padding: 12,
+                                    backgroundColor: "#e2e8f0",
+                                    borderRadius: 6,
+                                    marginBottom: 10,
+                                  }}
+                                  onPress={() => {
+                                    setTempSelectedDentists([...selectedDentists]);
+                                    setShowDentistModal(true);
+                                  }}
+                                >
+                                  <Text style={{ textAlign: "center", color: "#333", fontWeight: "bold" }}>
+                                    Select Dentist/s, Staff...
+                                  </Text>
+                                </TouchableOpacity>
+
+                                {/* Modal to select Dentists */}
+                                <Modal
+                                  visible={showDentistModal}
+                                  transparent
+                                  animationType="fade"
+                                  onRequestClose={() => setShowDentistModal(false)}
+                                >
+                                  <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 20 }}>
+                                    <View
+                                      style={{
+                                        backgroundColor: "white",
+                                        borderRadius: 12,
+                                        padding: 20,
+                                        width: isMobile ? "90%" : "40%",
+                                        maxHeight: "80%",
+                                        borderWidth: 1,
+                                        borderColor: "#ccc",
+                                      }}
+                                    >
+                                      <ScrollView>
+                                        <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 15, color: '#00505cff' }}>
+                                          Select Available Dentists and Staff
+                                        </Text>
+
+                                {(() => {
+
+                                  return (
+                                    <View>
+                                      {/* Fixed Roles */}
+                                      {fixedRoles.map((role, index) => {
+                                        const selected = tempSelectedDentists.includes(role);
                                         return (
-                                          <TouchableOpacity
-                                            key={trimmedOffer}
-                                            onPress={() => toggleTempReason(trimmedOffer)}
-                                            style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}
-                                          >
-                                            <View
-                                              style={{
+                                          <View key={`fixed-${index}`} style={{ marginBottom: 15 }}>
+                                            <TouchableOpacity
+                                              onPress={() => toggleTempDentist(role)}
+                                              style={{ flexDirection: "row", alignItems: "center", marginBottom: 6 }}
+                                            >
+                                              <View style={{
                                                 height: 20,
                                                 width: 20,
                                                 borderRadius: 4,
@@ -4597,176 +4277,104 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                                                 justifyContent: "center",
                                                 alignItems: "center",
                                                 marginRight: 10,
-                                                backgroundColor: tempSelectedReasons.includes(trimmedOffer) ? "#007bff" : "#fff",
-                                              }}
-                                            >
-                                              {tempSelectedReasons.includes(trimmedOffer) && (
-                                                <View style={{ width: 10, height: 10, backgroundColor: "#fff" }} />
-                                              )}
-                                            </View>
-                                            <Text style={{color: 'black'}}>{trimmedOffer}</Text>
-                                          </TouchableOpacity>
+                                                backgroundColor: selected ? "#007bff" : "#fff",
+                                              }}>
+                                                {selected && <View style={{ width: 10, height: 10, backgroundColor: "#fff" }} />}
+                                              </View>
+                                              <Text style={{ fontWeight: "bold", color: 'black' }}>{role}</Text>
+                                            </TouchableOpacity>
+                                          </View>
                                         );
                                       })}
-                                    </ScrollView>
 
-                                    {/* Buttons */}
-                                    <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 20 }}>
-                                      <TouchableOpacity
-                                        style={{
-                                          flex: 1,
-                                          backgroundColor: "#b32020",
-                                          paddingVertical: 12,
-                                          borderRadius: 6,
-                                          marginRight: 8,
-                                        }}
-                                        onPress={() => {
-                                          setShowOfferModal(false);
-                                        }}
-                                      >
-                                        <Text style={{ color: "white", textAlign: "center", fontWeight: "bold" }}>
-                                          Cancel
-                                        </Text>
-                                      </TouchableOpacity>
+                                      {/* Dentists List */}
+                                      {parsedDentistList.map((dentist, index) => {
+                                        const name = `Dr. ${dentist.name} (${dentist.specialty})`;
+                                        const selected = tempSelectedDentists.includes(name);
+                                        const todaySchedule = dentist?.weeklySchedule?.[today] ?? [];
+                                        const hasTodaySchedule = todaySchedule.length > 0;
 
-                                      <TouchableOpacity
-                                        style={{
-                                          flex: 1,
-                                          backgroundColor: "#2e7dccff",
-                                          paddingVertical: 12,
-                                          borderRadius: 6,
-                                          marginLeft: 8,
-                                        }}
-                                        onPress={() => {
-                                          setSelectedReasons(tempSelectedReasons);
-                                          setMessageToClinic(tempSelectedReasons.join(", "));
-                                          setShowOfferModal(false);
-                                        }}
-                                      >
-                                        <Text style={{ color: "white", textAlign: "center", fontWeight: "bold" }}>
-                                          Save
-                                        </Text>
-                                      </TouchableOpacity>
+                                        return (
+                                          <View key={`dentist-${index}`} style={{ marginBottom: 15 }}>
+                                            {/* Dentist Row */}
+                                            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                                              <TouchableOpacity
+                                                onPress={() => toggleTempDentist(name)}
+                                                style={{ flexDirection: "row", alignItems: "center", flex: 1 }}
+                                              >
+                                                <View style={{
+                                                  height: 20,
+                                                  width: 20,
+                                                  borderRadius: 4,
+                                                  borderWidth: 1,
+                                                  borderColor: "#888",
+                                                  justifyContent: "center",
+                                                  alignItems: "center",
+                                                  marginRight: 10,
+                                                  backgroundColor: selected ? "#007bff" : "#fff",
+                                                }}>
+                                                  {selected && <View style={{ width: 10, height: 10, backgroundColor: "#fff" }} />}
+                                                </View>
+                                                <Text style={{ fontWeight: "bold", color: 'black' }}>{name}</Text>
+                                              </TouchableOpacity>
+
+                                              <TouchableOpacity onPress={() => toggleSchedule(index)}>
+                                                <Text style={{ fontSize: 12, color: "#007bff" }}>
+                                                  {expandedDentistIndex === index ? "Hide" : "View"} Schedule
+                                                </Text>
+                                              </TouchableOpacity>
+                                            </View>
+
+                                            {/* Today’s Schedule or Warning */}
+                                            {hasTodaySchedule ? (
+                                              todaySchedule.map((time, i) => (
+                                                <Text key={i} style={{ marginLeft: 30, fontSize: 12, color: "#444" }}>
+                                                  🕒 {time}
+                                                </Text>
+                                              ))
+                                            ) : (
+                                              <Text style={{ marginLeft: 30, fontSize: 12, color: "#e67300" }}>
+                                                ⚠️ No schedule today
+                                              </Text>
+                                            )}
+
+                                            {/* Full Weekly Schedule */}
+                                            {expandedDentistIndex === index && (
+                                              <View style={{ marginTop: 6 }}>
+                                                {daysOfWeek.map((day, i) => {
+                                                  const schedule = dentist.weeklySchedule?.[day] || [];
+                                                  return (
+                                                    <Text key={i} style={{ marginLeft: 30, fontSize: 12, color: schedule.length ? "#444" : "#999" }}>
+                                                      {day}: {schedule.length ? schedule.join(", ") : "No schedule"}
+                                                    </Text>
+                                                  );
+                                                })}
+                                              </View>
+                                            )}
+                                          </View>
+                                        );
+                                      })}
                                     </View>
-                                  </View>
-                                </View>
-                              </Modal>
+                                  );
+                                })()}
 
-                              {/* "Others" checkbox */}
-                              <View style={{ width: "100%" }}>
-                                <TouchableOpacity
-                                  onPress={() => {
-                                    setIsOthersChecked(true);
-                                    setTempMessage(tempMessage || "");
-                                    setShowOthersModal(true);
-                                  }}
-                                  style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}
-                                >
-                                  <View
-                                    style={{
-                                      height: 20,
-                                      width: 20,
-                                      borderRadius: 4,
-                                      borderWidth: 1,
-                                      borderColor: "#888",
-                                      justifyContent: "center",
-                                      alignItems: "center",
-                                      marginRight: 10,
-                                      backgroundColor: isOthersChecked ? "#007bff" : "#fff",
-                                    }}
-                                  >
-                                    {isOthersChecked && (
-                                      <View style={{ width: 10, height: 10, backgroundColor: "#fff" }} />
-                                    )}
-                                  </View>
-                                  <Text>Others</Text>
-                                </TouchableOpacity>
 
-                                {/* ✅ Combined Message Preview (selected checkboxes + others) */}
-                                {messageToClinic.trim() !== "" && (
-                                  <View
-                                    style={{
-                                      padding: 10,
-                                      backgroundColor: "#f1f1f1",
-                                      borderRadius: 6,
-                                      marginBottom: 10,
-                                      width: "100%",
-                                    }}
-                                  >
-                                    <Text style={{ color: "#000" }}>{messageToClinic}</Text>
-                                  </View>
-                                )}
 
-                                {/* Modal for "Others" input */}
-                                <Modal
-                                  transparent
-                                  visible={showOthersModal}
-                                  onRequestClose={() => setShowOthersModal(false)}
-                                >
-                                  <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-                                    <View
-                                      style={{
-                                        width: isMobile ? "80%" : "30%",
-                                        backgroundColor: "white",
-                                        borderRadius: 10,
-                                        padding: 20,
-                                        borderWidth: 1,
-                                        borderColor: "#ccc",
-                                        alignItems: "center",
-                                      }}
-                                    >
-                                      <Text style={{ fontSize: 18, marginBottom: 10 }}>
-                                        Message to Clinic
-                                      </Text>
-                                      <TextInput
-                                        value={tempMessage}
-                                        onChangeText={setTempMessage}
-                                        multiline
-                                        style={{
-                                          height: 100,
-                                          width: "100%",
-                                          borderColor: "#ccc",
-                                          borderWidth: 1,
-                                          borderRadius: 6,
-                                          padding: 10,
-                                          marginBottom: 20,
-                                          textAlignVertical: "top",
-                                        }}
-                                        maxLength={350}
-                                        autoFocus
-                                      />
+                                      </ScrollView>
 
-                                      <View
-                                        style={{
-                                          flexDirection: "row",
-                                          justifyContent: "space-between",
-                                          width: "100%",
-                                        }}
-                                      >
+                                      {/* Buttons */}
+                                      <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 20 }}>
                                         <TouchableOpacity
                                           style={{
                                             flex: 1,
-                                            marginRight: 8,
                                             backgroundColor: "#b32020",
                                             paddingVertical: 12,
                                             borderRadius: 6,
+                                            marginRight: 8,
                                           }}
-                                          onPress={() => {
-                                            setShowOthersModal(false);
-                                            setIsOthersChecked(false);
-                                            setTempMessage("");
-
-                                            // Update message with only selected reasons
-                                            setMessageToClinic(selectedReasons.join(", "));
-                                          }}
+                                          onPress={() => setShowDentistModal(false)}
                                         >
-                                          <Text
-                                            style={{
-                                              color: "white",
-                                              textAlign: "center",
-                                              fontWeight: "bold",
-                                            }}
-                                          >
+                                          <Text style={{ color: "white", textAlign: "center", fontWeight: "bold" }}>
                                             Cancel
                                           </Text>
                                         </TouchableOpacity>
@@ -4774,32 +4382,17 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                                         <TouchableOpacity
                                           style={{
                                             flex: 1,
-                                            marginLeft: 8,
                                             backgroundColor: "#2e7dccff",
                                             paddingVertical: 12,
                                             borderRadius: 6,
+                                            marginLeft: 8,
                                           }}
                                           onPress={() => {
-                                            const newMsg = tempMessage.trim();
-                                            setTempMessage(newMsg);
-                                            setIsOthersChecked(!!newMsg);
-                                            setShowOthersModal(false);
-
-                                            // Combine selected reasons with "others"
-                                            const combined = [...selectedReasons];
-                                            if (newMsg) {
-                                              combined.push(newMsg);
-                                            }
-                                            setMessageToClinic(combined.join(", "));
+                                            setSelectedDentists(tempSelectedDentists);
+                                            setShowDentistModal(false);
                                           }}
                                         >
-                                          <Text
-                                            style={{
-                                              color: "white",
-                                              textAlign: "center",
-                                              fontWeight: "bold",
-                                            }}
-                                          >
+                                          <Text style={{ color: "white", textAlign: "center", fontWeight: "bold" }}>
                                             Save
                                           </Text>
                                         </TouchableOpacity>
@@ -4807,254 +4400,534 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                                     </View>
                                   </View>
                                 </Modal>
-                              </View>
 
-                              {/* Buttons */}
-                              <View
-                                style={{
-                                  flexDirection: "row",
-                                  justifyContent: "space-between",
-                                  width: "100%",
-                                  marginTop: 20,
-                                }}
-                              >
+                                {/* Message */}
+                                <Text style={{ alignSelf: "flex-start", marginBottom: 5, marginTop: 10 }}>
+                                  *Message to clinic: Reason of Appointment
+                                </Text>
+
+                                {/* Trigger Button to open Offer Modal */}
                                 <TouchableOpacity
                                   style={{
-                                    flex: 1,
-                                    backgroundColor: "#b32020",
-                                    paddingVertical: 12,
-                                    borderRadius: 8,
-                                    marginRight: 8,
+                                    width: "100%",
+                                    padding: 12,
+                                    backgroundColor: "#e2e8f0",
+                                    borderRadius: 6,
+                                    marginBottom: 10,
                                   }}
                                   onPress={() => {
-                                    setMessageToClinic("");
-                                    setModalAppoint(false);
-                                    setIsOthersChecked(false);
-                                    setTempMessage("");
-                                    setSelectedReasons([]);
+                                    setTempSelectedReasons([...selectedReasons]);
+                                    setShowOfferModal(true);
                                   }}
                                 >
-                                  <Text
-                                    style={{
-                                      color: "white",
-                                      fontWeight: "bold",
-                                      textAlign: "center",
-                                    }}
-                                  >
-                                    Cancel
+                                  <Text style={{ textAlign: "center", color: "#333", fontWeight: "bold" }}>
+                                    Select Appointment Offer/s
                                   </Text>
                                 </TouchableOpacity>
 
-                                <TouchableOpacity
+                                <Modal
+                                  visible={showOfferModal}
+                                  transparent
+                                  animationType="fade"
+                                  onRequestClose={() => setShowOfferModal(false)}
+                                >
+                                  <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 20 }}>
+                                    <View
+                                      style={{
+                                        backgroundColor: "white",
+                                        borderRadius: 12,
+                                        padding: 20,
+                                        width: isMobile ? "90%" : "40%",
+                                        maxHeight: "80%",
+                                        borderWidth: 1,
+                                        borderColor: "#ccc",
+                                      }}
+                                    >
+                                      <ScrollView>
+                                        <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 15, color: '#00505cff'}}>
+                                          Select Offer/s
+                                        </Text>
+
+                                        {(Array.isArray(offerList) ? offerList : offerList ? offerList.split("?") : []).map((offer) => {
+                                          const trimmedOffer = offer.trim();
+                                          if (!trimmedOffer) return null;
+
+                                          return (
+                                            <TouchableOpacity
+                                              key={trimmedOffer}
+                                              onPress={() => toggleTempReason(trimmedOffer)}
+                                              style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}
+                                            >
+                                              <View
+                                                style={{
+                                                  height: 20,
+                                                  width: 20,
+                                                  borderRadius: 4,
+                                                  borderWidth: 1,
+                                                  borderColor: "#888",
+                                                  justifyContent: "center",
+                                                  alignItems: "center",
+                                                  marginRight: 10,
+                                                  backgroundColor: tempSelectedReasons.includes(trimmedOffer) ? "#007bff" : "#fff",
+                                                }}
+                                              >
+                                                {tempSelectedReasons.includes(trimmedOffer) && (
+                                                  <View style={{ width: 10, height: 10, backgroundColor: "#fff" }} />
+                                                )}
+                                              </View>
+                                              <Text style={{color: 'black'}}>{trimmedOffer}</Text>
+                                            </TouchableOpacity>
+                                          );
+                                        })}
+                                      </ScrollView>
+
+                                      {/* Buttons */}
+                                      <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 20 }}>
+                                        <TouchableOpacity
+                                          style={{
+                                            flex: 1,
+                                            backgroundColor: "#b32020",
+                                            paddingVertical: 12,
+                                            borderRadius: 6,
+                                            marginRight: 8,
+                                          }}
+                                          onPress={() => {
+                                            setShowOfferModal(false);
+                                          }}
+                                        >
+                                          <Text style={{ color: "white", textAlign: "center", fontWeight: "bold" }}>
+                                            Cancel
+                                          </Text>
+                                        </TouchableOpacity>
+
+                                        <TouchableOpacity
+                                          style={{
+                                            flex: 1,
+                                            backgroundColor: "#2e7dccff",
+                                            paddingVertical: 12,
+                                            borderRadius: 6,
+                                            marginLeft: 8,
+                                          }}
+                                          onPress={() => {
+                                            setSelectedReasons(tempSelectedReasons);
+                                            setMessageToClinic(tempSelectedReasons.join(", "));
+                                            setShowOfferModal(false);
+                                          }}
+                                        >
+                                          <Text style={{ color: "white", textAlign: "center", fontWeight: "bold" }}>
+                                            Save
+                                          </Text>
+                                        </TouchableOpacity>
+                                      </View>
+                                    </View>
+                                  </View>
+                                </Modal>
+
+                                {/* "Others" checkbox */}
+                                <View style={{ width: "100%" }}>
+                                  <TouchableOpacity
+                                    onPress={() => {
+                                      setIsOthersChecked(true);
+                                      setTempMessage(tempMessage || "");
+                                      setShowOthersModal(true);
+                                    }}
+                                    style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}
+                                  >
+                                    <View
+                                      style={{
+                                        height: 20,
+                                        width: 20,
+                                        borderRadius: 4,
+                                        borderWidth: 1,
+                                        borderColor: "#888",
+                                        justifyContent: "center",
+                                        alignItems: "center",
+                                        marginRight: 10,
+                                        backgroundColor: isOthersChecked ? "#007bff" : "#fff",
+                                      }}
+                                    >
+                                      {isOthersChecked && (
+                                        <View style={{ width: 10, height: 10, backgroundColor: "#fff" }} />
+                                      )}
+                                    </View>
+                                    <Text>Others</Text>
+                                  </TouchableOpacity>
+
+                                  {/* ✅ Combined Message Preview (selected checkboxes + others) */}
+                                  {messageToClinic.trim() !== "" && (
+                                    <View
+                                      style={{
+                                        padding: 10,
+                                        backgroundColor: "#f1f1f1",
+                                        borderRadius: 6,
+                                        marginBottom: 10,
+                                        width: "100%",
+                                      }}
+                                    >
+                                      <Text style={{ color: "#000" }}>{messageToClinic}</Text>
+                                    </View>
+                                  )}
+
+                                  {/* Modal for "Others" input */}
+                                  <Modal
+                                    transparent
+                                    visible={showOthersModal}
+                                    onRequestClose={() => setShowOthersModal(false)}
+                                  >
+                                    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+                                      <View
+                                        style={{
+                                          width: isMobile ? "80%" : "30%",
+                                          backgroundColor: "white",
+                                          borderRadius: 10,
+                                          padding: 20,
+                                          borderWidth: 1,
+                                          borderColor: "#ccc",
+                                          alignItems: "center",
+                                        }}
+                                      >
+                                        <Text style={{ fontSize: 18, marginBottom: 10 }}>
+                                          Message to Clinic
+                                        </Text>
+                                        <TextInput
+                                          value={tempMessage}
+                                          onChangeText={setTempMessage}
+                                          multiline
+                                          style={{
+                                            height: 100,
+                                            width: "100%",
+                                            borderColor: "#ccc",
+                                            borderWidth: 1,
+                                            borderRadius: 6,
+                                            padding: 10,
+                                            marginBottom: 20,
+                                            textAlignVertical: "top",
+                                          }}
+                                          maxLength={350}
+                                          autoFocus
+                                        />
+
+                                        <View
+                                          style={{
+                                            flexDirection: "row",
+                                            justifyContent: "space-between",
+                                            width: "100%",
+                                          }}
+                                        >
+                                          <TouchableOpacity
+                                            style={{
+                                              flex: 1,
+                                              marginRight: 8,
+                                              backgroundColor: "#b32020",
+                                              paddingVertical: 12,
+                                              borderRadius: 6,
+                                            }}
+                                            onPress={() => {
+                                              setShowOthersModal(false);
+                                              setIsOthersChecked(false);
+                                              setTempMessage("");
+
+                                              // Update message with only selected reasons
+                                              setMessageToClinic(selectedReasons.join(", "));
+                                            }}
+                                          >
+                                            <Text
+                                              style={{
+                                                color: "white",
+                                                textAlign: "center",
+                                                fontWeight: "bold",
+                                              }}
+                                            >
+                                              Cancel
+                                            </Text>
+                                          </TouchableOpacity>
+
+                                          <TouchableOpacity
+                                            style={{
+                                              flex: 1,
+                                              marginLeft: 8,
+                                              backgroundColor: "#2e7dccff",
+                                              paddingVertical: 12,
+                                              borderRadius: 6,
+                                            }}
+                                            onPress={() => {
+                                              const newMsg = tempMessage.trim();
+                                              setTempMessage(newMsg);
+                                              setIsOthersChecked(!!newMsg);
+                                              setShowOthersModal(false);
+
+                                              // Combine selected reasons with "others"
+                                              const combined = [...selectedReasons];
+                                              if (newMsg) {
+                                                combined.push(newMsg);
+                                              }
+                                              setMessageToClinic(combined.join(", "));
+                                            }}
+                                          >
+                                            <Text
+                                              style={{
+                                                color: "white",
+                                                textAlign: "center",
+                                                fontWeight: "bold",
+                                              }}
+                                            >
+                                              Save
+                                            </Text>
+                                          </TouchableOpacity>
+                                        </View>
+                                      </View>
+                                    </View>
+                                  </Modal>
+                                </View>
+
+                                {/* Buttons */}
+                                <View
                                   style={{
-                                    flex: 1,
-                                    backgroundColor: "#2e7dccff",
-                                    paddingVertical: 12,
-                                    borderRadius: 8,
-                                    marginLeft: 8,
+                                    flexDirection: "row",
+                                    justifyContent: "space-between",
+                                    width: "100%",
+                                    marginTop: 20,
                                   }}
-                                  onPress={async () => {
-                                    if (!selectedClinicId) return;
-
-                                    if (!messageToClinic || !messageToClinic.trim()) {
-                                      setShowMessageModal(true);
-                                      return;
-                                    }
-
-                                    const now = new Date();
-
-                                    // ✅ Check cooldown (2 minutes = 120000 ms)
-                                    if (
-                                      lastAppointmentTime &&
-                                      now.getTime() - lastAppointmentTime.getTime() < 2 * 60 * 1000
-                                    ) {
-                                      const remainingMs = 2 * 60 * 1000 - (now.getTime() - lastAppointmentTime.getTime());
-                                      const remainingSec = Math.ceil(remainingMs / 1000);
-
-                                      setRemainingCooldownTime(remainingSec);
-                                      setCooldownModalVisible(true);
-                                      return;
-                                    }
-
-                                    if (appointmentDate < now) {
-                                      setShowInvalidTimeModal(true);
-                                      return;
-                                    }
-
-                                      if (!selectedDentists || selectedDentists.length === 0) {
-                                        setShowDentistRequiredModal(true); // <-- show modal instead of alert
-                                        return;
-                                      }
-
-                                    const { data, error } = await supabase
-                                      .from("clinic_schedule")
-                                      .select("*")
-                                      .eq("clinic_id", selectedClinicId)
-                                      .single();
-
-                                    if (error || !data) {
-                                      console.log("❌ Error fetching clinic schedule:", error);
-                                      setShowOutOfScheduleModal(true);
-                                      return;
-                                    }
-
-                                    const normalizeSchedule = (day) => {
-                                      return day && day.from && day.to ? day : null;
-                                    };
-
-                                    const schedules = [
-                                      normalizeSchedule(data.sunday),
-                                      normalizeSchedule(data.monday),
-                                      normalizeSchedule(data.tuesday),
-                                      normalizeSchedule(data.wednesday),
-                                      normalizeSchedule(data.thursday),
-                                      normalizeSchedule(data.friday),
-                                      normalizeSchedule(data.saturday),
-                                    ];
-
-                                    if (!isWithinClinicSchedule(appointmentDate, schedules)) {
-                                      setShowOutOfScheduleModal(true);
-                                      return;
-                                    }
-
-                                    const dayIndex = appointmentDate.getDay();
-                                    const daySchedule = schedules[dayIndex];
-
-                                    if (daySchedule && daySchedule.to) {
-                                      const isValid = isAtLeast30MinsBeforeClosing(appointmentDate, daySchedule.to);
-                                      if (!isValid) {
-                                        setShowTooCloseModal(true);
-                                        return;
-                                      }
-                                    }
-
-                                    const diffMs = appointmentDate.getTime() - now.getTime();
-                                    if (diffMs < 30 * 60 * 1000) {
-                                      setShowCloseTimeModal(true);
-                                      return;
-                                    }
-
-                                    // Validate dentist availability
-                                    const appointmentDay = appointmentDate.toLocaleString("en-US", { weekday: "long" }); // e.g., "Monday"
-                                    const appointmentTime = appointmentDate.getHours() * 60 + appointmentDate.getMinutes(); // convert to minutes
-
-                                    // Get selected dentists only (filter out receptionist, owner)
-                                    const selectedDentistNames = tempSelectedDentists.filter(name => name.startsWith("Dr."));
-
-                                    const parsedDentistList = typeof dentistList === "string" ? JSON.parse(dentistList) : dentistList || [];
-
-                                    // Function to convert time string to minutes since midnight
-                                    const parseTimeToMinutes = (timeStr) => {
-                                      const [time, meridian] = timeStr.split(" ");
-                                      let [hours, minutes] = time.split(":").map(Number);
-                                      if (meridian === "PM" && hours !== 12) hours += 12;
-                                      if (meridian === "AM" && hours === 12) hours = 0;
-                                      return hours * 60 + minutes;
-                                    };
-
-                                    let unavailableDentists = [];
-
-                                    for (const name of selectedDentistNames) {
-                                      const match = name.match(/^Dr\. (.+?) \((.+)\)$/);
-                                      if (!match) continue;
-                                      const [_, dentistName, specialty] = match;
-
-                                      const dentist = parsedDentistList.find(
-                                        (d) => d.name === dentistName && d.specialty === specialty
-                                      );
-
-                                      const scheduleForDay = dentist?.weeklySchedule?.[appointmentDay] || [];
-
-                                      const isAvailable = scheduleForDay.some((slot) => {
-                                        const [from, to] = slot.split(" - ");
-                                        const fromMinutes = parseTimeToMinutes(from);
-                                        const toMinutes = parseTimeToMinutes(to);
-                                        return appointmentTime >= fromMinutes && appointmentTime <= toMinutes;
-                                      });
-
-                                      if (!isAvailable) {
-                                        unavailableDentists.push(name);
-                                      }
-                                    }
-
-                                    if (unavailableDentists.length > 0) {
-                                      setUnavailableDentists(unavailableDentists); // you can store this in state if you want to show names
-                                      setShowDentistUnavailableModal(true); // trigger a modal
-                                      return;
-                                    }
-
-                                    // ✅ Create the appointment
-                                    await createAppointment(selectedClinicId, appointmentDate, messageToClinic, parsedDentistList);
-
-                                    // ✅ Save cooldown time
-                                    await AsyncStorage.setItem(COOLDOWN_KEY, now.toISOString());
-                                    setLastAppointmentTime(now);
-
-                                    // ✅ Reset UI
-                                    setModalAppoint(false);
-                                    setaIndicator(true);
-                                    setMessageToClinic("");
-                                    setIsOthersChecked(false);
-                                    setTempMessage("");
-                                    setSelectedReasons([]);
-                                  }}
-
-
                                 >
-                                  <Text
+                                  <TouchableOpacity
                                     style={{
-                                      color: "white",
-                                      fontWeight: "bold",
-                                      textAlign: "center",
+                                      flex: 1,
+                                      backgroundColor: "#b32020",
+                                      paddingVertical: 12,
+                                      borderRadius: 8,
+                                      marginRight: 8,
+                                    }}
+                                    onPress={() => {
+                                      setMessageToClinic("");
+                                      setModalAppoint(false);
+                                      setIsOthersChecked(false);
+                                      setTempMessage("");
+                                      setSelectedReasons([]);
                                     }}
                                   >
-                                    Appoint
-                                  </Text>
-                                </TouchableOpacity>
-                              </View>
-                            </ScrollView>
-                          </View>
-                        </View>
-                      </Modal>
+                                    <Text
+                                      style={{
+                                        color: "white",
+                                        fontWeight: "bold",
+                                        textAlign: "center",
+                                      }}
+                                    >
+                                      Cancel
+                                    </Text>
+                                  </TouchableOpacity>
 
-                      <Modal
-                        visible={showDentistRequiredModal}
-                        transparent
-                        animationType="fade"
-                        onRequestClose={() => setShowDentistRequiredModal(false)}
-                      >
-                        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-                          <View style={{ backgroundColor: "white", padding: 20, borderRadius: 10, width: isMobile ? "90%" : "40%", maxWidth: 400 }}>
-                            <Text style={{ fontSize: 16, fontWeight: "bold", marginBottom: 10,  color: "#555" }}>
-                              Select Dentist Required
-                            </Text>
-                            <Text style={{ fontSize: 14, color: "#555", marginBottom: 20 }}>
-                              Please select at least one dentist before proceeding with the appointment.
-                            </Text>
-                            <TouchableOpacity
-                              style={{
-                                backgroundColor: "#2e7dccff",
-                                paddingVertical: 10,
-                                borderRadius: 6,
-                              }}
-                              onPress={() => setShowDentistRequiredModal(false)}
-                            >
-                              <Text style={{ color: "white", textAlign: "center", fontWeight: "bold" }}>
-                                OK
+                                  <TouchableOpacity
+                                    style={{
+                                      flex: 1,
+                                      backgroundColor: "#2e7dccff",
+                                      paddingVertical: 12,
+                                      borderRadius: 8,
+                                      marginLeft: 8,
+                                    }}
+                                    onPress={async () => {
+                                      if (!selectedClinicId) return;
+
+                                      if (!messageToClinic || !messageToClinic.trim()) {
+                                        setShowMessageModal(true);
+                                        return;
+                                      }
+
+                                      const now = new Date();
+
+                                      // ✅ Check cooldown (2 minutes = 120000 ms)
+                                      if (
+                                        lastAppointmentTime &&
+                                        now.getTime() - lastAppointmentTime.getTime() < 2 * 60 * 1000
+                                      ) {
+                                        const remainingMs = 2 * 60 * 1000 - (now.getTime() - lastAppointmentTime.getTime());
+                                        const remainingSec = Math.ceil(remainingMs / 1000);
+
+                                        setRemainingCooldownTime(remainingSec);
+                                        setCooldownModalVisible(true);
+                                        return;
+                                      }
+
+                                      if (appointmentDate < now) {
+                                        setShowInvalidTimeModal(true);
+                                        return;
+                                      }
+
+                                        if (!selectedDentists || selectedDentists.length === 0) {
+                                          setShowDentistRequiredModal(true); // <-- show modal instead of alert
+                                          return;
+                                        }
+
+                                      const { data, error } = await supabase
+                                        .from("clinic_schedule")
+                                        .select("*")
+                                        .eq("clinic_id", selectedClinicId)
+                                        .single();
+
+                                      if (error || !data) {
+                                        console.log("❌ Error fetching clinic schedule:", error);
+                                        setShowOutOfScheduleModal(true);
+                                        return;
+                                      }
+
+                                      const normalizeSchedule = (day) => {
+                                        return day && day.from && day.to ? day : null;
+                                      };
+
+                                      const schedules = [
+                                        normalizeSchedule(data.sunday),
+                                        normalizeSchedule(data.monday),
+                                        normalizeSchedule(data.tuesday),
+                                        normalizeSchedule(data.wednesday),
+                                        normalizeSchedule(data.thursday),
+                                        normalizeSchedule(data.friday),
+                                        normalizeSchedule(data.saturday),
+                                      ];
+
+                                      if (!isWithinClinicSchedule(appointmentDate, schedules)) {
+                                        setShowOutOfScheduleModal(true);
+                                        return;
+                                      }
+
+                                      const dayIndex = appointmentDate.getDay();
+                                      const daySchedule = schedules[dayIndex];
+
+                                      if (daySchedule && daySchedule.to) {
+                                        const isValid = isAtLeast30MinsBeforeClosing(appointmentDate, daySchedule.to);
+                                        if (!isValid) {
+                                          setShowTooCloseModal(true);
+                                          return;
+                                        }
+                                      }
+
+                                      const diffMs = appointmentDate.getTime() - now.getTime();
+                                      if (diffMs < 30 * 60 * 1000) {
+                                        setShowCloseTimeModal(true);
+                                        return;
+                                      }
+
+                                      // Validate dentist availability
+                                      const appointmentDay = appointmentDate.toLocaleString("en-US", { weekday: "long" }); // e.g., "Monday"
+                                      const appointmentTime = appointmentDate.getHours() * 60 + appointmentDate.getMinutes(); // convert to minutes
+
+                                      // Get selected dentists only (filter out receptionist, owner)
+                                      const selectedDentistNames = tempSelectedDentists.filter(name => name.startsWith("Dr."));
+
+                                      const parsedDentistList = typeof dentistList === "string" ? JSON.parse(dentistList) : dentistList || [];
+
+                                      // Function to convert time string to minutes since midnight
+                                      const parseTimeToMinutes = (timeStr) => {
+                                        const [time, meridian] = timeStr.split(" ");
+                                        let [hours, minutes] = time.split(":").map(Number);
+                                        if (meridian === "PM" && hours !== 12) hours += 12;
+                                        if (meridian === "AM" && hours === 12) hours = 0;
+                                        return hours * 60 + minutes;
+                                      };
+
+                                      let unavailableDentists = [];
+
+                                      for (const name of selectedDentistNames) {
+                                        const match = name.match(/^Dr\. (.+?) \((.+)\)$/);
+                                        if (!match) continue;
+                                        const [_, dentistName, specialty] = match;
+
+                                        const dentist = parsedDentistList.find(
+                                          (d) => d.name === dentistName && d.specialty === specialty
+                                        );
+
+                                        const scheduleForDay = dentist?.weeklySchedule?.[appointmentDay] || [];
+
+                                        const isAvailable = scheduleForDay.some((slot) => {
+                                          const [from, to] = slot.split(" - ");
+                                          const fromMinutes = parseTimeToMinutes(from);
+                                          const toMinutes = parseTimeToMinutes(to);
+                                          return appointmentTime >= fromMinutes && appointmentTime <= toMinutes;
+                                        });
+
+                                        if (!isAvailable) {
+                                          unavailableDentists.push(name);
+                                        }
+                                      }
+
+                                      if (unavailableDentists.length > 0) {
+                                        setUnavailableDentists(unavailableDentists); // you can store this in state if you want to show names
+                                        setShowDentistUnavailableModal(true); // trigger a modal
+                                        return;
+                                      }
+
+                                      // ✅ Create the appointment
+                                      await createAppointment(selectedClinicId, appointmentDate, messageToClinic, parsedDentistList);
+
+                                      // ✅ Save cooldown time
+                                      await AsyncStorage.setItem(COOLDOWN_KEY, now.toISOString());
+                                      setLastAppointmentTime(now);
+
+                                      // ✅ Reset UI
+                                      setModalAppoint(false);
+                                      setaIndicator(true);
+                                      setMessageToClinic("");
+                                      setIsOthersChecked(false);
+                                      setTempMessage("");
+                                      setSelectedReasons([]);
+                                    }}
+
+
+                                  >
+                                    <Text
+                                      style={{
+                                        color: "white",
+                                        fontWeight: "bold",
+                                        textAlign: "center",
+                                      }}
+                                    >
+                                      Appoint
+                                    </Text>
+                                  </TouchableOpacity>
+                                </View>
+                                  
+                                  </>
+                                )}
+
+
+
+                              </ScrollView>
+                            </View>
+                          
+                    
+                        </Modal>
+
+                        <Modal
+                          visible={showDentistRequiredModal}
+                          transparent
+                          animationType="fade"
+                          onRequestClose={() => setShowDentistRequiredModal(false)}
+                        >
+                          <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+                            <View style={{ backgroundColor: "white", padding: 20, borderRadius: 10, width: isMobile ? "90%" : "40%", maxWidth: 400 }}>
+                              <Text style={{ fontSize: 16, fontWeight: "bold", marginBottom: 10,  color: "#555" }}>
+                                Select Dentist Required
                               </Text>
-                            </TouchableOpacity>
+                              <Text style={{ fontSize: 14, color: "#555", marginBottom: 20 }}>
+                                Please select at least one dentist before proceeding with the appointment.
+                              </Text>
+                              <TouchableOpacity
+                                style={{
+                                  backgroundColor: "#2e7dccff",
+                                  paddingVertical: 10,
+                                  borderRadius: 6,
+                                }}
+                                onPress={() => setShowDentistRequiredModal(false)}
+                              >
+                                <Text style={{ color: "white", textAlign: "center", fontWeight: "bold" }}>
+                                  OK
+                                </Text>
+                              </TouchableOpacity>
+                            </View>
                           </View>
-                        </View>
-                      </Modal>
+                        </Modal>
 
 
-                      <Modal
-                        visible={showDentistUnavailableModal}
-                        transparent
-                        animationType="fade"
-                        onRequestClose={() => setShowDentistUnavailableModal(false)}
-                      >
-                        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+                        <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={showDentistUnavailableModal} onBackdropPress={() => setShowDentistUnavailableModal(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>
+                        
                           <View
                             style={{
                               backgroundColor: "white",
@@ -5092,24 +4965,14 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                               <Text style={{ textAlign: "center", color: "white", fontWeight: "bold" }}>OK</Text>
                             </TouchableOpacity>
                           </View>
-                        </View>
-                      </Modal>
+                
+                        </Modal>
 
 
 
-                      {/* too Close Appointment */}
-                      <Modal
-                        transparent
-                        visible={showCloseTimeModal}
-                        animationType="fade"
-                        onRequestClose={() => setShowCloseTimeModal(false)}
-                      >
-                        <View style={{
-                          flex: 1,
-                          justifyContent: "center",
-                          alignItems: "center",
-                          padding: 20,
-                        }}>
+                        {/* too Close Appointment */}
+                        <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={showCloseTimeModal} onBackdropPress={() => setShowCloseTimeModal(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>
+                        
                           <View style={{
                             backgroundColor: "white",
                             padding: 20,
@@ -5139,201 +5002,172 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                               </Text>
                             </TouchableOpacity>
                           </View>
-                        </View>
-                      </Modal>
+                    
+                        </Modal>
 
-                      {/* cooldown modal */}
-                      <Modal
-                        transparent
-                        animationType="fade"
-                        visible={cooldownModalVisible}
-                        onRequestClose={() => setCooldownModalVisible(false)}
-                      >
-                        <View
-                          style={{
-                            flex: 1,
-                            justifyContent: "center",
-                            alignItems: "center",
-                            padding: 20,
-                          }}
+                        {/* cooldown modal */}
+                        <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={cooldownModalVisible} onBackdropPress={() => setCooldownModalVisible(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>
+                      
+                            <View
+                              style={{
+                                backgroundColor: "white",
+                                padding: 20,
+                                borderRadius: 10,
+                                alignItems: "center",
+                                width:  isMobile ? "90%" : "40%",
+                                borderWidth: 1,
+                                borderColor: "#ccc",
+                              }}
+                            >
+                              <Text
+                                style={{
+                                  fontSize: 18,
+                                  fontWeight: "bold",
+                                  marginBottom: 10,
+                                  color: "#b32020",
+                                  textAlign: "center",
+                                }}
+                              >
+                                Please wait
+                              </Text>
+
+                              <Text
+                                style={{
+                                  fontSize: 16,
+                                  textAlign: "center",
+                                  marginBottom: 20,
+                                  color: "#555"
+                                }}
+                              >
+                                You can't make another appointment right now. Please wait{" "}
+                                <Text style={{ fontWeight: "bold",  color: "#555" }}>{remainingCooldownTime}</Text> seconds.
+                              </Text>
+
+                              <TouchableOpacity
+                                onPress={() => setCooldownModalVisible(false)}
+                                style={{
+                                  backgroundColor: "#2e7dccff",
+                                  paddingVertical: 10,
+                                  paddingHorizontal: 20,
+                                  borderRadius: 6,
+                                }}
+                              >
+                                <Text style={{ color: "white", fontWeight: "bold" }}>OK</Text>
+                              </TouchableOpacity>
+                            </View>
+                    
+                        </Modal>
+
+
+                        {/* Closing Time Modal */}
+                        <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={showTooCloseModal} onBackdropPress={() => setShowTooCloseModal(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>
+                            <View
+                              style={{
+                                backgroundColor: "white",
+                                padding: 20,
+                                borderRadius: 10,
+                                borderWidth: 1,
+                                borderColor: "#ccc",
+                                width: isMobile ? "90%" : "40%",
+                                alignItems: "center",
+                              }}
+                            >
+                              <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10, color: "#b32020" }}>
+                                Appointment too close to closing time!
+                              </Text>
+                              <Text style={{ textAlign: "center", fontSize: 16 }}>
+                                Please choose a time at least 30 minutes before the clinic closes.
+                              </Text>
+                              <TouchableOpacity
+                                onPress={() => setShowTooCloseModal(false)}
+                                style={{
+                                  marginTop: 20,
+                                  backgroundColor: "#2e7dcc",
+                                  paddingVertical: 10,
+                                  paddingHorizontal: 20,
+                                  borderRadius: 6,
+                                }}
+                              >
+                                <Text style={{ color: "white", fontWeight: "bold" }}>OK</Text>
+                              </TouchableOpacity>
+                            </View>
+                    
+                        </Modal>
+
+                        {/* Message Required Modal */}
+                        <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={showMessageModal} onBackdropPress={() => setShowMessageModal(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>
+                    
+                            <View
+                              style={{
+                                backgroundColor: "white",
+                                padding: 24,
+                                borderRadius: 12,
+                                width: isMobile ? "90%" : "40%",
+                                alignItems: "center",
+                                borderWidth: 1,
+                                borderColor: "#ccc"
+                              }}
+                            >
+                              <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10 }}>Message Required</Text>
+                              <Text style={{ textAlign: "center", marginBottom: 20,  color: "#555" }}>
+                                Please write a message to the clinic before creating the appointment.
+                              </Text>
+                              <TouchableOpacity
+                                style={{
+                                  backgroundColor: "#2e7dccff",
+                                  paddingVertical: 10,
+                                  paddingHorizontal: 20,
+                                  borderRadius: 8,
+                                }}
+                                onPress={() => setShowMessageModal(false)}
+                              >
+                                <Text style={{ color: "white", fontWeight: "bold" }}>OK</Text>
+                              </TouchableOpacity>
+                            </View>
+                    
+                        </Modal>
+
+                        {/* Invalid Time Modal */}
+                        <Modal
+                          transparent
+                          animationType="fade"
+                          visible={showInvalidTimeModal}
+                          onRequestClose={() => setShowInvalidTimeModal(false)}
                         >
-                          <View
-                            style={{
-                              backgroundColor: "white",
-                              padding: 20,
-                              borderRadius: 10,
-                              alignItems: "center",
-                              width:  isMobile ? "90%" : "40%",
-                              borderWidth: 1,
-                              borderColor: "#ccc",
-                            }}
-                          >
-                            <Text
+                          <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+                            <View
                               style={{
-                                fontSize: 18,
-                                fontWeight: "bold",
-                                marginBottom: 10,
-                                color: "#b32020",
-                                textAlign: "center",
+                                backgroundColor: "white",
+                                padding: 24,
+                                borderRadius: 12,
+                                width: isMobile ? "90%" : "40%",
+                                alignItems: "center",
+                                borderWidth: 1,
+                                borderColor: "#ccc"
+                                
                               }}
                             >
-                              Please wait
-                            </Text>
-
-                            <Text
-                              style={{
-                                fontSize: 16,
-                                textAlign: "center",
-                                marginBottom: 20,
-                                 color: "#555"
-                              }}
-                            >
-                              You can't make another appointment right now. Please wait{" "}
-                              <Text style={{ fontWeight: "bold",  color: "#555" }}>{remainingCooldownTime}</Text> seconds.
-                            </Text>
-
-                            <TouchableOpacity
-                              onPress={() => setCooldownModalVisible(false)}
-                              style={{
-                                backgroundColor: "#2e7dccff",
-                                paddingVertical: 10,
-                                paddingHorizontal: 20,
-                                borderRadius: 6,
-                              }}
-                            >
-                              <Text style={{ color: "white", fontWeight: "bold" }}>OK</Text>
-                            </TouchableOpacity>
+                              <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10,  color: "#555" }}>Invalid Appointment Time</Text>
+                              <Text style={{ textAlign: "center", marginBottom: 20,  color: "#555" }}>
+                                You cannot create an appointment in the past. Please select a future date and time.
+                              </Text>
+                              <TouchableOpacity
+                                style={{
+                                  backgroundColor: "#2e7dccff",
+                                  paddingVertical: 10,
+                                  paddingHorizontal: 20,
+                                  borderRadius: 8,
+                                }}
+                                onPress={() => setShowInvalidTimeModal(false)}
+                              >
+                                <Text style={{ color: "white", fontWeight: "bold" }}>OK</Text>
+                              </TouchableOpacity>
+                            </View>
                           </View>
-                        </View>
-                      </Modal>
+                        </Modal>
 
-
-                      {/* Closing Time Modal */}
-                      <Modal
-                        transparent
-                        visible={showTooCloseModal}
-                        animationType="fade"
-                        onRequestClose={() => setShowTooCloseModal(false)}
-                      >
-                        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 20 }}>
-                          <View
-                            style={{
-                              backgroundColor: "white",
-                              padding: 20,
-                              borderRadius: 10,
-                              borderWidth: 1,
-                              borderColor: "#ccc",
-                              width: isMobile ? "90%" : "40%",
-                              alignItems: "center",
-                            }}
-                          >
-                            <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10, color: "#b32020" }}>
-                              Appointment too close to closing time!
-                            </Text>
-                            <Text style={{ textAlign: "center", fontSize: 16 }}>
-                              Please choose a time at least 30 minutes before the clinic closes.
-                            </Text>
-                            <TouchableOpacity
-                              onPress={() => setShowTooCloseModal(false)}
-                              style={{
-                                marginTop: 20,
-                                backgroundColor: "#2e7dcc",
-                                paddingVertical: 10,
-                                paddingHorizontal: 20,
-                                borderRadius: 6,
-                              }}
-                            >
-                              <Text style={{ color: "white", fontWeight: "bold" }}>OK</Text>
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      </Modal>
-
-                      {/* Message Required Modal */}
-                      <Modal
-                        transparent
-                        animationType="fade"
-                        visible={showMessageModal}
-                        onRequestClose={() => setShowMessageModal(false)}
-                      >
-                        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-                          <View
-                            style={{
-                              backgroundColor: "white",
-                              padding: 24,
-                              borderRadius: 12,
-                              width: isMobile ? "90%" : "40%",
-                              alignItems: "center",
-                              borderWidth: 1,
-                              borderColor: "#ccc"
-                            }}
-                          >
-                            <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10 }}>Message Required</Text>
-                            <Text style={{ textAlign: "center", marginBottom: 20,  color: "#555" }}>
-                              Please write a message to the clinic before creating the appointment.
-                            </Text>
-                            <TouchableOpacity
-                              style={{
-                                backgroundColor: "#2e7dccff",
-                                paddingVertical: 10,
-                                paddingHorizontal: 20,
-                                borderRadius: 8,
-                              }}
-                              onPress={() => setShowMessageModal(false)}
-                            >
-                              <Text style={{ color: "white", fontWeight: "bold" }}>OK</Text>
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      </Modal>
-
-                      {/* Invalid Time Modal */}
-                      <Modal
-                        transparent
-                        animationType="fade"
-                        visible={showInvalidTimeModal}
-                        onRequestClose={() => setShowInvalidTimeModal(false)}
-                      >
-                        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-                          <View
-                            style={{
-                              backgroundColor: "white",
-                              padding: 24,
-                              borderRadius: 12,
-                              width: isMobile ? "90%" : "40%",
-                              alignItems: "center",
-                              borderWidth: 1,
-                              borderColor: "#ccc"
-                              
-                            }}
-                          >
-                            <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10,  color: "#555" }}>Invalid Appointment Time</Text>
-                            <Text style={{ textAlign: "center", marginBottom: 20,  color: "#555" }}>
-                              You cannot create an appointment in the past. Please select a future date and time.
-                            </Text>
-                            <TouchableOpacity
-                              style={{
-                                backgroundColor: "#2e7dccff",
-                                paddingVertical: 10,
-                                paddingHorizontal: 20,
-                                borderRadius: 8,
-                              }}
-                              onPress={() => setShowInvalidTimeModal(false)}
-                            >
-                              <Text style={{ color: "white", fontWeight: "bold" }}>OK</Text>
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      </Modal>
-
-                      {/* Out of Schedule Modal */}
-                      <Modal
-                        transparent
-                        animationType="fade"
-                        visible={showOutOfScheduleModal}
-                        onRequestClose={() => setShowOutOfScheduleModal(false)}
-                      >
-                        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+                        {/* Out of Schedule Modal */}
+                      <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={showOutOfScheduleModal} onBackdropPress={() => setShowOutOfScheduleModal(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>
                           <View
                             style={{
                               backgroundColor: "white",
@@ -5361,23 +5195,11 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                               <Text style={{ color: "white", fontWeight: "bold" }}>OK</Text>
                             </TouchableOpacity>
                           </View>
-                        </View>
-                      </Modal>
+                    
+                        </Modal>
 
-                      {/* Success Indicator */}
-                      <Modal
-                        transparent
-                        visible={aIndicator}
-                        animationType="fade"
-                        onRequestClose={() => setaIndicator(false)}
-                      >
-                        <View
-                          style={{
-                            flex: 1,
-                            justifyContent: "center",
-                            alignItems: "center",
-                          }}
-                        >
+                        {/* Success Indicator */}
+                        <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={aIndicator} onBackdropPress={() => setaIndicator(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>
                           <View
                             style={{
                               width: isMobile ? "90%" : "40%",
@@ -5395,7 +5217,7 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                                 fontWeight: "600",
                                 marginBottom: 20,
                                 textAlign: "center",
-                                 color: "#555"
+                                  color: "#555"
                               }}
                             >
                               Appointment Request Successful
@@ -5414,136 +5236,131 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                               </Text>
                             </TouchableOpacity>
                           </View>
-                        </View>
-                      </Modal>
+                        </Modal>
 
-                      {/* Map Button */}
-                      <TouchableOpacity
-                        onPress={() => {
-                          setSelectedClinicId(clinic.id);
-                          setModalMap(true);
-                          setMapView([clinic.longitude, clinic.latitude]);
-                        }}
-                        style={{
-                          backgroundColor: "#0058aaff",
-                          paddingVertical: 12,
-                          paddingHorizontal: 10,
-                          borderRadius: 10,
-                          alignItems: "center",
-                        }}
-                      >
-                        <Text
-                          style={{
-                            color: "#fff",
-                            fontWeight: "bold",
-                            fontSize: isMobile ? 9 : 14,
-                            textAlign: "center",
+                        {/* Map Button */}
+                        <TouchableOpacity
+                          onPress={() => {
+                            setSelectedClinicId(clinic.id);
+                            setModalMap(true);
+                            setMapView([clinic.longitude, clinic.latitude]);
                           }}
-                        >
-                          Check in Map
-                        </Text>
-                      </TouchableOpacity>
-
-                      {/* Map Modal */}
-                      <Modal
-                        transparent
-                        animationType="fade"
-                        visible={modalMap}
-                        onRequestClose={() => setModalMap(false)}
-                      >
-                        <View
                           style={{
-                            flex: 1,
-                            justifyContent: "center",
+                            backgroundColor: "#0058aaff",
+                            paddingVertical: 12,
+                            paddingHorizontal: 10,
+                            borderRadius: 10,
                             alignItems: "center",
-                            padding: 20,
                           }}
                         >
-                          <View
+                          <Text
                             style={{
-                              backgroundColor: "white",
-                              borderRadius: 12,
-                              borderWidth: 1,
-                              borderColor: "#ccc",
-                              padding: 20,
-                              width: !isMobile ? "90%" : "100%",
-                              position: "relative",
+                              color: "#fff",
+                              fontWeight: "bold",
+                              fontSize: isMobile ? 9 : 14,
+                              textAlign: "center",
                             }}
                           >
-                            {/* ✅ Circular red close button in upper right */}
-                            <TouchableOpacity
-                              onPress={() => setModalMap(false)}
+                            Check in Map
+                          </Text>
+                        </TouchableOpacity>
+
+                        {/* Map Modal */}
+                        <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={modalMap} onBackdropPress={() => setModalMap(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>
+                      
+                          <View
+                            style={{
+                              flex: 1,
+                              justifyContent: "center",
+                              alignItems: "center",
+                              padding: 20,
+                            }}
+                          >
+                            <View
                               style={{
-                                position: "absolute",
-                                top: 10,
-                                right: 10,
-                                zIndex: 10,
-                                backgroundColor: "#e74c3c",
-                                width: 30,
-                                height: 30,
-                                borderRadius: 15,
-                                justifyContent: "center",
-                                alignItems: "center",
+                                backgroundColor: "white",
+                                borderRadius: 12,
+                                borderWidth: 1,
+                                borderColor: "#ccc",
+                                padding: 20,
+                                width: !isMobile ? "90%" : "100%",
+                                position: "relative",
                               }}
                             >
-                              <Text style={{ color: "white", fontWeight: "bold", fontSize: 18, lineHeight: 18 }}>
-                                ×
+                              {/* ✅ Circular red close button in upper right */}
+                              <TouchableOpacity
+                                onPress={() => setModalMap(false)}
+                                style={{
+                                  position: "absolute",
+                                  top: 10,
+                                  right: 10,
+                                  zIndex: 10,
+                                  backgroundColor: "#e74c3c",
+                                  width: 30,
+                                  height: 30,
+                                  borderRadius: 15,
+                                  justifyContent: "center",
+                                  alignItems: "center",
+                                }}
+                              >
+                                <Text style={{ color: "white", fontWeight: "bold", fontSize: 18, lineHeight: 18 }}>
+                                  ×
+                                </Text>
+                              </TouchableOpacity>
+
+                              <Text
+                                style={{
+                                  fontSize: 24,
+                                  fontWeight: "bold",
+                                  marginBottom: 20,
+                                  alignSelf: isMobile ? "center" : "flex-start",
+                                  color: "#00505cff",
+                                }}
+                              >
+                                Map
                               </Text>
-                            </TouchableOpacity>
 
-                            <Text
-                              style={{
-                                fontSize: 24,
-                                fontWeight: "bold",
-                                marginBottom: 20,
-                                alignSelf: isMobile ? "center" : "flex-start",
-                                color: "#00505cff",
-                              }}
-                            >
-                              Map
-                            </Text>
-
-                            {(mapView[0] || mapView[1]) ? (
-                              <MapPickerView
-                                pinLongitude={mapView[0]}
-                                pinLatitude={mapView[1]}
-                                allowEdit={false}
-                              />
-                            ) : (
-                              <Text>No map provided by the clinic</Text>
-                            )}
+                              {(mapView[0] || mapView[1]) ? (
+                                <MapPickerView
+                                  pinLongitude={mapView[0]}
+                                  pinLatitude={mapView[1]}
+                                  allowEdit={false}
+                                />
+                              ) : (
+                                <Text>No map provided by the clinic</Text>
+                              )}
+                            </View>
                           </View>
-                        </View>
-                      </Modal>
+                        </Modal>
 
-                    </View>
-                  </LinearGradient>
-                ))}
-              </View>
+                      </View>
+                    </LinearGradient>
+                  ))}
+                </View>
 
-    {clinicList.filter((clinic) => clinic.isFirst === false).length > 8 && (
-      <View style={{ alignItems: "center", marginTop: 20, marginBottom: 20 }}>
-        <TouchableOpacity
-          onPress={() => setShowAllClinics(!showAllClinics)}
-          style={{
-            backgroundColor: "#00505cff",
-            paddingVertical: 12,
-            paddingHorizontal: 30,
-            borderRadius: 8,
-            shadowColor: "#000",
-            shadowOpacity: 0.2,
-            shadowRadius: 4,
-            shadowOffset: { width: 0, height: 2 },
-            elevation: 3,
-          }}
-        >
-          <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>
-            {showAllClinics ? "Show Less" : `Show More (${clinicList.filter((clinic) => clinic.isFirst === false).length - 8} more)`}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    )}
-    </>
+                {clinicList.filter((clinic) => clinic.isFirst === false).length > 8 && (
+                  <View style={{ alignItems: "center", marginTop: 20, marginBottom: 20 }}>
+                    <TouchableOpacity
+                      onPress={() => setShowAllClinics(!showAllClinics)}
+                      style={{
+                        backgroundColor: "#00505cff",
+                        paddingVertical: 12,
+                        paddingHorizontal: 30,
+                        borderRadius: 8,
+                        shadowColor: "#000",
+                        shadowOpacity: 0.2,
+                        shadowRadius: 4,
+                        shadowOffset: { width: 0, height: 2 },
+                        elevation: 3,
+                      }}
+                    >
+                      <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>
+                        {showAllClinics ? "Show Less" : `Show More (${clinicList.filter((clinic) => clinic.isFirst === false).length - 8} more)`}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </>
               )}
             </ScrollView>
 
@@ -5601,7 +5418,7 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                       }}
                     >
                       
-                      <Text style={{ fontWeight: "700", marginBottom: 6, color: "#555" }}>Clinic Name:</Text>
+                      <Text style={{ fontWeight: "700", marginBottom: 6, color: "#555"}}>Clinic Name:</Text>
                       <Text style={{ marginBottom: 10, color: 'black' }}>{item.clinic_profiles.clinic_name}</Text>
 
                       <Text style={{ fontWeight: "700", marginBottom: 6,  color: "#555" }}>Message:</Text>
@@ -5654,108 +5471,103 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
               </ScrollView>
             ) : (
               // Desktop/table layout
-              <ScrollView horizontal contentContainerStyle={{ flexGrow: 1 }}>
-                <View style={{ flex: 1, minWidth: 1000 }}>
-                  <FlatList
-                    data={appointmentsCurrentList}
-                    keyExtractor={(e) => e.id.toString()}
-                    contentContainerStyle={{
-                      alignItems: "stretch",
-                      paddingHorizontal: 12,
+           <ScrollView horizontal contentContainerStyle={{ flexGrow: 1 }}>
+            <View style={{ flex: 1, minWidth: 900 }}>
+              <FlatList
+                data={appointmentsCurrentList}
+                keyExtractor={(e) => e.id.toString()}
+                contentContainerStyle={{
+                  alignItems: "stretch",
+                  paddingHorizontal: 12,
+                }}
+                ListHeaderComponent={() => (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      backgroundColor: "#00505cff",
+                      paddingVertical: 16,
+                      paddingHorizontal: 20,
+                      borderTopLeftRadius: 8,
+                      borderTopRightRadius: 8,
+                      minWidth: "100%",
                     }}
-                    ListHeaderComponent={() => (
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          backgroundColor: "#00505cff",
-                          paddingVertical: 16,
-                          paddingHorizontal: 20,
-                          borderTopLeftRadius: 8,
-                          borderTopRightRadius: 8,
-                          minWidth: "100%",
-                          alignItems: "center",
-                        }}
-                      >
-                        <Text style={{ flex: 1.2, fontWeight: "700", color: 'white' }}>Clinic Name</Text>
-                        <Text style={{ flex: 1, fontWeight: "700", color: 'white' }}>Message</Text>
-                        <Text style={{ flex: 0.9, fontWeight: "700", color: 'white' }}>Request</Text>
-                        <Text style={{ flex: 1.3, fontWeight: "700", color: 'white' }}>Request Date & Time</Text>
-                        <Text style={{ flex: 1, fontWeight: "700", color: 'white' }}>Created At</Text>
-                        <Text style={{ width: 110, fontWeight: "700", color: 'white', textAlign: "center" }}>Action</Text>
-                      </View>
-                    )}
-                    renderItem={({ item, index }) => (
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          borderBottomWidth: 1,
-                          borderColor: "#ccc",
-                          paddingVertical: 16,
-                          paddingHorizontal: 20,
-                          backgroundColor: index % 2 === 0 ? "#f9f9f9" : "#fff",
-                          alignItems: "center",
-                          minHeight: 70,
-                        }}
-                      >
-                        <Text style={{ flex: 1.2, color: "#333" }}>
-                          {item.clinic_profiles.clinic_name}
-                        </Text>
+                  >
+                    <Text style={{ width: 180, fontWeight: "700", color: "white" }}>Clinic Name</Text>
+                    <Text style={{ width: 180, fontWeight: "700", color: "white" }}>Message</Text>
+                    <Text style={{ width: 150, fontWeight: "700", color: "white" }}>Request</Text>
+                    <Text style={{ width: 200, fontWeight: "700", color: "white" }}>Request Date & Time</Text>
+                    <Text style={{ width: 200, fontWeight: "700", color: "white" }}>Created At</Text>
+                    <Text style={{ width: 180, fontWeight: "700", color: "white" }}></Text>
+                  </View>
+                )}
+                renderItem={({ item, index }) => (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      borderBottomWidth: 1,
+                      borderColor: "#ccc",
+                      paddingVertical: 20,
+                      paddingHorizontal: 20,
+                      backgroundColor: index % 2 === 0 ? "#f9f9f9" : "#fff",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text style={{ width: 180 }}>{item.clinic_profiles.clinic_name}</Text>
 
-                        <Text style={{ flex: 1, color: "#333" }}>
-                          {item.message.length > 20 ? (
-                            <>
-                              {item.message.slice(0, 20) + "... "}
-                              <Text
-                                onPress={() => {
-                                  setSelectedMessage(item.message);
-                                  setModalMessage(true);
-                                }}
-                                style={{ color: "#0056b3", textDecorationLine: "underline" }}
-                              >
-                                See More
-                              </Text>
-                            </>
-                          ) : (
-                            item.message
-                          )}
-                        </Text>
+                    <Text style={{ width: 180 }}>
+                      {item.message.length > 20 ? (
+                        <>
+                          {item.message.slice(0, 20) + "... "}
+                          <Text
+                            onPress={() => {
+                              setSelectedMessage(item.message);
+                              setModalMessage(true);
+                            }}
+                            style={{ color: "#0056b3", textDecorationLine: "underline" }}
+                          >
+                            See More
+                          </Text>
+                        </>
+                      ) : (
+                        item.message
+                      )}
+                    </Text>
 
-                        <TouchableOpacity style={{ flex: 0.9 }} onPress={() => openRequestView(item.request)}>
-                          <Text style={{ color: "#0056b3", textDecorationLine: "underline" }}>View Request</Text>
-                        </TouchableOpacity>
+                    <TouchableOpacity style={{ width: 150 }} onPress={() => openRequestView(item.request)}>
+                      <Text style={{ color: "#0056b3", textDecorationLine: "underline" }}>View Request</Text>
+                    </TouchableOpacity>
 
-                        <Text style={{ flex: 1.3, color: "#333" }}>
-                          {new Date(item.date_time).toLocaleString(undefined, {
-                            year: "numeric",
-                            month: "numeric",
-                            day: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          })}
-                        </Text>
+                    <Text style={{ width: 200 }}>
+                      {new Date(item.date_time).toLocaleString(undefined, {
+                        year: "numeric",
+                        month: "numeric",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}
+                    </Text>
 
-                        <Text style={{ flex: 1, color: "#333", fontSize: 13 }}>
-                          {new Date(item.created_at || 0).toLocaleString()}
-                        </Text>
+                    <Text style={{ width: 200 }}>{new Date(item.created_at || 0).toLocaleString()}</Text>
 
-                        <View style={{ width: 110, alignItems: "center", justifyContent: "center" }}>
-                          <CancelAppointmentUser 
-                            data={item} 
-                            sender_email={item.profiles.email} 
-                            receiver_email={item.clinic_profiles.email}
-                          />
-                        </View>
-                      </View>
-                    )}
-                    ListEmptyComponent={() => (
-                      <View style={{ width: "100%", alignItems: "center", marginTop: 40 }}>
-                        <Text style={{ fontSize: 20, color: "gray" }}>- No Appointments -</Text>
-                      </View>
-                    )}
-                  />
-                </View>
-              </ScrollView>
+                    <View style={{ width: 180 }}>
+                      <CancelAppointmentUser
+                        data={item}
+                        sender_email={item.profiles.email}
+                        receiver_email={item.clinic_profiles.email}
+                      />
+                    </View>
+                  </View>
+                )}
+                ListEmptyComponent={() => (
+                  <View style={{ width: "100%", alignItems: "center", marginTop: 40 }}>
+                    <Text style={{ fontSize: 20, color: "gray" }}>- No Appointments -</Text>
+                  </View>
+                )}
+              />
+            </View>
+          </ScrollView>
+
             )}
           </View>
         )}
@@ -6011,77 +5823,62 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
             </TouchableOpacity>
 
             {/* Download Confirmation Modal */}
-            <Modal
-              visible={downloadModal}
-              transparent
-              animationType="fade"
-              onRequestClose={() => setDownloadModal(false)}
-            >
+           <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={downloadModal} onBackdropPress={() => setDownloadModal(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>
               <View
                 style={{
-                  flex: 1,
-                  backgroundColor: "rgba(0,0,0,0.5)",
-                  justifyContent: "center",
+                  backgroundColor: "#fff",
+                  borderRadius: 10,
+                  padding: 24,
+                  width: "100%",
+                  maxWidth: 400,
                   alignItems: "center",
-                  padding: 20,
                 }}
               >
+                <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 16 }}>
+                  Confirm Download
+                </Text>
+                <Text style={{ fontSize: 16, marginBottom: 24, textAlign: "center" }}>
+                  Are you sure you want to download the history?
+                </Text>
+
                 <View
                   style={{
-                    backgroundColor: "#fff",
-                    borderRadius: 10,
-                    padding: 24,
+                    flexDirection: "row",
+                    justifyContent: "space-between",
                     width: "100%",
-                    maxWidth: 400,
-                    alignItems: "center",
                   }}
                 >
-                  <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 16 }}>
-                    Confirm Download
-                  </Text>
-                  <Text style={{ fontSize: 16, marginBottom: 24, textAlign: "center" }}>
-                    Are you sure you want to download the history?
-                  </Text>
-
-                  <View
+                  <TouchableOpacity
+                    onPress={() => setDownloadModal(false)}
                     style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      width: "100%",
+                      backgroundColor: "#ccc",
+                      paddingVertical: 10,
+                      paddingHorizontal: 20,
+                      borderRadius: 8,
+                      flex: 1,
+                      marginRight: 10,
+                      alignItems: "center",
                     }}
                   >
-                    <TouchableOpacity
-                      onPress={() => setDownloadModal(false)}
-                      style={{
-                        backgroundColor: "#ccc",
-                        paddingVertical: 10,
-                        paddingHorizontal: 20,
-                        borderRadius: 8,
-                        flex: 1,
-                        marginRight: 10,
-                        alignItems: "center",
-                      }}
-                    >
-                      <Text style={{ fontSize: 16 }}>Cancel</Text>
-                    </TouchableOpacity>
+                    <Text style={{ fontSize: 16 }}>Cancel</Text>
+                  </TouchableOpacity>
 
-                    <TouchableOpacity
-                      onPress={() => {
-                        setDownloadModal(false);
-                        handleDownloadExcel(appointmentsPast ?? []);
-                      }}
-                      style={{
-                        backgroundColor: "#007AFF",
-                        paddingVertical: 10,
-                        paddingHorizontal: 20,
-                        borderRadius: 8,
-                        flex: 1,
-                        alignItems: "center",
-                      }}
-                    >
-                      <Text style={{ color: "#fff", fontSize: 16 }}>Download</Text>
-                    </TouchableOpacity>
-                  </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setDownloadModal(false);
+                      handleDownloadExcel(appointmentsPast ?? []);
+                    }}
+                    style={{
+                      backgroundColor: "#007AFF",
+                      paddingVertical: 10,
+                      paddingHorizontal: 20,
+                      borderRadius: 8,
+                      flex: 1,
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text style={{ color: "#fff", fontSize: 16 }}>Download</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             </Modal>
@@ -6335,63 +6132,50 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
         )}
 
           {/* Request View Modal */}
-          <Modal
-            visible={requestViewVisible}
-            transparent={true}
-            animationType="fade"
-            onRequestClose={() => setRequestViewVisible(false)}
-          >
+          <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={requestViewVisible} onBackdropPress={() => setRequestViewVisible(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>      
             <View
               style={{
-                flex: 1,
-                justifyContent: "center",
-                alignItems: "center",
+                backgroundColor: "#fff",
+                padding: 20,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: "#f1f5f9",
+                width: "80%",
+                maxWidth: 500,
               }}
             >
-              <View
-                style={{
-                  backgroundColor: "#fff",
-                  padding: 20,
-                  borderRadius: 10,
-                  borderWidth: 1,
-                  borderColor: "#f1f5f9",
-                  width: "80%",
-                  maxWidth: 500,
-                }}
-              >
-                <Text style={{ fontWeight: "700", fontSize: 18, marginBottom: 12, color: "#00505cff" }}>
-                  Requested Dentists/Staff
-                </Text>
+              <Text style={{ fontWeight: "700", fontSize: 18, marginBottom: 12, color: "#00505cff" }}>
+                Requested Dentists/Staff
+              </Text>
 
-                <ScrollView style={{ marginBottom: 20 }}>
-                  {!selectedRequest || selectedRequest.length === 0 || selectedRequest === "" ? (
-                    <Text style={{ fontSize: 16, textAlign: "center", color: "#888" }}>
-                      No dentists/staff were requested.
+              <ScrollView style={{ marginBottom: 20 }}>
+                {!selectedRequest || selectedRequest.length === 0 || selectedRequest === "" ? (
+                  <Text style={{ fontSize: 16, textAlign: "center", color: "#888" }}>
+                    No dentists/staff were requested.
+                  </Text>
+                ) : (
+                  selectedRequest.map((line, i) => (
+                    <Text key={i} style={{ fontSize: 16, textAlign: "left" }}>
+                      {line}
+                      {"\n"}
                     </Text>
-                  ) : (
-                    selectedRequest.map((line, i) => (
-                      <Text key={i} style={{ fontSize: 16, textAlign: "left" }}>
-                        {line}
-                        {"\n"}
-                      </Text>
-                    ))
-                  )}
-                </ScrollView>
+                  ))
+                )}
+              </ScrollView>
 
-                <TouchableOpacity
-                  style={{
-                    alignSelf: "flex-end",
-                    backgroundColor: "#00505cff",
-                    paddingVertical: 8,
-                    paddingHorizontal: 16,
-                    borderRadius: 5,
-                  }}
-                  onPress={() => setRequestViewVisible(false)}
-                >
-                  <Text style={{ color: "white", fontWeight: "bold" }}>Close</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+              <TouchableOpacity
+                style={{
+                  alignSelf: "flex-end",
+                  backgroundColor: "#00505cff",
+                  paddingVertical: 8,
+                  paddingHorizontal: 16,
+                  borderRadius: 5,
+                }}
+                onPress={() => setRequestViewVisible(false)}
+              >
+                <Text style={{ color: "white", fontWeight: "bold" }}>Close</Text>
+              </TouchableOpacity>
+            </View>        
           </Modal>
 
         {/* Dashboard Chats --------------------------------------------------------------------------------------- */}
@@ -6490,7 +6274,8 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
           marginBottom: 20,
         }}
       >
-        This platform was created to bridge the gap between patients and trusted dental clinics in City of San Jose del Monte, Bulacan
+        This platform was created to bridge the gap between patients and
+        trusted dental clinics in SJDM, Caloocan, and Metro Manila.
       </Text>
 
       <View style={{ alignSelf: "center", marginTop: 20, marginBottom: 20 }}>
@@ -6694,20 +6479,8 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
 </View>
 
 {/* Support Modal - ADD THIS IN YOUR MODALS SECTION (with other modals) */}
-<Modal
-  visible={supportModalVisible}
-  transparent
-  onRequestClose={() => setSupportModalVisible(false)}
->
-  <View
-    style={{
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      backgroundColor: "rgba(0,0,0,0.5)",
-      padding: 20,
-    }}
-  >
+ <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={supportModalVisible} onBackdropPress={() => setSupportModalVisible(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>      
+
     <View
       style={{
         backgroundColor: "white",
@@ -6833,7 +6606,6 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
         </Text>
       </TouchableOpacity>
     </View>
-  </View>
 </Modal>
 
 
@@ -6955,19 +6727,7 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
         )}
 
         {/* Modal */}
-        <Modal
-          visible={termsOfUse}
-          transparent
-          onRequestClose={() => setTermsOfUse(false)}
-        >
-          <View
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.5)",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
+       <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={termsOfUse} onBackdropPress={() => setTermsOfUse(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>            
           <View
             style={{
               backgroundColor: "white",
@@ -7136,7 +6896,7 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
+   
         </Modal>
 
         {/* Dashboard Augmented Reality --------------------------------------------------------------------------------------- */}

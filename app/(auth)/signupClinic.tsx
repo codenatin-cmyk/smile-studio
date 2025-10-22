@@ -5,7 +5,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, Image, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import Modal from 'react-native-modal';
 import { useSession } from '../../lib/SessionContext'; // Adjust path accordingly
 
   type ErrorsType = {
@@ -14,6 +15,8 @@ import { useSession } from '../../lib/SessionContext'; // Adjust path accordingl
     email?: string;
     password?: string;
     confirmPassword?: string;
+    building?: string;
+    block?: string;
     street?: string;
     barangay?: string;
     zipCode?: string;
@@ -39,11 +42,16 @@ export default function SignupScreen() {
   const { signUpClinic } = useSession();
   const [modalVisible, setModalVisible] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [building, setBuilding] = useState('');
+  const [block, setBlock] = useState('');
   const [street, setStreet] = useState('');
   const [barangay, setBarangay] = useState('');
   const [cityProvince, setCityProvince] = useState('City of San Jose del Monte, Bulacan');
   const [zipCode, setZipCode] = useState('');
   const [errors, setErrors] = useState<ErrorsType>({});
+
+  const [loading, setLoading] = useState(false);
+  const [signUpSuccess, setSignUpSucess] = useState(false)
 
   const [barangayList, setBarangayList] = useState<
     { brgy: string; zip_code: string }[]
@@ -201,7 +209,9 @@ const signUpHandler = async () => {
     const success = await signUpClinic(email, password, clinicProfile);
 
     if (success) {
-      alert("✅ Clinic account created. Please verify your email to continue.");
+      setLoading(false)
+      setModalVisible(false);
+      setSignUpSucess(true);
       router.push('/login');
     }
   } catch (error: any) {
@@ -243,7 +253,7 @@ const signUpHandler = async () => {
   };
 
 useEffect(() => {
-  const fullAddress = `${street}, ${barangay}, ${cityProvince}, ${zipCode}`;
+  const fullAddress = `${building && `${building},`} ${block && `${block},`} ${street}, ${barangay}, ${cityProvince}, ${zipCode}`;
   setAddress(fullAddress);
 }, [street, barangay, cityProvince, zipCode]);
 
@@ -409,6 +419,50 @@ return (
             <View style={{ marginBottom: 30, flex : 1, marginTop: isMobile ? 10 : null  }}>
               <Text style={styles.sectionHeader}>Clinic Location</Text>
 
+              {/* Building */}
+              <Text style={[styles.label, { marginBottom: 4 }]}>*Building (Optional)</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  errors.building && { borderColor: 'red' },
+                  { marginBottom: 8 },
+                ]}
+                placeholder="e.g. Sunshine Tower"
+                placeholderTextColor="#555"
+                maxLength={30}
+                value={building}
+                onChangeText={(text) => {
+                  setBuilding(text);
+                  if (errors.building)
+                    setErrors((prev) => ({ ...prev, building: undefined }));
+                }}
+              />
+              {errors.building && (
+                <Text style={styles.errorText}>{errors.building}</Text>
+              )}
+
+              {/* Block */}
+              <Text style={[styles.label, { marginBottom: 4 }]}>*Block (Optional)</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  errors.block && { borderColor: 'red' },
+                  { marginBottom: 8 },
+                ]}
+                placeholder="e.g. Block 3 Lot 2"
+                placeholderTextColor="#555"
+                maxLength={30}
+                value={block}
+                onChangeText={(text) => {
+                  setBlock(text);
+                  if (errors.block)
+                    setErrors((prev) => ({ ...prev, block: undefined }));
+                }}
+              />
+              {errors.block && (
+                <Text style={styles.errorText}>{errors.block}</Text>
+              )}
+
               {/* Street */}
               <Text style={[styles.label, { marginBottom: 4 }]}>*Street</Text>
               <TextInput
@@ -433,44 +487,44 @@ return (
 
               {/* Barangay */}
               <Text style={[styles.label, { marginBottom: 4 }]}>*Barangay</Text>
-<View
-  style={[
-    styles.pickerContainer,
-    errors.barangay && { borderColor: 'red', borderWidth: 1 },
-    { marginBottom: 8 },
-  ]}
->
-  <Picker
-    selectedValue={selectedBarangay}
-    style={{
-      height: isMobile ? (Platform.OS === 'ios' ? 230 : 50) : 45,
-      color: 'black',
-      borderWidth: 0, // explicit: Picker has no visible border
-    }}
-    itemStyle={{ color: 'black', fontSize: 16 }}
-    onValueChange={(itemValue, itemIndex) => {
-      setSelectedBarangay(itemValue);
-      setBarangay(itemValue);
+              <View
+                style={[
+                  styles.pickerContainer,
+                  errors.barangay && { borderColor: 'red', borderWidth: 1 },
+                  { marginBottom: 8 },
+                ]}
+              >
+                <Picker
+                  selectedValue={selectedBarangay}
+                  style={{
+                    height: isMobile ? (Platform.OS === 'ios' ? 230 : 50) : 45,
+                    color: 'black',
+                    borderWidth: 0, // explicit: Picker has no visible border
+                  }}
+                  itemStyle={{ color: 'black', fontSize: 16 }}
+                  onValueChange={(itemValue, itemIndex) => {
+                    setSelectedBarangay(itemValue);
+                    setBarangay(itemValue);
 
-      // Auto-set zip code based on selected barangay
-      const matched = barangayList.find((b) => b.brgy === itemValue);
-      if (matched) {
-        setZipCode(matched.zip_code);
-      } else {
-        setZipCode('');
-      }
+                    // Auto-set zip code based on selected barangay
+                    const matched = barangayList.find((b) => b.brgy === itemValue);
+                    if (matched) {
+                      setZipCode(matched.zip_code);
+                    } else {
+                      setZipCode('');
+                    }
 
-      if (errors.barangay) {
-        setErrors((prev) => ({ ...prev, barangay: undefined }));
-      }
-    }}
-  >
-    <Picker.Item label="Select Barangay" value="" />
-    {barangayList.map((item) => (
-      <Picker.Item key={item.brgy} label={item.brgy} value={item.brgy} />
-    ))}
-  </Picker>
-</View>
+                    if (errors.barangay) {
+                      setErrors((prev) => ({ ...prev, barangay: undefined }));
+                    }
+                  }}
+                >
+                  <Picker.Item label="Select Barangay" value="" />
+                  {barangayList.map((item) => (
+                    <Picker.Item key={item.brgy} label={item.brgy} value={item.brgy} />
+                  ))}
+                </Picker>
+              </View>
 
 
               {errors.barangay && <Text style={styles.errorText}>{errors.barangay}</Text>}
@@ -491,23 +545,23 @@ return (
               />
 
               {/* Zip Code */}
-<Text style={[styles.label, { marginBottom: 4 }]}>*Zip Code</Text>
-<TextInput
-  style={[
-    styles.input,
-    { color: '#000', backgroundColor: '#fff' }, // force text color and bg
-    errors.zipCode && { borderColor: 'red' },
-    { marginBottom: 8 },
-  ]}
-  placeholder="Auto-filled from barangay"
-  placeholderTextColor="#555"
-  value={zipCode}
-  editable={false}
-  selectTextOnFocus={false}
-/>
-{errors.zipCode && (
-  <Text style={styles.errorText}>{errors.zipCode}</Text>
-)}
+              <Text style={[styles.label, { marginBottom: 4 }]}>*Zip Code</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  { color: '#000', backgroundColor: '#fff' }, // force text color and bg
+                  errors.zipCode && { borderColor: 'red' },
+                  { marginBottom: 8 },
+                ]}
+                placeholder="Auto-filled from barangay"
+                placeholderTextColor="#555"
+                value={zipCode}
+                editable={false}
+                selectTextOnFocus={false}
+              />
+              {errors.zipCode && (
+                <Text style={styles.errorText}>{errors.zipCode}</Text>
+              )}
 
 
               {/* You can optionally show combined address here for user confirmation */}
@@ -593,7 +647,7 @@ return (
           </View>
 
           {/* Terms Modal */}
-          <Modal visible={modalVisible} animationType="fade" transparent={true}>
+          <Modal animationIn="fadeIn" animationOut="fadeOut" isVisible={modalVisible} backdropColor="#000" backdropOpacity={0.8}  onBackdropPress={() => setModalVisible(false)} style={{alignItems: "center", justifyContent: "center"}}>
             <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', position: 'absolute', top: 0, bottom: 0 }} >
               <View style={{ backgroundColor: '#f1f5f9', marginHorizontal: 20, borderRadius: 10, maxHeight: '80%', padding: 20, width: isMobile ? '80%' : '35%', }} >
                 <Text style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 15, textAlign: 'center', color: '#00505cff', }} > Terms of Use & Privacy Policy </Text>
@@ -924,12 +978,12 @@ return (
                       borderRadius: 6,
                       marginRight: 10,
                       alignItems: 'center',
-                      backgroundColor: '#00505cff',
+                      backgroundColor: '#ccc',
                       justifyContent: 'center',
                       padding: isMobile ? 8 : null,
                     }}
                   >
-                    <Text style={{ color: 'white', fontWeight: '600', textAlign: 'center' }}>
+                    <Text style={{ color: '#00505cff', fontWeight: '600', textAlign: 'center' }}>
                       Reject Terms and Close
                     </Text>
                   </TouchableOpacity>
@@ -948,12 +1002,12 @@ return (
                       borderRadius: 6,
                       marginLeft: 10,
                       alignItems: 'center',
-                      backgroundColor: termsAccepted ? '#ffffffff' : '#ccc',
+                      backgroundColor: '#00505cff',
                       justifyContent: 'center',
                       padding: isMobile ? 8 : null,
                     }}
                   >
-                    <Text style={{ color: '#00505cff', fontWeight: '600', textAlign: 'center' }}>
+                    <Text style={{ color: '#fff', fontWeight: '600', textAlign: 'center' }}>
                       Accept Terms and Sign Up
                     </Text>
                   </TouchableOpacity>
@@ -984,6 +1038,55 @@ return (
         </View>
       </View>
     </View>
+      <Modal animationIn="fadeIn" animationOut="fadeOut" isVisible={loading} backdropColor="#000" backdropOpacity={0.8}  onBackdropPress={() => setLoading(false)} style={{alignItems: "center", justifyContent: "center"}}>
+        <View
+          style={{
+            backgroundColor: "white",
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: "#ccc",
+            width: !isMobile ? "30%" : "90%",
+            maxHeight: "90%",
+            padding: 20,
+            alignItems: 'center'
+            
+          }}
+        >
+          <View style={{flexDirection: 'row', gap: 10}}>
+            <Text style={{ color: '#00505cff', fontWeight: '600', textAlign: 'center' }}>
+              SIGNING UP...PLEASE WAIT 
+            </Text>
+            <ActivityIndicator />
+          </View>
+        </View>
+      </Modal>
+      <Modal animationIn="fadeIn" animationOut="fadeOut" isVisible={signUpSuccess} backdropColor="#000" backdropOpacity={0.5} onBackdropPress={() => setSignUpSucess(false)} style={{ alignItems: "center", justifyContent: "center" }} >
+        <View
+          style={{
+            backgroundColor: "white",
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: "#ccc",
+            width: !isMobile ? "30%" : "90%",
+            maxHeight: "90%",
+            padding: 25,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+
+          <View style={{ width: 70, height: 70, borderRadius: 35, backgroundColor: "#22c55e", alignItems: "center", justifyContent: "center", marginBottom: 20, }} >
+            <Text style={{ color: "white", fontSize: 36 }}>✓</Text>
+          </View>
+
+          <Text style={{ fontSize: 20, fontWeight: "bold", color: "#22c55e", textAlign: "center", marginBottom: 10, }} > Clinic Sign Up Successful! </Text>
+          <Text style={{ fontSize: 15, color: "#555", textAlign: "center", marginBottom: 25, }} > Please check your email to verify your account before logging in. </Text>
+
+          <TouchableOpacity onPress={() => setSignUpSucess(false)} style={{ backgroundColor: "#22c55e", paddingVertical: 10, paddingHorizontal: 25, borderRadius: 8, }} >
+            <Text style={{ color: "white", fontWeight: "600", fontSize: 16 }}> OK </Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
   </LinearGradient>
 );
 

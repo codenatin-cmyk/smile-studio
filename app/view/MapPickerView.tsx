@@ -1,13 +1,12 @@
-import React, { useState, useRef, useEffect } from "react";
+import MapboxGL from "@rnmapbox/maps"; // Native Mapbox
+import React, { useEffect, useRef, useState } from "react";
 import {
   Platform,
+  StyleSheet,
   Text,
   useWindowDimensions,
-  View,
-  StyleSheet,
-  TouchableOpacity,
+  View
 } from "react-native";
-import MapboxGL from "@rnmapbox/maps"; // Native Mapbox
 
 // You may need to add this CSS import to your project's index.js or a similar file
 // import 'mapbox-gl/dist/mapbox-gl.css';

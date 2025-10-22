@@ -5,7 +5,8 @@ import * as FileSystem from "expo-file-system";
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import Modal from "react-native-modal";
 import { supabase } from '../../lib/supabase';
 import DayScheduleView from "../view/DayScheduleView";
 import MapPickerView from "../view/MapPickerView";
@@ -123,6 +124,62 @@ const [supportMessages, setSupportMessages] = useState<any[]>([]);
 const [supportLoading, setSupportLoading] = useState(false);
 const [supportFilter, setSupportFilter] = useState<'all' | 'pending' | 'in_progress' | 'resolved'>('all');
 
+const [verificationRequestCount, setVerificationRequestCount] = useState(0);
+
+useEffect(() => {
+  if (dashboardView === 'ar') {
+    // Optional: You could add a "last_viewed" timestamp to track when admin checked
+    // This is just to give visual feedback that they've seen the notifications
+  }
+}, [dashboardView]);
+
+// Add this useEffect to fetch and listen for verification requests
+useEffect(() => {
+  const fetchVerificationCount = async () => {
+    try {
+      const { count, error } = await supabase
+        .from('clinic_profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('request_verification', true)
+        .eq('isVerified', false);
+      
+      if (error) throw error;
+      setVerificationRequestCount(count ?? 0);
+    } catch (error) {
+      console.error('Error fetching verification count:', error);
+    }
+  };
+
+  // Initial fetch
+  fetchVerificationCount();
+
+  // Set up real-time subscription
+  const channel = supabase
+    .channel('verification-requests-realtime')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'clinic_profiles',
+      },
+      (payload) => {
+        console.log('Clinic profile change detected:', payload);
+        // Refetch count whenever any clinic profile changes
+        fetchVerificationCount();
+      }
+    )
+    .subscribe();
+
+  // Also refresh count when dashboard view changes to 'ar'
+  if (dashboardView === 'ar') {
+    fetchVerificationCount();
+  }
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, [dashboardView]);
 
 
 useEffect(() => {
@@ -644,21 +701,7 @@ useEffect(() => {
           >
           <View style={{flex: 1}}>
 
-          <Modal
-            transparent
-            animationType="fade"
-            visible={modalSignout}
-            onRequestClose={() => setModalSignout(false)}
-          >
-            <View
-              style={{
-                flex: 1,
-                backgroundColor: "rgba(0,0,0,0.4)",
-                justifyContent: "center",
-                alignItems: "center",
-                padding: 50,
-              }}
-            >
+         <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={modalSignout} onBackdropPress={() => setModalSignout(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}> 
               <View
                 style={{
                   backgroundColor: "white",
@@ -734,7 +777,6 @@ useEffect(() => {
                   </TouchableOpacity>
                 </View>
               </View>
-            </View>
           </Modal>
           {(isMobile) && (
             <View style={[{ height: 60}]}>
@@ -821,22 +863,7 @@ useEffect(() => {
               > 
             <View style={{ ...styles.container, width: '100%' }}>
 
-                <Modal
-                  transparent
-                  animationType="fade"
-                  visible={modalUpdate}
-                  onRequestClose={() => setModalUpdate(false)}
-                >
-                  <View
-                    style={{
-                      flex: 1,
-                      backgroundColor: "rgba(0,0,0,0.4)",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      padding: 50,
-                      
-                    }}
-                  >
+                <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={modalUpdate} onBackdropPress={() => setModalUpdate(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}> 
                     <View
                       style={{
                         backgroundColor: "white",
@@ -964,7 +991,6 @@ useEffect(() => {
                         </TouchableOpacity>
                       </View>
                     </View>
-                  </View>
                 </Modal>
 
 <TouchableOpacity
@@ -1108,6 +1134,7 @@ useEffect(() => {
     backgroundColor: dashboardView === "ar" ? '#ffffff' : 'transparent',
     borderRadius: 15,
     padding: 10,
+    position: 'relative', // Important for badge positioning
   }}
   disabled={loading}
 >
@@ -1123,6 +1150,36 @@ useEffect(() => {
       }}>
         Verify Clinics
       </Text>
+      
+      {/* Notification Badge */}
+      {verificationRequestCount > 0 && (
+        <View
+          style={{
+            position: 'absolute',
+            top: -5,
+            left: -5,
+            backgroundColor: '#ff4444',
+            borderRadius: 12,
+            minWidth: 24,
+            height: 24,
+            justifyContent: 'center',
+            alignItems: 'center',
+            paddingHorizontal: 6,
+            borderWidth: 2,
+            borderColor: dashboardView === "ar" ? '#ffffff' : '#00505cff',
+          }}
+        >
+          <Text
+            style={{
+              color: 'white',
+              fontSize: 12,
+              fontWeight: 'bold',
+            }}
+          >
+            {verificationRequestCount > 99 ? '99+' : verificationRequestCount}
+          </Text>
+        </View>
+      )}
     </View>
   )}
 </TouchableOpacity>
@@ -1329,9 +1386,59 @@ useEffect(() => {
                       SJDM Registered Clinics
                     </Text>
                 </View>
-              
+                <View style={styles.card}>
+                  <View style={{flexDirection: 'column',}}>
+                  <View>
+                      <Text style={{color: '#00505cff', textAlign: 'center', marginTop: 6, fontSize: isMobile ? 15 : 25 }}>
+                        (Not Finished)
+                      </Text>
+                    </View>
+                    <View style={{ marginTop: 20, alignItems: 'center' }}>
+                      <TouchableOpacity
+                        style={{...styles.redButton, backgroundColor: '#00505cff'}}
+                        onPress={() => setModalVisible(true)}
+                      >
+                        <Text style={{...styles.buttonText1, color: '#ffffffff', fontSize: isMobile ? 10 : 25 }}>Overview</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={modalVisible} onBackdropPress={() => setModalVisible(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}> 
+
+                        <View style={{...styles.modalContent, width: isMobile ? 350 : '40%'}}>
+                          <Text style={{ fontSize: 20, marginBottom: 20 }}>Suggestion Overview</Text>
+                          <View style={{ padding: 20 }}>
+
+                            {/* Appointment Section */}
+                            <View>
+                              <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 10 }}>Suggestions</Text>
+                              <View style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 10, padding: 15, backgroundColor: '#f1f1f1' }}>
+                                <Text style={{ fontWeight: '600' }}>Mark Ariya</Text>
+                                <Text style={{ color: '#555' }}>Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum</Text>
+                                <Text style={{ color: '#555' }}>8/22/25 - 10:00 AM</Text>
+                              </View>
+
+                              <View style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 10, padding: 15, backgroundColor: '#f1f1f1', marginTop: 10 }}>
+                                <Text style={{ fontWeight: '600' }}>Jenny Rom</Text>
+                                <Text style={{ color: '#555' }}>Lorem Ipsum Lorem Ipsum</Text>
+                                <Text style={{ color: '#555' }}>8/22/25 - 2:30 PM</Text>
+                              </View>
+                            </View>
+                          </View>
+                          <TouchableOpacity
+                            style={styles.closeButton}
+                            onPress={() => setModalVisible(false)}
+                          >
+                            <Text style={styles.closeButtonText}>Close</Text>
+                          </TouchableOpacity>
+                        </View>
+                
+                    </Modal>
+                  </View>
+                </View>
               </View>
-              
+              <View style={styles.infoSection}>
+                <Text style={styles.infoText}>Further information can go here. (to be designed) </Text>
+              </View>
             </View>
     
             
@@ -1385,101 +1492,88 @@ useEffect(() => {
                 View All Registered Clinics in Map
               </Text>
             </TouchableOpacity>
-            <Modal
-              transparent
-              animationType="fade"
-              visible={tMap}
-              onRequestClose={() => setTMap(false)}
-            >
+            <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={tMap} onBackdropPress={() => setTMap(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}> 
               <View
                 style={{
-                  flex: 1,
-                  justifyContent: "center",
-                  alignItems: "center",
+                  width: isMobile ? "90%" : "80%",
+                  maxHeight: "90%",
+                  backgroundColor: "white",
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: "#ccc",
+                  padding: 20,
+                  position: "relative",
                 }}
               >
-                <View
+                {/* ✅ Circular red "X" close button in top right */}
+                <TouchableOpacity
+                  onPress={() => setTMap(false)}
                   style={{
-                    width: isMobile ? "90%" : "80%",
-                    maxHeight: "90%",
-                    backgroundColor: "white",
-                    borderRadius: 12,
-                    borderWidth: 1,
-                    borderColor: "#ccc",
-                    padding: 20,
-                    position: "relative",
+                    position: "absolute",
+                    top: 10,
+                    right: 10,
+                    zIndex: 10,
+                    backgroundColor: "#e74c3c",
+                    width: 30,
+                    height: 30,
+                    borderRadius: 15,
+                    justifyContent: "center",
+                    alignItems: "center",
                   }}
                 >
-                  {/* ✅ Circular red "X" close button in top right */}
-                  <TouchableOpacity
-                    onPress={() => setTMap(false)}
+                  <Text
                     style={{
-                      position: "absolute",
-                      top: 10,
-                      right: 10,
-                      zIndex: 10,
-                      backgroundColor: "#e74c3c",
-                      width: 30,
-                      height: 30,
-                      borderRadius: 15,
-                      justifyContent: "center",
-                      alignItems: "center",
+                      color: "white",
+                      fontWeight: "bold",
+                      fontSize: 18,
+                      lineHeight: 18,
                     }}
                   >
-                    <Text
-                      style={{
-                        color: "white",
-                        fontWeight: "bold",
-                        fontSize: 18,
-                        lineHeight: 18,
-                      }}
-                    >
-                      ×
-                    </Text>
-                  </TouchableOpacity>
+                    ×
+                  </Text>
+                </TouchableOpacity>
 
-                  <ScrollView
-                    contentContainerStyle={{
-                      paddingTop: 10,
+                <ScrollView
+                  contentContainerStyle={{
+                    paddingTop: 10,
+                  }}
+                  showsVerticalScrollIndicator={false}
+                >
+                  <Text
+                    style={{
+                      fontSize: 22,
+                      fontWeight: "bold",
+                      marginBottom: 10,
+                      color: "#00505cff",
+                      alignSelf: isMobile ? "center" : "flex-start",
                     }}
-                    showsVerticalScrollIndicator={false}
                   >
-                    <Text
-                      style={{
-                        fontSize: 22,
-                        fontWeight: "bold",
-                        marginBottom: 10,
-                        color: "#00505cff",
-                        alignSelf: isMobile ? "center" : "flex-start",
-                      }}
-                    >
-                      Map
-                    </Text>
+                    Map
+                  </Text>
 
-                    <Text
-                      style={{
-                        fontSize: 15,
-                        color: "#000",
-                        fontStyle: "italic",
-                        marginBottom: 10,
-                        alignSelf: "flex-start",
-                      }}
-                    >
-                      Click/Tap the pin to view dental clinic details
-                    </Text>
+                  <Text
+                    style={{
+                      fontSize: 15,
+                      color: "#000",
+                      fontStyle: "italic",
+                      marginBottom: 10,
+                      alignSelf: "flex-start",
+                    }}
+                  >
+                    Click/Tap the pin to view dental clinic details
+                  </Text>
 
-                    <View
-                      style={{
-                        width: "100%",
-                        height: isMobile ? 350 : 450,
-                        marginBottom: 20,
-                      }}
-                    >
-                      <MapPickerView allowEdit={false} pins={clinicList} />
-                    </View>
-                  </ScrollView>
-                </View>
-              </View>
+                  <View
+                    style={{
+                      width: "100%",
+                      height: isMobile ? 350 : 450,
+                      marginBottom: 20,
+                    }}
+                  >
+                    <MapPickerView allowEdit={false} pins={clinicList} />
+                  </View>
+                </ScrollView>
+              </View> 
             </Modal>
 
           {clinicList.length === 0 ? (
@@ -1583,19 +1677,7 @@ useEffect(() => {
                         </TouchableOpacity>
 
                         {/* Modal */}
-                      <Modal
-                        transparent
-                        visible={viewClinic}
-                        onRequestClose={() => setviewClinic(false)}
-                      >
-                        <View
-                          style={{
-                            flex: 1,
-                            justifyContent: "center",
-                            alignItems: "center",
-                            padding: 20,
-                          }}
-                        >
+                       <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={viewClinic} onBackdropPress={() => setviewClinic(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>                    
                           <View
                             style={{
                               backgroundColor: "#fff",
@@ -1772,7 +1854,7 @@ useEffect(() => {
                                 >
                                   <Text style={{ fontSize: 16 }}>🗓️</Text>
                                 </View>
-                                <Text style={{ fontSize: 14, color: "#333" }}>
+                                <Text style={{ fontSize: 14, color: "#333", width: '90%' }}>
                                   Joined: {selectedClinicCreatedAt || "N/A"}
                                 </Text>
                               </View>
@@ -1883,13 +1965,10 @@ useEffect(() => {
                               </Text>
                             </TouchableOpacity>
                           </View>
-                        </View>
+                   
                       </Modal>
-                      <Modal
-                        visible={fullProfile}
-                        transparent={false}
-                        onRequestClose={() => setFullProfile(false)}
-                      >
+                      <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={fullProfile} onBackdropPress={() => setFullProfile(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>
+                      
                         <View style={{ flex: 1, backgroundColor: "#f8fafc" }}>
                           
                           {/* Header with Back Button */}
@@ -2122,7 +2201,7 @@ useEffect(() => {
                                     >
                                       <Text style={{ fontSize: 16 }}>🗓️</Text>
                                     </View>
-                                    <Text style={{ fontSize: 14, color: "#333" }}>
+                                    <Text style={{ fontSize: 14, color: "#333", width: '90%' }}>
                                       Joined: {selectedClinicCreatedAt || "N/A"}
                                     </Text>
                                   </View>
@@ -2571,20 +2650,8 @@ useEffect(() => {
                       </TouchableOpacity>
 
                       {/* Modal: Map View */}
-                      <Modal
-                        transparent
-                        animationType="fade"
-                        visible={modalMap}
-                        onRequestClose={() => setModalMap(false)}
-                      >
-                        <View
-                          style={{
-                            flex: 1,
-                            justifyContent: "center",
-                            alignItems: "center",
-                            padding: 20,
-                          }}
-                        >
+                     <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={modalMap} onBackdropPress={() => setModalMap(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>
+
                           <View
                             style={{
                               backgroundColor: "white",
@@ -2639,7 +2706,7 @@ useEffect(() => {
                               <Text>No map provided by the clinic</Text>
                             )}
                           </View>
-                        </View>
+                
                       </Modal>
                     </View>
                   </LinearGradient>
@@ -2880,15 +2947,8 @@ useEffect(() => {
         </View>
 
         {userMessage && (
-          <Modal visible={userMessage} transparent animationType="fade">
-            <View
-              style={{
-                flex: 1,
-                backgroundColor: 'rgba(0,0,0,0.5)',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-            >
+           <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={userMessage} onBackdropPress={() => setUserMessage(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>
+
               <View
                 style={{
                   backgroundColor: '#fff',
@@ -2979,7 +3039,7 @@ useEffect(() => {
                   </TouchableOpacity>
                 </View>
               </View>
-            </View>
+      
           </Modal>
         )}
 
@@ -3227,15 +3287,8 @@ useEffect(() => {
         )}
 
         {/* Modal for clinics */}
-        <Modal visible={clinicMessage} transparent animationType="fade">
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: "rgba(0,0,0,0.5)",
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
+        <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={clinicMessage} onBackdropPress={() => setClinicMessage(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>
+
             <View
               style={{
                 backgroundColor: "#fff",
@@ -3351,7 +3404,7 @@ useEffect(() => {
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
+      
         </Modal>
         </View>
 
@@ -3452,7 +3505,7 @@ useEffect(() => {
           marginBottom: 20,
         }}
       >
-        This platform was created to bridge the gap between patients and trusted dental clinics in City of San Jose del Monte, Bulacan
+       This platform was created to bridge the gap between patients and trusted dental clinics in City of San Jose del Monte, Bulacan
       </Text>
 
       <View style={{ alignSelf: "center", marginTop: 20, marginBottom: 20 }}>
@@ -3575,19 +3628,9 @@ useEffect(() => {
       </TouchableOpacity>
 
       {/* Modal */}
-      <Modal
-        visible={termsOfUse}
-        transparent
-        onRequestClose={() => setTermsOfUse(false)}
-      >
-        <View
-        style={{
-          flex: 1,
-          backgroundColor: "rgba(0,0,0,0.5)",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
+      <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={termsOfUse} onBackdropPress={() => setTermsOfUse(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>
+
+     
         <View
           style={{
             backgroundColor: "white",
@@ -3756,7 +3799,7 @@ useEffect(() => {
             </Text>
           </TouchableOpacity>
         </View>
-      </View>
+  
       </Modal>
     </View>
 
@@ -3886,16 +3929,21 @@ useEffect(() => {
           ]}
         >
           <Text
-            style={{
-              fontSize: 24,
-              fontWeight: "bold",
-              marginBottom: 20,
-              alignSelf: isMobile ? "center" : "flex-start",
-              color: "#00505cff",
-            }}
-          >
-            Verify Clinics
-          </Text>
+  style={{
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 20,
+    alignSelf: isMobile ? "center" : "flex-start",
+    color: "#00505cff",
+  }}
+>
+  Verify Clinics
+  {verificationRequestCount > 0 && (
+    <Text style={{ color: '#ff4444', fontSize: 20 }}>
+      {` (${verificationRequestCount} pending)`}
+    </Text>
+  )}
+</Text>
 
           {isMobile ? (
             // 📱 Mobile Card View
@@ -4313,8 +4361,9 @@ useEffect(() => {
 
 
                   {/* ⛔ Denial Modal */}
-                  <Modal visible={denialModalVisible} transparent animationType="fade">
-                    <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" }}>
+                  <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={denialModalVisible} onBackdropPress={() => setDenialModalVisible(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>
+                 
+                  
                       <View style={{ backgroundColor: "#fff", padding: 20, borderRadius: 10, width: isMobile ? "90%" : "40%" }}>
                         <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10, color: '#00505cff' }}>
                           Reason for Denial
@@ -4384,12 +4433,13 @@ useEffect(() => {
                           </TouchableOpacity>
                         </View>
                       </View>
-                    </View>
+                   
                   </Modal>
 
                   {/* ✅ Verification Modal */}
-                  <Modal visible={verificationModalVisible} transparent animationType="fade">
-                    <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" }}>
+                  <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={verificationModalVisible} onBackdropPress={() => setVerificationModalVisible(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>
+
+                  
                       <View
                         style={{
                           backgroundColor: "#fff",
@@ -4481,7 +4531,7 @@ useEffect(() => {
                           </View>
                         </ScrollView>
                       </View>
-                    </View>
+                   
                   </Modal>
       </LinearGradient>
     </LinearGradient>
