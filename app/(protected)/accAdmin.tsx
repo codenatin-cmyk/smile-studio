@@ -1386,59 +1386,9 @@ useEffect(() => {
                       SJDM Registered Clinics
                     </Text>
                 </View>
-                <View style={styles.card}>
-                  <View style={{flexDirection: 'column',}}>
-                  <View>
-                      <Text style={{color: '#00505cff', textAlign: 'center', marginTop: 6, fontSize: isMobile ? 15 : 25 }}>
-                        (Not Finished)
-                      </Text>
-                    </View>
-                    <View style={{ marginTop: 20, alignItems: 'center' }}>
-                      <TouchableOpacity
-                        style={{...styles.redButton, backgroundColor: '#00505cff'}}
-                        onPress={() => setModalVisible(true)}
-                      >
-                        <Text style={{...styles.buttonText1, color: '#ffffffff', fontSize: isMobile ? 10 : 25 }}>Overview</Text>
-                      </TouchableOpacity>
-                    </View>
-
-                    <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={modalVisible} onBackdropPress={() => setModalVisible(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}> 
-
-                        <View style={{...styles.modalContent, width: isMobile ? 350 : '40%'}}>
-                          <Text style={{ fontSize: 20, marginBottom: 20 }}>Suggestion Overview</Text>
-                          <View style={{ padding: 20 }}>
-
-                            {/* Appointment Section */}
-                            <View>
-                              <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 10 }}>Suggestions</Text>
-                              <View style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 10, padding: 15, backgroundColor: '#f1f1f1' }}>
-                                <Text style={{ fontWeight: '600' }}>Mark Ariya</Text>
-                                <Text style={{ color: '#555' }}>Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum</Text>
-                                <Text style={{ color: '#555' }}>8/22/25 - 10:00 AM</Text>
-                              </View>
-
-                              <View style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 10, padding: 15, backgroundColor: '#f1f1f1', marginTop: 10 }}>
-                                <Text style={{ fontWeight: '600' }}>Jenny Rom</Text>
-                                <Text style={{ color: '#555' }}>Lorem Ipsum Lorem Ipsum</Text>
-                                <Text style={{ color: '#555' }}>8/22/25 - 2:30 PM</Text>
-                              </View>
-                            </View>
-                          </View>
-                          <TouchableOpacity
-                            style={styles.closeButton}
-                            onPress={() => setModalVisible(false)}
-                          >
-                            <Text style={styles.closeButtonText}>Close</Text>
-                          </TouchableOpacity>
-                        </View>
                 
-                    </Modal>
-                  </View>
-                </View>
               </View>
-              <View style={styles.infoSection}>
-                <Text style={styles.infoText}>Further information can go here. (to be designed) </Text>
-              </View>
+              
             </View>
     
             
@@ -4437,102 +4387,232 @@ useEffect(() => {
                   </Modal>
 
                   {/* ✅ Verification Modal */}
-                  <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={verificationModalVisible} onBackdropPress={() => setVerificationModalVisible(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>
+<Modal 
+  animationIn="fadeIn" 
+  animationOut="fadeOut" 
+  isVisible={verificationModalVisible} 
+  onBackdropPress={() => setVerificationModalVisible(false)} 
+  backdropColor="#000" 
+  backdropOpacity={0.1} 
+  style={{alignItems: "center", justifyContent: "center"}}
+>
+  <View
+    style={{
+      backgroundColor: "#fff",
+      padding: 20,
+      borderRadius: 10,
+      width: isMobile ? "90%" : "40%",
+      maxHeight: "90%",
+    }}
+  >
+    <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
+      <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10, color: '#00505cff' }}>
+        Are you sure you want to verify{" "}
+        <Text style={{ fontWeight: "bold" }}>
+          {selectedClinicForAction?.clinic_name || "this clinic"}?
+        </Text>
+      </Text>
 
-                  
-                      <View
-                        style={{
-                          backgroundColor: "#fff",
-                          padding: 20,
-                          borderRadius: 10,
-                          width: isMobile ? "90%" : "40%" ,
-                          maxHeight: "90%",
-                        }}
-                      >
-                        <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
-                          <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10, color: '#00505cff' }}>
-                            Are you sure you want to verify{" "}
-                            <Text style={{ fontWeight: "bold" }}>
-                              {selectedClinicForAction?.clinic_name || "this clinic"}?
-                            </Text>
-                          </Text>
+      <View
+        style={{
+          marginTop: 15,
+          marginBottom: 20,
+          minHeight: selectedClinicForAction?.license_photo_url ? 450 : undefined,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        {selectedClinicForAction?.license_photo_url ? (
+          <>
+            {/* Check if it's a PDF */}
+            {selectedClinicForAction.license_photo_url.toLowerCase().endsWith('.pdf') ? (
+              <View style={{ 
+                alignItems: "center", 
+                padding: 30,
+                backgroundColor: "#f8fafc",
+                borderRadius: 12,
+                width: "100%"
+              }}>
+                <View style={{
+                  padding: 20,
+                  backgroundColor: "white",
+                  borderRadius: 16,
+                  marginBottom: 20,
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 8,
+                  elevation: 3,
+                }}>
+                  <FontAwesome5 name="file-pdf" size={100} color="#ef4444" />
+                </View>
+                <Text style={{ 
+                  fontSize: 18, 
+                  fontWeight: "bold", 
+                  color: "#1e293b",
+                  marginBottom: 8
+                }}>
+                  DTI Permit (PDF)
+                </Text>
+                <Text style={{
+                  fontSize: 14,
+                  color: "#64748b",
+                  marginBottom: 20,
+                  textAlign: "center"
+                }} numberOfLines={1}>
+                  {selectedClinicForAction.license_photo_url.split('/').pop()}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (Platform.OS === 'web') {
+                      window.open(selectedClinicForAction.license_photo_url, '_blank');
+                    } else {
+                      Alert.alert('PDF Viewer', 'Opening PDF in browser...');
+                    }
+                  }}
+                  style={{
+                    backgroundColor: "#00505cff",
+                    paddingVertical: 14,
+                    paddingHorizontal: 28,
+                    borderRadius: 10,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 4,
+                    elevation: 3,
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <FontAwesome5 name="external-link-alt" size={16} color="white" style={{ marginRight: 10 }} />
+                  <Text style={{ color: "white", fontWeight: "bold", fontSize: 14 }}>Open PDF</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              /* Show image for JPEG/PNG */
+              <View style={{ width: "100%", alignItems: "center" }}>
+                <View style={{
+                  width: "100%",
+                  height: 450,
+                  backgroundColor: "#f1f5f9",
+                  borderRadius: 12,
+                  overflow: "hidden",
+                  borderWidth: 1,
+                  borderColor: "#e2e8f0",
+                  position: "relative",
+                }}>
+                  <Image
+                    source={{ uri: selectedClinicForAction.license_photo_url }}
+                    resizeMode="contain"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                    }}
+                  />
+                </View>
+                
+                <View style={{ 
+                  flexDirection: "row", 
+                  gap: 10, 
+                  marginTop: 15,
+                  flexWrap: "wrap",
+                  justifyContent: "center"
+                }}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (Platform.OS === 'web') {
+                        window.open(selectedClinicForAction.license_photo_url, '_blank');
+                      }
+                    }}
+                    style={{
+                      backgroundColor: "#00505cff",
+                      paddingVertical: 10,
+                      paddingHorizontal: 18,
+                      borderRadius: 8,
+                      flexDirection: "row",
+                      alignItems: "center",
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <FontAwesome5 name="expand" size={14} color="white" style={{ marginRight: 8 }} />
+                    <Text style={{ color: "white", fontWeight: "bold", fontSize: 14 }}>
+                      View Full Size
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </>
+        ) : (
+          <View style={{ 
+            alignItems: "center", 
+            padding: 40,
+            backgroundColor: "#f8fafc",
+            borderRadius: 12,
+            width: "100%"
+          }}>
+            <FontAwesome5 name="file-image" size={80} color="#cbd5e0" />
+            <Text style={{ 
+              color: "#64748b", 
+              fontStyle: "italic", 
+              marginTop: 20, 
+              textAlign: "center",
+              fontSize: 15
+            }}>
+              This clinic did not provide a Business Permit.
+            </Text>
+          </View>
+        )}
+      </View>
 
-                          <View
-                            style={{
-                              marginTop: 15,
-                              marginBottom: 20,
-                              height: selectedClinicForAction?.license_photo_url ? 450 : undefined,
-                              justifyContent: "center",
-                              alignItems: "center",
-                            }}
-                          >
-                            {selectedClinicForAction?.license_photo_url ? (
-                              <Image
-                                source={{ uri: selectedClinicForAction.license_photo_url }}
-                                resizeMode="contain"
-                                style={{
-                                  width: "100%",
-                                  height: "100%",
-                                  borderRadius: 10,
-                                  borderWidth: 1,
-                                  borderColor: "#ccc",
-                                }}
-                              />
-                            ) : (
-                              <Text style={{ color: "#c0392b", fontStyle: "italic" }}>
-                                This clinic did not provide a Business Permit.
-                              </Text>
-                            )}
-                          </View>
+      <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
+        <TouchableOpacity
+          onPress={() => {
+            setVerificationModalVisible(false);
+            setSelectedClinicForAction(null);
+          }}
+          style={{ marginRight: 20 }}
+        >
+          <Text style={{ color: "#888" }}>Cancel</Text>
+        </TouchableOpacity>
 
-                          <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
-                            <TouchableOpacity
-                              onPress={() => {
-                                setVerificationModalVisible(false);
-                                setSelectedClinicForAction(null);
-                              }}
-                              style={{ marginRight: 20 }}
-                            >
-                              <Text style={{ color: "#888" }}>Cancel</Text>
-                            </TouchableOpacity>
+        <TouchableOpacity
+          onPress={async () => {
+            if (!selectedClinicForAction) return;
 
-                            <TouchableOpacity
-                              onPress={async () => {
-                                if (!selectedClinicForAction) return;
+            const { error } = await supabase
+              .from("clinic_profiles")
+              .update({
+                request_verification: false,
+                denied_verification_reason: null,
+                isVerified: true,
+              })
+              .eq("id", selectedClinicForAction.id);
 
-                                const { error } = await supabase
-                                  .from("clinic_profiles")
-                                  .update({
-                                    request_verification: false,
-                                    denied_verification_reason: null,
-                                    isVerified: true,
-                                  })
-                                  .eq("id", selectedClinicForAction.id);
+            if (error) {
+              alert("Error verifying clinic.");
+              console.error(error);
+            } else {
+              setClinicList(prev =>
+                prev.map(c =>
+                  c.id === selectedClinicForAction.id
+                    ? { ...c, request_verification: false, isVerified: true }
+                    : c
+                )
+              );
+            }
 
-                                if (error) {
-                                  alert("Error verifying clinic.");
-                                  console.error(error);
-                                } else {
-                                  setClinicList(prev =>
-                                    prev.map(c =>
-                                      c.id === selectedClinicForAction.id
-                                        ? { ...c, request_verification: false, isVerified: true }
-                                        : c
-                                    )
-                                  );
-                                }
-
-                                setVerificationModalVisible(false);
-                                setSelectedClinicForAction(null);
-                              }}
-                            >
-                              <Text style={{ color: "#2ecc71", fontWeight: "bold" }}>Verify</Text>
-                            </TouchableOpacity>
-                          </View>
-                        </ScrollView>
-                      </View>
-                   
-                  </Modal>
+            setVerificationModalVisible(false);
+            setSelectedClinicForAction(null);
+          }}
+        >
+          <Text style={{ color: "#2ecc71", fontWeight: "bold" }}>Verify</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  </View>
+</Modal>
       </LinearGradient>
     </LinearGradient>
   )

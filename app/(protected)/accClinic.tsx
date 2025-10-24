@@ -140,9 +140,12 @@ export default function Account() {
 
   const [dashboardView, setDashboardView] = useState("profile");
   // State for the verification photo
+ // State for the verification photo
   const [verifyPhoto, setVerifyPhoto] = useState<string | { uri: string; file: File } | null>(null);
   // New state for submission loading
-  const [isSubmitting, setIsSubmitting] = useState(false); 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  // State to track if uploaded file is PDF
+  const [isVerifyPhotoPDF, setIsVerifyPhotoPDF] = useState(false);
 
   const [clinicList, setClinicList] = useState<any[]>([]);
   const [selectedClinicId, setSelectedClinicId] = useState<string>();
@@ -1293,6 +1296,7 @@ async function getProfile() {
     };
 
     // MODIFIED pickVerifyPhotoMobile: ONLY updates state, does NOT upload
+   // MODIFIED pickVerifyPhotoMobile: ONLY updates state, does NOT upload
     const pickVerifyPhotoMobile = async () => {
         // ... permission checks ...
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -1313,7 +1317,8 @@ async function getProfile() {
 
         if (!result.canceled && result.assets.length > 0) {
             // Set the URI to state. The button text will change now.
-            setVerifyPhoto(result.assets[0].uri); 
+            setVerifyPhoto(result.assets[0].uri);
+            setIsVerifyPhotoPDF(false);
         }
     };
 
@@ -1321,13 +1326,15 @@ async function getProfile() {
     const pickVerifyPhotoWeb = () => {
         const input = document.createElement("input");
         input.type = "file";
-        input.accept = "image/*";
+        input.accept = "image/*,application/pdf"; // Accept both images and PDFs
         input.onchange = async (event: any) => {
             const file = event.target.files?.[0];
             if (file) {
+                const isPDF = file.type === "application/pdf";
                 // Store the file object and a temporary URL for preview/tracking
                 const uri = URL.createObjectURL(file);
                 setVerifyPhoto({ uri, file });
+                setIsVerifyPhotoPDF(isPDF);
             }
         };
         input.click();
@@ -6525,6 +6532,7 @@ const PatientHistoryModalComponent = () => (
               </Text>
 
               {/* Upload Area */}
+              {/* Upload Area */}
               <View
                 style={{
                   borderWidth: 1,
@@ -6549,20 +6557,32 @@ const PatientHistoryModalComponent = () => (
                 )}
                 {!verified && !requestVerification && (
                   <Text style={{ marginBottom: 10, color: "#666", textAlign: "center"  }}>
-                    Optional: Please Upload DTI Permit.
+                    Optional: Please Upload DTI Permit (Image or PDF).
                   </Text>
                 )}
 
                   {!!verifyPhoto && (
-                      <Image
+                    <View style={{ alignItems: "center", marginBottom: 15 }}>
+                      {isVerifyPhotoPDF ? (
+                        <View style={{ alignItems: "center" }}>
+                          <FontAwesome5 name="file-pdf" size={80} color="#d32f2f" />
+                          <Text style={{ marginTop: 10, color: "#666", fontSize: 14 }}>
+                            PDF File Selected
+                          </Text>
+                        </View>
+                      ) : (
+                        <Image
                           source={{ uri: typeof verifyPhoto === 'object' ? verifyPhoto.uri : verifyPhoto }}
-                          style={{ width: 200, height: 150, borderRadius: 10, marginBottom: 15 }}
+                          style={{ width: 200, height: 150, borderRadius: 10 }}
                           resizeMode="cover"
-                      />
+                        />
+                      )}
+                    </View>
                   )}
 
-                  {/* Replace with actual upload logic later */}
+                  {/* Upload and Cancel Buttons */}
               {!verified && !requestVerification && (
+                <View style={{ flexDirection: "row", gap: 10 }}>
                   <TouchableOpacity
                     onPress={async () => {
                       handlePickVerifyPhoto(); // Existing logic to pick a photo
@@ -6575,9 +6595,28 @@ const PatientHistoryModalComponent = () => (
                     }}
                   >
                     <Text style={{ color: "#00796b" }}>
-                      {!!verifyPhoto ? "Change Photo" : "Upload Photo"}
+                      {!!verifyPhoto ? "Change File" : "Upload File"}
                     </Text>
                   </TouchableOpacity>
+
+                  {/* Cancel/Remove Button */}
+                  {!!verifyPhoto && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setVerifyPhoto(null);
+                        setIsVerifyPhotoPDF(false);
+                      }}
+                      style={{
+                        backgroundColor: "#ffebee",
+                        paddingVertical: 10,
+                        paddingHorizontal: 20,
+                        borderRadius: 5,
+                      }}
+                    >
+                      <Text style={{ color: "#c62828" }}>Remove</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
                 )}
               </View>
 
