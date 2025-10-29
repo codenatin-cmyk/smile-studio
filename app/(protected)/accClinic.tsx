@@ -3053,7 +3053,7 @@ const PatientHistoryModalComponent = () => (
         color: dashboardView === "profile" ? '#00505cff' : '#ffffffff',
         marginLeft: 8,
       }}>
-        Profile
+        Dashboard
       </Text>
     </View>
   )}
@@ -3527,7 +3527,7 @@ const PatientHistoryModalComponent = () => (
                 color: '#00505cff',
               }}
             >
-              Profile
+             Dashboard
             </Text>
             <View style={styles.proinfo}>
               <Image
