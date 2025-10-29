@@ -1561,9 +1561,27 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
 
             <Text style={{fontWeight: 'bold', fontSize: 20, marginTop: -40, color: '#00505cff', textAlign: 'center', }}>SMILE STUDIO</Text>
             <Text style={{fontSize: 12, color: '#00505cff', textAlign: 'center', marginBottom: 7, }}>GRIN CREATORS</Text>
-            <View style={{padding: 7, marginLeft: 40, marginRight: 40, backgroundColor: 'white', marginBottom: 30, borderRadius: 10}}>
-              <Text style={{fontSize: 12, color: '#00505cff', textAlign: 'center'}}>PATIENT</Text>
-            </View>
+           <View style={{
+  paddingHorizontal: 16,
+  paddingVertical: 8,
+  backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  marginBottom: 30,
+  borderRadius: 20,
+  borderWidth: 2,
+  borderColor: '#00505cff',
+  alignSelf: 'center',
+  minWidth: 120,
+}}>
+  <Text style={{
+    fontSize: 11,
+    color: '#00505cff',
+    textAlign: 'center',
+    fontWeight: '600',
+    letterSpacing: 1,
+  }}>
+    • PATIENT •
+  </Text>
+</View>
                 <TouchableOpacity
                   style={{
                     backgroundColor: '#00505cff',
