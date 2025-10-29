@@ -103,8 +103,8 @@ export default function MapPickerView(props: MapPickerViewType) {
   const markerRef = useRef<any>(null);
 
   const defaultCoords = {
-    latitude: props.pinLatitude || 14.5995,
-    longitude: props.pinLongitude || 120.9842, // Manila as default center
+    latitude: props.pinLatitude || 14.8139,
+    longitude: props.pinLongitude || 121.0453, // San Jose del Monte, Bulacan
   };
 
   // Initialize Mapbox

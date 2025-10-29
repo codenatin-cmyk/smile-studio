@@ -713,7 +713,7 @@ const createAppointment = async (
         clinic_id: client_id,
         patient_id: session.user.id,
         date_time: datetime.toISOString(),
-        message: 'HELLO',
+        message: message,
         request: tempSelectedDentists,
         notification_sent: false
       },
@@ -1561,7 +1561,7 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
 
             <Text style={{fontWeight: 'bold', fontSize: 20, marginTop: -40, color: '#00505cff', textAlign: 'center', }}>SMILE STUDIO</Text>
             <Text style={{fontSize: 12, color: '#00505cff', textAlign: 'center', marginBottom: 7, }}>GRIN CREATORS</Text>
-           <View style={{
+            <View style={{
   paddingHorizontal: 16,
   paddingVertical: 8,
   backgroundColor: 'rgba(255, 255, 255, 0.3)',
@@ -1581,7 +1581,7 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
   }}>
     • PATIENT •
   </Text>
-</View>
+            </View>
                 <TouchableOpacity
                   style={{
                     backgroundColor: '#00505cff',
@@ -4265,175 +4265,186 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                                   </Text>
                                 </TouchableOpacity>
 
-                                {/* Modal to select Dentists */}
-                                <Modal
-                                  visible={showDentistModal}
-                                  transparent
-                                  animationType="fade"
-                                  onRequestClose={() => setShowDentistModal(false)}
+                                 {/* Modal to select Dentists */}
+                            <Modal animationIn="fadeIn" animationOut="fadeOut" isVisible={showDentistModal} backdropColor="#000" backdropOpacity={0.1}  onBackdropPress={() => setShowDentistModal(false)} style={{alignItems: "center", justifyContent: "center"}}>                       
+
+
+                                <View
+                                  style={{
+                                    backgroundColor: "white",
+                                    borderRadius: 12,
+                                    padding: 20,
+                                    width: isMobile ? "90%" : "40%",
+                                    maxHeight: "80%",
+                                    borderWidth: 1,
+                                    borderColor: "#ccc",
+                                  }}
                                 >
-                                  <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 20 }}>
-                                    <View
+                                  <ScrollView>
+                                    <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 15, color: '#00505cff' }}>
+                                      Select Available Dentists and Staff
+                                    </Text>
+                                    
+                                    {/* Show selected date */}
+                                    <Text style={{ fontSize: 14, color: "#666", marginBottom: 15 }}>
+                                      📅 {appointmentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
+                                    </Text>
+
+                                    {(() => {
+                                      // Get the day name from the selected appointment date
+                                      const selectedDayName: string = appointmentDate.toLocaleDateString('en-US', { weekday: 'long' });
+                                      
+                                      // Filter dentists who have schedule on the selected day
+                                      const availableDentists = parsedDentistList.filter((dentist) => {
+                                        // Check both capitalized and lowercase versions
+                                        const daySchedule = dentist?.weeklySchedule?.[selectedDayName] || 
+                                                          dentist?.weeklySchedule?.[selectedDayName.toLowerCase()] || [];
+                                        return daySchedule.length > 0;
+                                      });
+
+                                      return (
+                                        <View>
+                                          {/* Fixed Roles - always show */}
+                                          {fixedRoles.map((role: string, index: number) => {
+                                            const selected = tempSelectedDentists.includes(role);
+                                            return (
+                                              <View key={`fixed-${index}`} style={{ marginBottom: 15 }}>
+                                                <TouchableOpacity
+                                                  onPress={() => toggleTempDentist(role)}
+                                                  style={{ flexDirection: "row", alignItems: "center", marginBottom: 6 }}
+                                                >
+                                                  <View style={{
+                                                    height: 20,
+                                                    width: 20,
+                                                    borderRadius: 4,
+                                                    borderWidth: 1,
+                                                    borderColor: "#888",
+                                                    justifyContent: "center",
+                                                    alignItems: "center",
+                                                    marginRight: 10,
+                                                    backgroundColor: selected ? "#007bff" : "#fff",
+                                                  }}>
+                                                    {selected && <View style={{ width: 10, height: 10, backgroundColor: "#fff" }} />}
+                                                  </View>
+                                                  <Text style={{ fontWeight: "bold", color: 'black' }}>{role}</Text>
+                                                </TouchableOpacity>
+                                              </View>
+                                            );
+                                          })}
+
+                                          {/* Available Dentists Only */}
+                                          {availableDentists.length > 0 ? (
+                                            availableDentists.map((dentist, index: number) => {
+                                              const name: string = `Dr. ${dentist.name} (${dentist.specialty})`;
+                                              const selected = tempSelectedDentists.includes(name);
+                                              const selectedDaySchedule: string[] = dentist?.weeklySchedule?.[selectedDayName] || 
+                                                                        dentist?.weeklySchedule?.[selectedDayName.toLowerCase()] || [];
+
+                                              return (
+                                                <View key={`dentist-${index}`} style={{ marginBottom: 15 }}>
+                                                  {/* Dentist Row */}
+                                                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                                                    <TouchableOpacity
+                                                      onPress={() => toggleTempDentist(name)}
+                                                      style={{ flexDirection: "row", alignItems: "center", flex: 1 }}
+                                                    >
+                                                      <View style={{
+                                                        height: 20,
+                                                        width: 20,
+                                                        borderRadius: 4,
+                                                        borderWidth: 1,
+                                                        borderColor: "#888",
+                                                        justifyContent: "center",
+                                                        alignItems: "center",
+                                                        marginRight: 10,
+                                                        backgroundColor: selected ? "#007bff" : "#fff",
+                                                      }}>
+                                                        {selected && <View style={{ width: 10, height: 10, backgroundColor: "#fff" }} />}
+                                                      </View>
+                                                      <Text style={{ fontWeight: "bold", color: 'black' }}>{name}</Text>
+                                                    </TouchableOpacity>
+
+                                                    <TouchableOpacity onPress={() => toggleSchedule(index)}>
+                                                      <Text style={{ fontSize: 12, color: "#007bff" }}>
+                                                        {expandedDentistIndex === index ? "Hide" : "View"} Full Schedule
+                                                      </Text>
+                                                    </TouchableOpacity>
+                                                  </View>
+
+                                                  {/* Selected Day's Schedule */}
+                                                  {selectedDaySchedule.map((time: string, i: number) => (
+                                                    <Text key={i} style={{ marginLeft: 30, fontSize: 12, color: "#059669" }}>
+                                                      🕒 {time}
+                                                    </Text>
+                                                  ))}
+
+                                                  {/* Full Weekly Schedule */}
+                                                  {expandedDentistIndex === index && (
+                                                    <View style={{ marginTop: 6, paddingTop: 6, borderTopWidth: 1, borderTopColor: "#e5e7eb" }}>
+                                                      {daysOfWeek.map((day: string, i: number) => {
+                                                        const schedule: string[] = dentist.weeklySchedule?.[day] || [];
+                                                        return (
+                                                          <Text key={i} style={{ marginLeft: 30, fontSize: 12, color: schedule.length ? "#444" : "#999" }}>
+                                                            {day}: {schedule.length ? schedule.join(", ") : "No schedule"}
+                                                          </Text>
+                                                        );
+                                                      })}
+                                                    </View>
+                                                  )}
+                                                </View>
+                                              );
+                                            })
+                                          ) : (
+                                            <View style={{ padding: 20, backgroundColor: "#fef3c7", borderRadius: 8, marginTop: 10 }}>
+                                              <Text style={{ fontSize: 14, color: "#92400e", textAlign: "center" }}>
+                                                ⚠️ No dentists available on {selectedDayName}
+                                              </Text>
+                                            </View>
+                                          )}
+                                        </View>
+                                      );
+                                    })()}
+
+                                  </ScrollView>
+
+                                  {/* Buttons */}
+                                  <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 20 }}>
+                                    <TouchableOpacity
                                       style={{
-                                        backgroundColor: "white",
-                                        borderRadius: 12,
-                                        padding: 20,
-                                        width: isMobile ? "90%" : "40%",
-                                        maxHeight: "80%",
-                                        borderWidth: 1,
-                                        borderColor: "#ccc",
+                                        flex: 1,
+                                        backgroundColor: "#b32020",
+                                        paddingVertical: 12,
+                                        borderRadius: 6,
+                                        marginRight: 8,
+                                      }}
+                                      onPress={() => setShowDentistModal(false)}
+                                    >
+                                      <Text style={{ color: "white", textAlign: "center", fontWeight: "bold" }}>
+                                        Cancel
+                                      </Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                      style={{
+                                        flex: 1,
+                                        backgroundColor: "#2e7dccff",
+                                        paddingVertical: 12,
+                                        borderRadius: 6,
+                                        marginLeft: 8,
+                                      }}
+                                      onPress={() => {
+                                        setSelectedDentists(tempSelectedDentists);
+                                        setShowDentistModal(false);
                                       }}
                                     >
-                                      <ScrollView>
-                                        <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 15, color: '#00505cff' }}>
-                                          Select Available Dentists and Staff
-                                        </Text>
-
-                                {(() => {
-
-                                  return (
-                                    <View>
-                                      {/* Fixed Roles */}
-                                      {fixedRoles.map((role, index) => {
-                                        const selected = tempSelectedDentists.includes(role);
-                                        return (
-                                          <View key={`fixed-${index}`} style={{ marginBottom: 15 }}>
-                                            <TouchableOpacity
-                                              onPress={() => toggleTempDentist(role)}
-                                              style={{ flexDirection: "row", alignItems: "center", marginBottom: 6 }}
-                                            >
-                                              <View style={{
-                                                height: 20,
-                                                width: 20,
-                                                borderRadius: 4,
-                                                borderWidth: 1,
-                                                borderColor: "#888",
-                                                justifyContent: "center",
-                                                alignItems: "center",
-                                                marginRight: 10,
-                                                backgroundColor: selected ? "#007bff" : "#fff",
-                                              }}>
-                                                {selected && <View style={{ width: 10, height: 10, backgroundColor: "#fff" }} />}
-                                              </View>
-                                              <Text style={{ fontWeight: "bold", color: 'black' }}>{role}</Text>
-                                            </TouchableOpacity>
-                                          </View>
-                                        );
-                                      })}
-
-                                      {/* Dentists List */}
-                                      {parsedDentistList.map((dentist, index) => {
-                                        const name = `Dr. ${dentist.name} (${dentist.specialty})`;
-                                        const selected = tempSelectedDentists.includes(name);
-                                        const todaySchedule = dentist?.weeklySchedule?.[today] ?? [];
-                                        const hasTodaySchedule = todaySchedule.length > 0;
-
-                                        return (
-                                          <View key={`dentist-${index}`} style={{ marginBottom: 15 }}>
-                                            {/* Dentist Row */}
-                                            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                                              <TouchableOpacity
-                                                onPress={() => toggleTempDentist(name)}
-                                                style={{ flexDirection: "row", alignItems: "center", flex: 1 }}
-                                              >
-                                                <View style={{
-                                                  height: 20,
-                                                  width: 20,
-                                                  borderRadius: 4,
-                                                  borderWidth: 1,
-                                                  borderColor: "#888",
-                                                  justifyContent: "center",
-                                                  alignItems: "center",
-                                                  marginRight: 10,
-                                                  backgroundColor: selected ? "#007bff" : "#fff",
-                                                }}>
-                                                  {selected && <View style={{ width: 10, height: 10, backgroundColor: "#fff" }} />}
-                                                </View>
-                                                <Text style={{ fontWeight: "bold", color: 'black' }}>{name}</Text>
-                                              </TouchableOpacity>
-
-                                              <TouchableOpacity onPress={() => toggleSchedule(index)}>
-                                                <Text style={{ fontSize: 12, color: "#007bff" }}>
-                                                  {expandedDentistIndex === index ? "Hide" : "View"} Schedule
-                                                </Text>
-                                              </TouchableOpacity>
-                                            </View>
-
-                                            {/* Today’s Schedule or Warning */}
-                                            {hasTodaySchedule ? (
-                                              todaySchedule.map((time, i) => (
-                                                <Text key={i} style={{ marginLeft: 30, fontSize: 12, color: "#444" }}>
-                                                  🕒 {time}
-                                                </Text>
-                                              ))
-                                            ) : (
-                                              <Text style={{ marginLeft: 30, fontSize: 12, color: "#e67300" }}>
-                                                ⚠️ No schedule today
-                                              </Text>
-                                            )}
-
-                                            {/* Full Weekly Schedule */}
-                                            {expandedDentistIndex === index && (
-                                              <View style={{ marginTop: 6 }}>
-                                                {daysOfWeek.map((day, i) => {
-                                                  const schedule = dentist.weeklySchedule?.[day] || [];
-                                                  return (
-                                                    <Text key={i} style={{ marginLeft: 30, fontSize: 12, color: schedule.length ? "#444" : "#999" }}>
-                                                      {day}: {schedule.length ? schedule.join(", ") : "No schedule"}
-                                                    </Text>
-                                                  );
-                                                })}
-                                              </View>
-                                            )}
-                                          </View>
-                                        );
-                                      })}
-                                    </View>
-                                  );
-                                })()}
-
-
-
-                                      </ScrollView>
-
-                                      {/* Buttons */}
-                                      <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 20 }}>
-                                        <TouchableOpacity
-                                          style={{
-                                            flex: 1,
-                                            backgroundColor: "#b32020",
-                                            paddingVertical: 12,
-                                            borderRadius: 6,
-                                            marginRight: 8,
-                                          }}
-                                          onPress={() => setShowDentistModal(false)}
-                                        >
-                                          <Text style={{ color: "white", textAlign: "center", fontWeight: "bold" }}>
-                                            Cancel
-                                          </Text>
-                                        </TouchableOpacity>
-
-                                        <TouchableOpacity
-                                          style={{
-                                            flex: 1,
-                                            backgroundColor: "#2e7dccff",
-                                            paddingVertical: 12,
-                                            borderRadius: 6,
-                                            marginLeft: 8,
-                                          }}
-                                          onPress={() => {
-                                            setSelectedDentists(tempSelectedDentists);
-                                            setShowDentistModal(false);
-                                          }}
-                                        >
-                                          <Text style={{ color: "white", textAlign: "center", fontWeight: "bold" }}>
-                                            Save
-                                          </Text>
-                                        </TouchableOpacity>
-                                      </View>
-                                    </View>
+                                      <Text style={{ color: "white", textAlign: "center", fontWeight: "bold" }}>
+                                        Save
+                                      </Text>
+                                    </TouchableOpacity>
                                   </View>
-                                </Modal>
+                                </View>
+                             
+                            </Modal>
 
                                 {/* Message */}
                                 <Text style={{ alignSelf: "flex-start", marginBottom: 5, marginTop: 10 }}>
@@ -5193,14 +5204,7 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                         {/* Map Modal */}
                         <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={modalMap} onBackdropPress={() => setModalMap(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>
                       
-                          <View
-                            style={{
-                              flex: 1,
-                              justifyContent: "center",
-                              alignItems: "center",
-                              padding: 20,
-                            }}
-                          >
+                       
                             <View
                               style={{
                                 backgroundColor: "white",
@@ -5255,7 +5259,7 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                                 <Text>No map provided by the clinic</Text>
                               )}
                             </View>
-                          </View>
+                       
                         </Modal>
 
                       </View>
@@ -6220,7 +6224,7 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
           marginBottom: 20,
         }}
       >
-        This platform was created to bridge the gap between patients and trusted dental clinics in City of San Jose del Monte, Bulacan
+      This platform was created to bridge the gap between patients and trusted dental clinics in City of San Jose del Monte, Bulacan
       </Text>
 
       <View style={{ alignSelf: "center", marginTop: 20, marginBottom: 20 }}>
