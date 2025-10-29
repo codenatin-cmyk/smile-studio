@@ -2,6 +2,7 @@ import CalendarPicker from "@/components/CalendarPicker";
 import CameraScreenFilter from '@/components/CameraScreenFilter';
 import CancelAppointmentUser from "@/components/CancelAppointmentUser";
 import TimePicker from "@/components/TimePicker";
+import { activityLogger } from "@/hooks/useActivityLogs";
 import { useChatRoom } from "@/hooks/useChatRoom";
 import { useSession } from "@/lib/SessionContext";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -40,6 +41,7 @@ type Appointment = {
     last_name: string;
     email: string;
   };
+  outcome: string;
   isAccepted: boolean | null;
   rejection_note: string;
   isAttended: boolean | null;
@@ -688,54 +690,56 @@ useEffect(() => {
     return <Text>Loading...</Text>;
   }
 
+
 const createAppointment = async (
   client_id: string,
   datetime: Date,
   message: string,
-  request: string
+  request: any
 ) => {
-  // Step 1: Check if session user id is available
+  console.log("🟢 createAppointment called");
+  
   if (!session?.user?.id) {
-    console.error("No session user ID found");
+    console.error("❌ No session user ID found");
     return null;
   }
 
-  // Step 2: Log the data being inserted for debugging
-  console.log("Creating appointment with:", {
-    clinic_id: client_id,
-    patient_id: session.user.id,
-    date_time: datetime.toISOString(),
-    message: message,
-    request: tempSelectedDentists
-  });
+  console.log("🟢 Session user ID:", session.user.id);
 
-  // Step 3: Attempt the insert with detailed logging of result
   const result = await supabase
     .from("appointments")
     .insert([
       {
-        clinic_id: client_id,      // Clinic ID must exist in clinic_profiles
-        patient_id: session.user.id,  // Patient ID from authenticated user
+        clinic_id: client_id,
+        patient_id: session.user.id,
         date_time: datetime.toISOString(),
-        message: message,
+        message: 'HELLO',
         request: tempSelectedDentists,
         notification_sent: false
       },
     ])
     .select();
 
-  // Step 4: Check for errors and log results
   if (result.error) {
-    console.error("Error inserting appointment:", result.error.message);
+    console.error("❌ Error inserting appointment:", result.error.message);
     return null;
   }
 
-  // console.log("Inserted appointment:", result.data);
+  console.log("✅ Appointment created successfully");
+  console.log("🟡 About to call activityLogger.log...");
+  
+  // Try to log activity
+  try {
+    await activityLogger.log(
+      session.user.id, 
+      'user', 
+      'Created appointment'
+    );
+  } catch (error) {
+    console.error("❌ Error calling activity logger:", error);
+  }
 
-  // Step 5: Refresh appointments after successful insert (if applicable)
   await fetchAppointments();
-
-  // Step 6: Return inserted data
   return result.data;
 };
 
@@ -796,6 +800,17 @@ const createAppointment = async (
         .eq("id", session.user.id);
 
       if (updateError) throw updateError;
+
+        // Try to log activity
+      try {
+        await activityLogger.log(
+          session.user.id, 
+          'user', 
+          'Changed profile picture'
+        );
+      } catch (error) {
+        console.error("❌ Error calling activity logger:", error);
+      }
 
       // 7️⃣ Update local state
       setAvatarUrl(publicUrl);
@@ -945,6 +960,7 @@ type Appointment = {
     dentists?: { first_name: string; last_name: string }[];
   };
   profiles: { first_name: string; last_name: string, email: string; };
+  outcome: string;
   isAccepted: boolean | null;
   rejection_note: string;
   request: string;
@@ -1714,7 +1730,7 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
         color: dashboardView === "profile" ? '#00505cff' : '#ffffff',
         marginLeft: 8,
       }}>
-        Profile
+        Dashboard
       </Text>
     </View>
   )}
@@ -4716,7 +4732,7 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                                     </Text>
                                   </TouchableOpacity>
 
-                                  <TouchableOpacity
+                                 <TouchableOpacity
                                     style={{
                                       flex: 1,
                                       backgroundColor: "#2e7dccff",
@@ -4734,128 +4750,21 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
 
                                       const now = new Date();
 
-                                      // ✅ Check cooldown (2 minutes = 120000 ms)
-                                      if (
-                                        lastAppointmentTime &&
-                                        now.getTime() - lastAppointmentTime.getTime() < 2 * 60 * 1000
-                                      ) {
-                                        const remainingMs = 2 * 60 * 1000 - (now.getTime() - lastAppointmentTime.getTime());
-                                        const remainingSec = Math.ceil(remainingMs / 1000);
+                                      // ... all your validation code ...
 
-                                        setRemainingCooldownTime(remainingSec);
-                                        setCooldownModalVisible(true);
+                                      // ✅ Create the appointment (logging is done inside this function)
+                                      const appointmentResult = await createAppointment(
+                                        selectedClinicId, 
+                                        appointmentDate, 
+                                        messageToClinic, 
+                                        parsedDentistList
+                                      );
+
+                                      // Check if appointment was created successfully
+                                      if (!appointmentResult) {
+                                        // Handle error (show error modal, etc.)
                                         return;
                                       }
-
-                                      if (appointmentDate < now) {
-                                        setShowInvalidTimeModal(true);
-                                        return;
-                                      }
-
-                                        if (!selectedDentists || selectedDentists.length === 0) {
-                                          setShowDentistRequiredModal(true); // <-- show modal instead of alert
-                                          return;
-                                        }
-
-                                      const { data, error } = await supabase
-                                        .from("clinic_schedule")
-                                        .select("*")
-                                        .eq("clinic_id", selectedClinicId)
-                                        .single();
-
-                                      if (error || !data) {
-                                        console.log("❌ Error fetching clinic schedule:", error);
-                                        setShowOutOfScheduleModal(true);
-                                        return;
-                                      }
-
-                                      const normalizeSchedule = (day) => {
-                                        return day && day.from && day.to ? day : null;
-                                      };
-
-                                      const schedules = [
-                                        normalizeSchedule(data.sunday),
-                                        normalizeSchedule(data.monday),
-                                        normalizeSchedule(data.tuesday),
-                                        normalizeSchedule(data.wednesday),
-                                        normalizeSchedule(data.thursday),
-                                        normalizeSchedule(data.friday),
-                                        normalizeSchedule(data.saturday),
-                                      ];
-
-                                      if (!isWithinClinicSchedule(appointmentDate, schedules)) {
-                                        setShowOutOfScheduleModal(true);
-                                        return;
-                                      }
-
-                                      const dayIndex = appointmentDate.getDay();
-                                      const daySchedule = schedules[dayIndex];
-
-                                      if (daySchedule && daySchedule.to) {
-                                        const isValid = isAtLeast30MinsBeforeClosing(appointmentDate, daySchedule.to);
-                                        if (!isValid) {
-                                          setShowTooCloseModal(true);
-                                          return;
-                                        }
-                                      }
-
-                                      const diffMs = appointmentDate.getTime() - now.getTime();
-                                      if (diffMs < 30 * 60 * 1000) {
-                                        setShowCloseTimeModal(true);
-                                        return;
-                                      }
-
-                                      // Validate dentist availability
-                                      const appointmentDay = appointmentDate.toLocaleString("en-US", { weekday: "long" }); // e.g., "Monday"
-                                      const appointmentTime = appointmentDate.getHours() * 60 + appointmentDate.getMinutes(); // convert to minutes
-
-                                      // Get selected dentists only (filter out receptionist, owner)
-                                      const selectedDentistNames = tempSelectedDentists.filter(name => name.startsWith("Dr."));
-
-                                      const parsedDentistList = typeof dentistList === "string" ? JSON.parse(dentistList) : dentistList || [];
-
-                                      // Function to convert time string to minutes since midnight
-                                      const parseTimeToMinutes = (timeStr) => {
-                                        const [time, meridian] = timeStr.split(" ");
-                                        let [hours, minutes] = time.split(":").map(Number);
-                                        if (meridian === "PM" && hours !== 12) hours += 12;
-                                        if (meridian === "AM" && hours === 12) hours = 0;
-                                        return hours * 60 + minutes;
-                                      };
-
-                                      let unavailableDentists = [];
-
-                                      for (const name of selectedDentistNames) {
-                                        const match = name.match(/^Dr\. (.+?) \((.+)\)$/);
-                                        if (!match) continue;
-                                        const [_, dentistName, specialty] = match;
-
-                                        const dentist = parsedDentistList.find(
-                                          (d) => d.name === dentistName && d.specialty === specialty
-                                        );
-
-                                        const scheduleForDay = dentist?.weeklySchedule?.[appointmentDay] || [];
-
-                                        const isAvailable = scheduleForDay.some((slot) => {
-                                          const [from, to] = slot.split(" - ");
-                                          const fromMinutes = parseTimeToMinutes(from);
-                                          const toMinutes = parseTimeToMinutes(to);
-                                          return appointmentTime >= fromMinutes && appointmentTime <= toMinutes;
-                                        });
-
-                                        if (!isAvailable) {
-                                          unavailableDentists.push(name);
-                                        }
-                                      }
-
-                                      if (unavailableDentists.length > 0) {
-                                        setUnavailableDentists(unavailableDentists); // you can store this in state if you want to show names
-                                        setShowDentistUnavailableModal(true); // trigger a modal
-                                        return;
-                                      }
-
-                                      // ✅ Create the appointment
-                                      await createAppointment(selectedClinicId, appointmentDate, messageToClinic, parsedDentistList);
 
                                       // ✅ Save cooldown time
                                       await AsyncStorage.setItem(COOLDOWN_KEY, now.toISOString());
@@ -4869,8 +4778,6 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                                       setTempMessage("");
                                       setSelectedReasons([]);
                                     }}
-
-
                                   >
                                     <Text
                                       style={{
@@ -5967,12 +5874,27 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                         {item.isAccepted ? "Accepted" : "Rejected"}
                       </Text>
 
-                      <Text style={{ fontWeight: "700", marginBottom: 6 }}>Rejection Note:</Text>
-                      <Text style={{ marginBottom: 10 }}>
-                        {item.isAccepted === false
-                          ? item.rejection_note || "No rejection note"
-                          : "-"}
-                      </Text>
+                      {item.outcome && 
+                        <>
+                          <Text style={{ fontWeight: "700", marginBottom: 6 }}>Outcome:</Text>
+                          <Text style={{ marginBottom: 10, color: 'green'}}>
+                            {item.outcome}
+                          </Text>
+                        
+                        </>
+                      }
+                      
+                      {item.rejection_note && 
+                        <>
+                          <Text style={{ fontWeight: "700", marginBottom: 6 }}>Rejection Note:</Text>
+                          <Text style={{ marginBottom: 10 }}>
+                            {item.isAccepted === false
+                              ? item.rejection_note || "No rejection note"
+                              : "-"}
+                          </Text>
+                        
+                        </>
+                      }
 
                       <Text style={{ fontWeight: "700", marginBottom: 6 }}>Created At:</Text>
                       <Text style={{ marginBottom: 10 }}>
@@ -6023,6 +5945,7 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                         <Text style={{ flex: 1, fontWeight: "700" }}>Status</Text>
                         <Text style={{ flex: 1, fontWeight: "700" }}>Rejection Note</Text>
                         <Text style={{ flex: 1, fontWeight: "700" }}>Created At</Text>
+                        <Text style={{ flex: 1, fontWeight: "700" }}>Outcome</Text>
                         <Text style={{ flex: 1, fontWeight: "700", textAlign: "center" }}>
                           Attendance
                         </Text>
@@ -6107,6 +6030,11 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                         {/* Created At */}
                         <Text style={{ flex: 1, color: "#333" }}>
                           {new Date(item.created_at || 0).toLocaleString()}
+                        </Text>
+
+                         {/* Outcome */}
+                        <Text style={{ flex: 1, color: "#333" }}>
+                          {item.outcome}
                         </Text>
 
                         {/* Attendance */}
@@ -6274,8 +6202,7 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
           marginBottom: 20,
         }}
       >
-        This platform was created to bridge the gap between patients and
-        trusted dental clinics in SJDM, Caloocan, and Metro Manila.
+        This platform was created to bridge the gap between patients and trusted dental clinics in City of San Jose del Monte, Bulacan
       </Text>
 
       <View style={{ alignSelf: "center", marginTop: 20, marginBottom: 20 }}>

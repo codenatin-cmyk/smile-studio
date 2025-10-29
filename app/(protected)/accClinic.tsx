@@ -1,4 +1,6 @@
 import CancelAppointment from "@/components/CancelAppointment";
+import RescheduleAppointment from "@/components/RescheduleAppointment";
+import { activityLogger } from "@/hooks/useActivityLogs";
 import { useSession } from "@/lib/SessionContext";
 import { MaterialIcons } from "@expo/vector-icons";
 import Entypo from '@expo/vector-icons/Entypo';
@@ -224,7 +226,11 @@ const defaultWeeklySchedule = {
   const [requestViewVisible, setRequestViewVisible] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState([]);
 
-  const openRequestView = (requestStr) => {
+    const [outcomeModalVisible, setOutcomeModalVisible] = useState(false);
+const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
+const [outcomeMessage, setOutcomeMessage] = useState("");
+
+  const openRequestView = (requestStr : any) => {
     try {
       const parsed = JSON.parse(requestStr);
       setSelectedRequest(parsed);
@@ -732,6 +738,16 @@ const acceptAppointment = async (appointmentId: string, item: any) => {
     }),
   });
 
+  try {
+    await activityLogger.log(
+      item.clinic_profiles.clinic_id, 
+      'user', 
+      `Accepted an appointment`
+    );
+  } catch (error) {
+    console.error("❌ Error calling activity logger:", error);
+  }
+
    console.log('Fetch completed. Status:', response.status, 'StatusText:', response.statusText);
       
       if (!response.ok) {
@@ -756,22 +772,45 @@ const rejectAppointment = async (
     })
     .eq("id", appointmentId);
 
+  try {
+    await activityLogger.log(
+      '', 
+      'user', 
+      `Accepted an appointment`
+    );
+  } catch (error) {
+    console.error("❌ Error calling activity logger:", error);
+  }
+
   if (error) {
     console.error("Error rejecting appointment:", error.message); // See error
     Alert.alert("Error", error.message);
   }
 };
 
-const attendedAppointment = async (appointmentId: string) => {
+const openOutcomeModal = (appointmentId: string) => {
+  setSelectedAppointmentId(appointmentId);
+  setOutcomeModalVisible(true);
+};
+
+const attendedAppointment = async (appointmentId: string, outcome: string) => {
   const { error } = await supabase
     .from("appointments")
-    .update({ isAttended: true }) // ✅ CORRECTED
+    .update({ 
+      isAttended: true,
+      outcome: outcome 
+    }) 
     .eq("id", appointmentId);
 
   if (error) {
     console.error("Error marking as attended:", error.message);
     Alert.alert("Error", error.message);
   } else {
+    // Close modal and reset
+    setOutcomeModalVisible(false);
+    setOutcomeMessage("");
+    setSelectedAppointmentId(null);
+    
     // OPTIONAL: Refresh the appointments list if needed
     // await fetchAppointments();
   }
@@ -1039,6 +1078,17 @@ async function getProfile() {
         .eq("id", session.user.id); 
 
       const { error } = await supabase.from("profiles").upsert(updates);
+
+      try {
+        await activityLogger.log(
+          session?.user.id, 
+          'clinic', 
+          'Updated clinic profile'
+        );
+      } catch (error) {
+        console.error("❌ Error calling activity logger:", error);
+      }
+
       if (error) throw error;
     } catch (error) {
       if (error instanceof Error) Alert.alert(error.message);
@@ -1288,6 +1338,16 @@ async function getProfile() {
             const publicUrl = data?.publicUrl;
             if (!publicUrl) throw new Error("Failed to get public URL");
 
+              try {
+                await activityLogger.log(
+                  session?.user.id, 
+                  'clinic', 
+                  'Upload verification details'
+                );
+              } catch (error) {
+                console.error("❌ Error calling activity logger:", error);
+              }
+
             return publicUrl;
         } catch (err) {
             console.error("Upload failed:", err);
@@ -1383,11 +1443,23 @@ async function getProfile() {
                 .from("clinic_profiles")
                 .update(updates)
                 .eq("id", session!.user.id);
+
+                    try {
+                await activityLogger.log(
+                  session?.user.id as any, 
+                  'clinic', 
+                  'Upload verification details'
+                );
+              } catch (error) {
+                console.error("❌ Error calling activity logger:", error);
+              }
+
             
             if (dbUpdateError) throw dbUpdateError;
 
             Alert.alert("Success", publicUrl ? "Verification photo uploaded and submission sent!" : "Verification request sent!");
 
+          
             // Clear the local photo state after successful submission
             setVerifyPhoto(null);
 
@@ -1426,6 +1498,7 @@ type Appointment = {
   clinic_profiles: { clinic_name: string, email: string };
   profiles: { first_name: string; last_name: string, email: string };
   isAccepted: boolean | null;
+  outcome: string;
   rejection_note: string;
   isAttended: boolean | null;
   request: string; // 👈 Added this back in
@@ -1461,13 +1534,21 @@ const handleDownloadExcel = async (appointmentsPast: Appointment[]) => {
   const dataToExport = appointmentsPast.map(item => ({
     'Clinic Name': item.clinic_profiles?.clinic_name || '',
     Patient: item.profiles?.last_name || '',
-    Request: (() => {
+    Request: ( async () => {
       try {
+          await activityLogger.log(
+          item.clinic_id, 
+          'clinic', 
+          'Upload verification details'
+        );
+
         return JSON.parse(item.request).join(', ');
       } catch {
         return item.request || 'No request data';
       }
+      
     })(),
+    
     'Request Date & Time': new Date(item.date_time).toLocaleString(),
     Message: item.message,
     Status:
@@ -1481,7 +1562,10 @@ const handleDownloadExcel = async (appointmentsPast: Appointment[]) => {
         ? item.rejection_note || 'No rejection note'
         : '-',
     'Created At': new Date(item.created_at || 0).toLocaleString(),
+    
   }));
+
+  
 
   const ws = XLSX.utils.json_to_sheet(dataToExport);
   const wb = XLSX.utils.book_new();
@@ -1509,6 +1593,7 @@ const handleDownloadExcel = async (appointmentsPast: Appointment[]) => {
         Alert.alert('Sharing is not available on this device');
         return;
       }
+
 
       await Sharing.shareAsync(fileUri, {
         mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -1962,6 +2047,20 @@ const PatientHistoryModalComponent = () => (
                         }}
                       >
                         {apt.isAttended ? "Attended" : "Not Attended"}
+                      </Text>
+                    </View>
+                  )}
+                  {apt.outcome && (
+                    <View style={{ flexDirection: "row" }}>
+                      <Text style={{ fontWeight: "600", width: 140 }}>Outcome:</Text>
+                      <Text
+                        style={{
+                          flex: 1,
+                          color: apt.outcome ? "#4caf50" : "#f44336",
+                          fontWeight: "600",
+                        }}
+                      >
+                        {apt.outcome}
                       </Text>
                     </View>
                   )}
@@ -3993,7 +4092,7 @@ const PatientHistoryModalComponent = () => (
               }}
             >
               <TouchableOpacity
-                onPress={() => attendedAppointment(e.item.id)}
+                onPress={() => openOutcomeModal(e.item.id)}
                 style={{
                   backgroundColor: "#4CAF50",
                   paddingVertical: 8,
@@ -5430,8 +5529,10 @@ const PatientHistoryModalComponent = () => (
               {/* <Text style={{color: 'black'}}>{item.clinic_profiles.email}</Text>
               <Text style={{color: 'black'}}>{item.profiles.email}</Text>
               <Text style={{color: 'black'}}>{item.id}</Text> */}
-
-              <CancelAppointment data={item} sender_email={item.clinic_profiles.email} receiver_email={item.profiles.email}/>
+              <View style={{gap: 10}}>
+                <RescheduleAppointment data={item} sender_email={item.clinic_profiles.email} receiver_email={item.profiles.email} />
+                <CancelAppointment data={item} sender_email={item.clinic_profiles.email} receiver_email={item.profiles.email}/>
+              </View>
             </View>
           ))
         )}
@@ -5557,7 +5658,12 @@ const PatientHistoryModalComponent = () => (
                 </Text>
 
                 {/* Cancel */}
-                <View style={{ width: 180 }}>
+                <View style={{ width: 180, gap: 10}}>
+                  <RescheduleAppointment 
+                    data={item}
+                    sender_email={item.clinic_profiles.email}
+                    receiver_email={item.profiles.email}
+                  />
                   <CancelAppointment
                     data={item}
                     sender_email={item.clinic_profiles.email}
@@ -6175,15 +6281,30 @@ const PatientHistoryModalComponent = () => (
                         <Text style={{ marginBottom: 10 }}>
                           {item.isAccepted ? "Accepted" : "Rejected"}
                         </Text>
+                        
+                        {item.rejection_note && 
+                          <>  
+                            <Text style={{ fontWeight: "700", marginBottom: 6 }}>
+                              Rejection Note:
+                            </Text>
+                            <Text style={{ marginBottom: 10 }}>
+                              {item.isAccepted === false
+                                ? item.rejection_note || "No rejection note"
+                                : "-"}
+                            </Text>
+                          </>  
+                        }
 
-                        <Text style={{ fontWeight: "700", marginBottom: 6 }}>
-                          Rejection Note:
-                        </Text>
-                        <Text style={{ marginBottom: 10 }}>
-                          {item.isAccepted === false
-                            ? item.rejection_note || "No rejection note"
-                            : "-"}
-                        </Text>
+                        {item.outcome && 
+                          <>  
+                            <Text style={{ fontWeight: "700", marginBottom: 6 }}>
+                              Outcome:
+                            </Text>
+                            <Text style={{ marginBottom: 10, color: 'green' }}>
+                              {item.outcome}
+                            </Text>
+                          </>  
+                        }
 
                         <Text style={{ fontWeight: "700", marginBottom: 6 }}>Created At:</Text>
                         <Text style={{ marginBottom: 10 }}>
@@ -6210,7 +6331,7 @@ const PatientHistoryModalComponent = () => (
                             }}
                           >
                             <TouchableOpacity
-                              onPress={() => attendedAppointment(item.id)}
+                             onPress={() => openOutcomeModal(item.id)}
                               style={{
                                 backgroundColor: "#4CAF50",
                                 borderRadius: 8,
@@ -6287,11 +6408,13 @@ const PatientHistoryModalComponent = () => (
                           <Text style={{ flex: 1, fontWeight: "700" }}>Message</Text>
                           <Text style={{ flex: 1, fontWeight: "700" }}>Request</Text>
                           <Text style={{ flex: 1, fontWeight: "700" }}>Status</Text>
+                          
                           <Text style={{ flex: 1, fontWeight: "700" }}>Rejection Note</Text>
                           <Text style={{ flex: 1, fontWeight: "700" }}>Created At</Text>
                           <Text style={{ flex: 1, fontWeight: "700", textAlign: "center" }}>
                             Attendance
                           </Text>
+                          <Text style={{ flex: 1, fontWeight: "700" }}>Outcome</Text>
                           <Text style={{ flex: 1, fontWeight: "700", textAlign: "center" }}>
                             Actions
                           </Text>
@@ -6381,6 +6504,7 @@ const PatientHistoryModalComponent = () => (
                             {item.isAccepted ? "Accepted" : "Rejected"}
                           </Text>
 
+
                           {/* Rejection Note */}
                           <Text style={{ flex: 1, color: "#333" }}>
                             {item.isAccepted === false
@@ -6402,6 +6526,11 @@ const PatientHistoryModalComponent = () => (
                               : "Not Attended"}
                           </Text>
 
+                            {/* Outcome */}
+                          <Text style={{ flex: 1, color: "#333" }}>
+                            {item.outcome}
+                          </Text>
+
                           {/* Actions */}
                           <View
                             style={{
@@ -6414,7 +6543,7 @@ const PatientHistoryModalComponent = () => (
                             {item.isAccepted === true && (
                               <>
                                 <TouchableOpacity
-                                  onPress={() => attendedAppointment(item.id)}
+                                 onPress={() => openOutcomeModal(item.id)}
                                   style={{
                                     backgroundColor: "#4CAF50",
                                     paddingVertical: 8,
@@ -6425,7 +6554,7 @@ const PatientHistoryModalComponent = () => (
                                   <Text
                                     style={{ color: "white", fontWeight: "600", fontSize: 8 }}
                                   >
-                                    Attended
+                                    Attendend
                                   </Text>
                                 </TouchableOpacity>
 
@@ -7368,7 +7497,100 @@ const PatientHistoryModalComponent = () => (
           </View>
  
         </Modal>
+          
+         <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={outcomeModalVisible} onBackdropPress={() => setOutcomeModalVisible(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}> 
 
+            <View
+              style={{
+                backgroundColor: "white",
+                width: "90%",
+                padding: 20,
+                borderRadius: 16,
+                maxHeight: "80%",
+              }}
+            >
+              <Text style={{
+                fontSize: 18,
+                fontWeight: "600",
+                marginBottom: 16,
+                textAlign: "center"
+              }}>
+                Appointment Outcome
+              </Text>
+              <Text style={{color: 'red'}}>*Required</Text>
+              <TextInput
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#ddd",
+                  borderRadius: 8,
+                  padding: 12,
+                  minHeight: 100,
+                  textAlignVertical: "top",
+                  marginBottom: 16
+                }}
+                placeholder="Enter outcome message..."
+                value={outcomeMessage}
+                onChangeText={setOutcomeMessage}
+                multiline
+                numberOfLines={4}
+              />
+              
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setOutcomeModalVisible(false);
+                    setOutcomeMessage("");
+                    setSelectedAppointmentId(null);
+                  }}
+                  style={{
+                    flex: 1,
+                    backgroundColor: "#ccc",
+                    paddingVertical: 12,
+                    paddingHorizontal: 20,
+                    borderRadius: 8,
+                    marginRight: 8
+                  }}
+                >
+                  <Text style={{
+                    color: "#333",
+                    fontWeight: "600",
+                    textAlign: "center"
+                  }}>
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  onPress={() => {
+                    if (outcomeMessage.trim() === "") {
+                      Alert.alert("Required", "Please enter an outcome message");
+                      return;
+                    }
+                    if (selectedAppointmentId) {
+                      attendedAppointment(selectedAppointmentId, outcomeMessage);
+                    }
+                  }}
+                  style={{
+                    flex: 1,
+                    backgroundColor: "#4CAF50",
+                    paddingVertical: 12,
+                    paddingHorizontal: 20,
+                    borderRadius: 8,
+                    marginLeft: 8
+                  }}
+                >
+                  <Text style={{
+                    color: "white",
+                    fontWeight: "600",
+                    textAlign: "center"
+                  }}>
+                    Confirm
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          
+        </Modal>
 
       </LinearGradient>
     </LinearGradient>

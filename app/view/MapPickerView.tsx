@@ -1,27 +1,26 @@
-import MapboxGL from "@rnmapbox/maps"; // Native Mapbox
+import MapboxGL from "@rnmapbox/maps";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  FlatList,
   Platform,
   StyleSheet,
   Text,
+  TextInput,
+  TouchableOpacity,
   useWindowDimensions,
-  View
+  View,
 } from "react-native";
-
-// You may need to add this CSS import to your project's index.js or a similar file
-// import 'mapbox-gl/dist/mapbox-gl.css';
 
 const MAPBOX_ACCESS_TOKEN =
   "pk.eyJ1IjoiZG91YmxlajEyNiIsImEiOiJjbWZhb3RpczMwZ2l3Mmpwb2FodGdpanh3In0.-h87gulMpAPDy9aScbl3uA";
 
-
 interface MapPickerViewType {
   pinLongitude?: number;
   pinLatitude?: number;
-  allowEdit : boolean,
-  onSave? : (longitude : number, latitude : number) => void,
-  pins? : any[]
-};
+  allowEdit: boolean;
+  onSave?: (longitude: number, latitude: number) => void;
+  pins?: any[];
+}
 
 const styles = StyleSheet.create({
   mapContainer: {
@@ -31,6 +30,46 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     width: "100%",
+  },
+  searchContainer: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    right: 10,
+    zIndex: 999,
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 14,
+  },
+  searchResultBox: {
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    marginTop: 6,
+    maxHeight: 160,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  searchResult: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
   },
   callout: {
     backgroundColor: "white",
@@ -44,55 +83,33 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 4,
     textAlign: "left",
-    writingDirection: "ltr",
   },
   calloutText: {
     textAlign: "left",
-    writingDirection: "ltr",
-    includeFontPadding: false, // 👈 helps Android layout
-    textAlignVertical: "center", // 👈 prevents weird stacking
   },
 });
- 
 
 export default function MapPickerView(props: MapPickerViewType) {
   const { width } = useWindowDimensions();
   const [longitude, setLongitude] = useState(props.pinLongitude);
   const [latitude, setLatitude] = useState(props.pinLatitude);
-  const [mapboxgl, setMapBoxgl] = useState(null);
+  const [mapboxgl, setMapBoxgl] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showResults, setShowResults] = useState(false);
 
-
-
-  const mapContainerRef = useRef(null);
-  const mapRef = useRef(null);
-  const markerRef = useRef(null);
+  const mapContainerRef = useRef<any>(null);
+  const mapRef = useRef<any>(null);
+  const markerRef = useRef<any>(null);
 
   const defaultCoords = {
-    latitude: props.pinLatitude || 14.8058552317373,
-    longitude: props.pinLongitude || 121.047323237295,
+    latitude: props.pinLatitude || 14.5995,
+    longitude: props.pinLongitude || 120.9842, // Manila as default center
   };
 
-  function wrapText(text: string, limit: number) {
-    const words = text.split(" ");
-    let lines: string[] = [];
-    let currentLine = "";
-
-    words.forEach((word) => {
-      if ((currentLine + word).length <= limit) {
-        currentLine += (currentLine ? " " : "") + word;
-      } else {
-        lines.push(currentLine);
-        currentLine = word;
-      }
-    });
-
-    if (currentLine) lines.push(currentLine);
-    return lines.join("\n");
-  }
-
+  // Initialize Mapbox
   useEffect(() => {
     MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
-    // Ensures that MapboxGL is only loaded when on Web platform
     if (Platform.OS === "web") {
       setMapBoxgl(() => {
         let content = require("mapbox-gl");
@@ -102,6 +119,7 @@ export default function MapPickerView(props: MapPickerViewType) {
     }
   }, []);
 
+  // Setup Map for Web
   useEffect(() => {
     if (Platform.OS === "web" && !!mapboxgl && mapContainerRef.current) {
       const map = new mapboxgl.Map({
@@ -112,8 +130,8 @@ export default function MapPickerView(props: MapPickerViewType) {
       });
       mapRef.current = map;
 
-      // Web Onclick listener on map
-      map.on("click", (e) => {
+      // Click to pick location
+      map.on("click", (e: any) => {
         if (!props.allowEdit) return;
         setLatitude(e.lngLat.lat);
         setLongitude(e.lngLat.lng);
@@ -123,37 +141,27 @@ export default function MapPickerView(props: MapPickerViewType) {
     }
   }, [mapboxgl]);
 
-  // Unified effect for adding pins on web
+  // Add or update markers on Web
   useEffect(() => {
     if (Platform.OS === "web" && mapRef.current && mapboxgl) {
-      // Clear existing markers before re-rendering
       if (markerRef.current) {
         markerRef.current.remove();
       }
-      
-      // Add the editable pin if it exists
-      if (longitude && latitude) {
-        // Remove the old marker
-        if (markerRef.current) {
-          markerRef.current.remove();
-        }
 
-        // Add a new marker
+      if (longitude && latitude) {
         markerRef.current = new mapboxgl.Marker({ color: "red" })
           .setLngLat([longitude, latitude])
           .addTo(mapRef.current);
       }
-      // Loop through all provided pins and create markers for them
-      props.pins?.forEach(pin => {
-        // Check if both longitude and latitude are valid numbers
+
+      props.pins?.forEach((pin) => {
         if (pin.longitude && pin.latitude) {
-          var popup = new mapboxgl.Popup({ offset: 25 })
-          .setHTML(`<h3>${pin.clinic_name}</h3>
-            // <br>
+          const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(`
+            <h3>${pin.clinic_name}</h3>
             <p>Address: ${pin.address}</p>
-            <p>Mobile Number:${pin.mobile_number}</p>
-            `);
-          new mapboxgl.Marker({ color: 'red' }) // Use a different color for static pins
+            <p>Mobile: ${pin.mobile_number}</p>
+          `);
+          new mapboxgl.Marker({ color: "red" })
             .setLngLat([pin.longitude, pin.latitude])
             .addTo(mapRef.current)
             .setPopup(popup);
@@ -162,6 +170,7 @@ export default function MapPickerView(props: MapPickerViewType) {
     }
   }, [mapboxgl, longitude, latitude, props.pins]);
 
+  // Native map click handler
   const onMapClickNative = (e: any) => {
     if (!props.allowEdit) return;
     const coords = e.geometry.coordinates;
@@ -169,152 +178,159 @@ export default function MapPickerView(props: MapPickerViewType) {
     setLongitude(coords[0]);
   };
 
-  const renderNativeMap = () => {
-    const [selectedPin, setSelectedPin] = useState<[number, number]>()
-
-    // Ensure MapboxGL is initialized before rendering
-    if (!MapboxGL) {
-      return <Text>Loading Map...</Text>;
+  // 🔍 Handle location search (PH only)
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    if (query.length < 2) {
+      setSearchResults([]);
+      setShowResults(false);
+      return;
     }
-    return (
-      <MapboxGL.MapView
-        style={styles.mapContainer}
-        styleURL={MapboxGL.StyleURL.Street}
-        onPress={onMapClickNative}
-      >
-        <MapboxGL.Camera
-          zoomLevel={12}
-          centerCoordinate={[defaultCoords.longitude, defaultCoords.latitude]}
-        />
-        {/* Render single pin only if no props.pins is passed */}
-        {longitude && latitude && !props.pins && (
+
+    try {
+      const res = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+          query
+        )}.json?country=PH&access_token=${MAPBOX_ACCESS_TOKEN}&limit=5`
+      );
+      const data = await res.json();
+      setSearchResults(data.features || []);
+      setShowResults(true);
+    } catch (error) {
+      console.error("Geocoding error:", error);
+    }
+  };
+
+  // When user selects a search result
+  const handleSelectLocation = (item: any) => {
+    const [lng, lat] = item.center;
+    setLongitude(lng);
+    setLatitude(lat);
+    setShowResults(false);
+    setSearchQuery(item.place_name);
+
+    if (Platform.OS === "web" && mapRef.current) {
+      mapRef.current.flyTo({ center: [lng, lat], zoom: 14 });
+    }
+  };
+
+  const renderNativeMap = () => (
+    <MapboxGL.MapView
+      style={styles.mapContainer}
+      styleURL={MapboxGL.StyleURL.Street}
+      onPress={onMapClickNative}
+    >
+      <MapboxGL.Camera
+        zoomLevel={12}
+        centerCoordinate={[longitude || defaultCoords.longitude, latitude || defaultCoords.latitude]}
+      />
+
+      {/* Selected pin */}
+      {longitude && latitude && !props.pins && (
+        <MapboxGL.PointAnnotation
+          id="selected-location-pin"
+          coordinate={[longitude, latitude]}
+        >
+          <View
+            style={{
+              width: 16,
+              height: 16,
+              borderRadius: 12,
+              backgroundColor: "red",
+              borderWidth: 2,
+              borderColor: "white",
+            }}
+          />
+        </MapboxGL.PointAnnotation>
+      )}
+
+      {/* Multiple pins */}
+      {props.pins?.map((pin, index) =>
+        pin.longitude && pin.latitude ? (
           <MapboxGL.PointAnnotation
-            id="selected-location-pin"
-            coordinate={[longitude, latitude]}
+            key={`pin-${index}`}
+            id={`pin-${index}`}
+            coordinate={[pin.longitude, pin.latitude]}
           >
             <View
               style={{
-                width: 16,
-                height: 16,
-                borderRadius: 12,
+                width: 20,
+                height: 20,
+                borderRadius: 10,
                 backgroundColor: "red",
                 borderWidth: 2,
                 borderColor: "white",
               }}
             />
-          </MapboxGL.PointAnnotation>
-        )}
-
-        {/* Render multiple pins if props.pins exists */}
-        {props.pins?.map((pin, index) => (
-          (pin.longitude && pin.latitude) && (
-            <MapboxGL.PointAnnotation
-              key={`pinKey-${index}`}
-              id={`pin-${index}`}
-              coordinate={[pin.longitude, pin.latitude]}
-            >
-              <View
-                style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: 10,
-                  backgroundColor: "blue",
-                  borderWidth: 2,
-                  borderColor: "white",
-                }}
-              />
-            {Platform.OS === "android" ? (
-              // ✅ Custom overlay for Android
+            <MapboxGL.Callout>
               <View style={styles.callout}>
-                <Text
-                  style={{
-                    ...styles.title,
-                    color: "#ff0000ff",
-                    textAlign: "center",
-                    fontSize: 7,
-                  }}
-                >
-                  {wrapText(pin.clinic_name, 15)}
-                </Text>
+                <Text style={styles.title}>{pin.clinic_name}</Text>
+                <Text style={styles.calloutText}>Address: {pin.address}</Text>
+                <Text style={styles.calloutText}>Mobile: {pin.mobile_number}</Text>
               </View>
-            ) : (
-              // ✅ Native Callout for iOS/Web
-              <MapboxGL.Callout>
-                <View style={styles.callout}>
-                  <Text style={styles.title}>{pin.clinic_name}</Text>
-                  <Text style={styles.calloutText}>Address: {pin.address}</Text>
-                  <Text style={styles.calloutText}>Mobile: {pin.mobile_number}</Text>
-                </View>
-              </MapboxGL.Callout>
-            )}
-
-            </MapboxGL.PointAnnotation>
-          )
-        ))}
-
-      </MapboxGL.MapView>
-    );
-  };
+            </MapboxGL.Callout>
+          </MapboxGL.PointAnnotation>
+        ) : null
+      )}
+    </MapboxGL.MapView>
+  );
 
   return (
-    <View
-      style={{
-        width: "100%",
-        backgroundColor: "white",
-        padding: 0,
-        ...(width > 720
-          ? {
-              minWidth: 580,
-              minHeight: 580,
-            }
-          : {
-              minHeight: 0,
-            }),
-      }}
-    >
-      {
-        (latitude && longitude)
-        &&
-        <Text>{`Selected location at x:${longitude} y:${latitude}`}</Text>
-      }
+    <View style={{ flex: 1, width: "100%", backgroundColor: "white" }}>
+      {/* 🔍 Search Bar */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          value={searchQuery}
+          onChangeText={handleSearch}
+          placeholder="Search location in the Philippines..."
+          style={styles.searchInput}
+        />
+        {showResults && searchResults.length > 0 && (
+          <View style={styles.searchResultBox}>
+            <FlatList
+              data={searchResults}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  onPress={() => handleSelectLocation(item)}
+                  style={styles.searchResult}
+                >
+                  <Text>{item.place_name}</Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        )}
+      </View>
+
+      {/* 🗺 Map */}
       {Platform.OS === "web" ? (
-        <div 
-          ref={mapContainerRef} 
-          style={{ 
-            width: "100%", 
-            height: width > 720 ? "100%" : 300,  // or a fixed height like 300 for mobile
-            minHeight: 300 
-          }} 
+        <div
+          ref={mapContainerRef}
+          style={{
+            width: "100%",
+            height: width > 720 ? "100%" : 300,
+            minHeight: 300,
+          }}
         />
       ) : (
         renderNativeMap()
       )}
-      {
-        (!!longitude && !!latitude && props.allowEdit)
-        &&
 
-          <Text
-            style={{
-              color: "#003f30ff",
-              fontWeight: "bold",
-              textAlign: "center",
-              margin: 20,
-              marginTop: 10,
-              ...(width > 720
-              ? {
-                  
-                }
-              : {
-                  
-                }),
-            }}
-          onPress={()=>{
-            props?.onSave(longitude, latitude);
+      {/* ✅ Confirm Button */}
+      {!!longitude && !!latitude && props.allowEdit && (
+        <Text
+          style={{
+            color: "#b71c1c",
+            fontWeight: "bold",
+            textAlign: "center",
+            margin: 20,
           }}
-          >Confirm Clinic Location</Text>
-      }
-
+          onPress={() => props?.onSave(longitude, latitude)}
+        >
+          Confirm Clinic Location
+        </Text>
+      )}
     </View>
   );
 }
-

@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { activityLogger } from '../hooks/useActivityLogs';
 
 type Appointment = {
   id: string;
@@ -217,6 +218,16 @@ export default function CancelAppointment({ data, sender_email, receiver_email }
       } else {
         setResultType('success');
         setResultMessage('Appointment cancelled successfully');
+      }
+
+      try {
+        await activityLogger.log(
+          data.clinic_id, 
+          'clinic', 
+           `Cancelled appointment for patient ${data.profiles.first_name}  ${data.profiles.last_name}`
+        );
+      } catch (error) {
+        console.error("❌ Error calling activity logger:", error);
       }
 
       setModalVisible(false);

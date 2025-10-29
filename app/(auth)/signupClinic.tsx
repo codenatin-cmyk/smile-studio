@@ -360,6 +360,18 @@ return (
               }}
               keyboardType="email-address"
               autoCapitalize="none"
+              onBlur={() => {
+              const emailRegex = /^[A-Za-z0-9._%+-]+@(gmail\.com|outlook\.com|hotmail\.com|yahoo\.com)$/i;
+              if (email && !emailRegex.test(email)) {
+                setErrors((prev) => ({
+                  ...prev,
+                  email:
+                    'Only Gmail, Outlook, Hotmail, or Yahoo email addresses are allowed.',
+                }));
+              } else {
+                setErrors((prev) => ({ ...prev, email: undefined }));
+              }
+          }}
             />
             {errors.email && (
               <Text style={styles.errorText}>{errors.email}</Text>

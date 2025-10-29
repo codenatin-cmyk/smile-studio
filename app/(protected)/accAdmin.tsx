@@ -1,3 +1,5 @@
+import ActivityLogScreen from '@/components/ActivityLogScreen';
+import { activityLogger } from '@/hooks/useActivityLogs';
 import { useSession } from '@/lib/SessionContext';
 import { FontAwesome, FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 import SimpleLineIcons from '@expo/vector-icons/SimpleLineIcons';
@@ -23,6 +25,7 @@ export default function Account() {
   const [website, setWebsite] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
 
+  const [adminId, setAdminId] = useState('')
   const [adminName, setNameAdmin] = useState('')
   const [avatarAdmin, setAvatarAdmin] = useState('')
 
@@ -205,6 +208,14 @@ const warnUser = async (id, currentStatus, reason) => {
   const newStatus = !currentStatus;
 
   try {
+    const { data: userData, error: fetchError } = await supabase
+      .from('profiles')
+      .select('first_name, last_name')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) throw fetchError;
+
     const { error } = await supabase
       .from('profiles')
       .update({
@@ -215,6 +226,13 @@ const warnUser = async (id, currentStatus, reason) => {
       .eq('id', id);
 
     if (error) throw error;
+
+    await activityLogger.log(
+      adminId,
+      'admin',
+      `${newStatus ? 'Warned' : 'Unwarned'} user ${userData.first_name} ${userData.last_name}`
+    );
+
 
     setPatientUsers((prev) =>
       prev.map((u) =>
@@ -232,6 +250,16 @@ const banUser = async (id, currentStatus, reason) => {
   const newStatus = !currentStatus;
 
   try {
+    // get user info
+    const { data: userData, error: fetchError } = await supabase
+      .from('profiles')
+      .select('first_name, last_name')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // update ban status
     const { error } = await supabase
       .from('profiles')
       .update({
@@ -242,6 +270,14 @@ const banUser = async (id, currentStatus, reason) => {
 
     if (error) throw error;
 
+    // activity log
+    await activityLogger.log(
+      adminId,
+      'admin',
+      `${newStatus ? 'Banned' : 'Unbanned'} user ${userData.first_name} ${userData.last_name}`
+    );
+
+    // update state
     setPatientUsers((prev) =>
       prev.map((u) =>
         u.id === id
@@ -250,7 +286,7 @@ const banUser = async (id, currentStatus, reason) => {
       )
     );
   } catch (err) {
-    console.error('Failed to ban/unban user:', err);
+    console.error('❌ Failed to ban/unban user:', err);
   }
 };
   
@@ -468,6 +504,7 @@ useEffect(() => {
       if (error && status !== 406) throw error
 
       if (data) {
+        setAdminId(session.user.id)
         setNameAdmin(data.nameadmin)
         setAvatarAdmin(data.avatar_url)
       }
@@ -1027,6 +1064,38 @@ useEffect(() => {
 
 <TouchableOpacity
   onPress={() => {
+    setDashboardView("activityLogs");
+    if (isMobile) {
+      setMoved((prev) => !prev);
+      setExpanded((prev) => !prev);
+    }
+  }}
+  style={{
+    ...styles.mar2,
+    backgroundColor: dashboardView === "activityLogs" ? '#ffffff' : 'transparent',
+    borderRadius: 15,
+    padding: 10,
+  }}
+  disabled={loading}
+>
+  {loading ? (
+    <ActivityIndicator animating color={"black"} />
+  ) : (
+    <View style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 10 }}>
+      <FontAwesome name="tasks" size={24} color={dashboardView === "activityLogs" ? '#00505cff' : '#ffffff'} />
+      <Text style={{
+        ...styles.buttonText,
+        color: dashboardView === "activityLogs" ? '#00505cff' : '#ffffff',
+        marginLeft: 8,
+      }}>
+        Activity Logs
+      </Text>
+    </View>
+  )}
+</TouchableOpacity>
+
+<TouchableOpacity
+  onPress={() => {
     setDashboardView("clinics");
     if (isMobile) {
       setMoved((prev) => !prev);
@@ -1390,7 +1459,14 @@ useEffect(() => {
               </View>
               
             </View>
-    
+        
+        {/* Activity Logs */}
+          <View style={[styles.dashboard, { width: !isDesktop ? '95%' : expanded ? '80%' : '95%', right: dashboardView === 'activityLogs' ? 11 : 20000, backgroundColor: '#f1f5f9',}]}>
+         
+          <ActivityLogScreen />
+                  
+        </View>
+
             
         {/* Dashboard Clinics --------------------------------------------------------------------------------------- */}
     
@@ -4360,6 +4436,12 @@ useEffect(() => {
                                   denied_verification_reason: denialReason,
                                 })
                                 .eq("id", selectedClinicForAction.id);
+                              
+                              await activityLogger.log(
+                                adminId,
+                                'admin',
+                                `Denied verification request for clinic ${selectedClinicForAction.name}. Reason: ${denialReason}`
+                              );
 
                               if (error) {
                                 alert("Error denying clinic.");
@@ -4589,6 +4671,12 @@ useEffect(() => {
                 isVerified: true,
               })
               .eq("id", selectedClinicForAction.id);
+
+              await activityLogger.log(
+                adminId,
+                'admin',
+                `Accepted verification request for clinic ${selectedClinicForAction.name}`
+              );
 
             if (error) {
               alert("Error verifying clinic.");

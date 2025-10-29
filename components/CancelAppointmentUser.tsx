@@ -1,3 +1,4 @@
+import { activityLogger } from '@/hooks/useActivityLogs';
 import { supabase } from '@/lib/supabase';
 import React, { useState } from 'react';
 import {
@@ -217,6 +218,16 @@ export default function CancelAppointmentUser({ data, sender_email, receiver_ema
       } else {
         setResultType('success');
         setResultMessage('Appointment cancelled successfully');
+      }
+
+      try {
+        await activityLogger.log(
+          data.id, 
+          'user', 
+          `Cancelled appointment at ${data.clinic_profiles.clinic_name}`
+        );
+      } catch (error) {
+        console.error("❌ Error calling activity logger:", error);
       }
 
       setModalVisible(false);
