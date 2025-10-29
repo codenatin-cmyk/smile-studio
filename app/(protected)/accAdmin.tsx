@@ -1170,7 +1170,7 @@ useEffect(() => {
         color: dashboardView === "authusers" ? '#00505cff' : '#ffffff',
         marginLeft: 8,
       }}>
-        Auth Users
+        Manage Users
       </Text>
     </View>
   )}
@@ -1202,7 +1202,7 @@ useEffect(() => {
         color: dashboardView === "authclinics" ? '#00505cff' : '#ffffff',
         marginLeft: 8,
       }}>
-        Auth Clinics
+        Manage Clinics
       </Text>
     </View>
   )}
