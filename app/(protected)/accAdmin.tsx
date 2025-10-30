@@ -290,6 +290,53 @@ const banUser = async (id, currentStatus, reason) => {
   }
 };
   
+const [supportMessageCount, setSupportMessageCount] = useState(0);
+
+useEffect(() => {
+  const fetchSupportCount = async () => {
+    try {
+      const { count, error } = await supabase
+        .from('support_messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending'); // Only count pending messages
+      
+      if (error) throw error;
+      setSupportMessageCount(count ?? 0);
+    } catch (error) {
+      console.error('Error fetching support count:', error);
+    }
+  };
+
+  // Initial fetch
+  fetchSupportCount();
+
+  // Set up real-time subscription
+  const channel = supabase
+    .channel('support-messages-realtime')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'support_messages',
+      },
+      (payload) => {
+        console.log('Support message change detected:', payload);
+        // Refetch count whenever any support message changes
+        fetchSupportCount();
+      }
+    )
+    .subscribe();
+
+  // Also refresh count when dashboard view changes to 'chats'
+  if (dashboardView === 'chats') {
+    fetchSupportCount();
+  }
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, [dashboardView]);
 
 const updateSupportStatus = async (messageId: string, status: string, adminNotes?: string) => {
   try {
@@ -1284,6 +1331,7 @@ useEffect(() => {
     backgroundColor: dashboardView === "chats" ? '#ffffff' : 'transparent',
     borderRadius: 15,
     padding: 10,
+    position: 'relative', // Important for badge positioning
   }}
   disabled={loading}
 >
@@ -1299,6 +1347,36 @@ useEffect(() => {
       }}>
         Support
       </Text>
+      
+      {/* Notification Badge */}
+      {supportMessageCount > 0 && (
+        <View
+          style={{
+            position: 'absolute',
+            top: -5,
+            left: -5,
+            backgroundColor: '#ff4444',
+            borderRadius: 12,
+            minWidth: 24,
+            height: 24,
+            justifyContent: 'center',
+            alignItems: 'center',
+            paddingHorizontal: 6,
+            borderWidth: 2,
+            borderColor: dashboardView === "chats" ? '#ffffff' : '#00505cff',
+          }}
+        >
+          <Text
+            style={{
+              color: 'white',
+              fontSize: 12,
+              fontWeight: 'bold',
+            }}
+          >
+            {supportMessageCount > 99 ? '99+' : supportMessageCount}
+          </Text>
+        </View>
+      )}
     </View>
   )}
 </TouchableOpacity>

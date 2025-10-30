@@ -221,6 +221,61 @@ const defaultWeeklySchedule = {
   sunday: [],
 };
 
+
+// Add this state variable with your other states (around line 50-60)
+const [appointmentRequestCount, setAppointmentRequestCount] = useState(0);
+
+// Add this useEffect to fetch and listen for appointment requests
+useEffect(() => {
+  if (!session?.user?.id) return;
+
+  const fetchRequestCount = async () => {
+    try {
+      const { count, error } = await supabase
+        .from('appointments')
+        .select('*', { count: 'exact', head: true })
+        .eq('clinic_id', session.user.id)
+        .is('isAccepted', null)
+        .or('rejection_note.is.null,rejection_note.eq.\'\'');
+      
+      if (error) throw error;
+      setAppointmentRequestCount(count ?? 0);
+    } catch (error) {
+      console.error('Error fetching request count:', error);
+    }
+  };
+
+  // Initial fetch
+  fetchRequestCount();
+
+  // Set up real-time subscription
+  const channel = supabase
+    .channel('appointment-requests-realtime')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'appointments',
+        filter: `clinic_id=eq.${session.user.id}`,
+      },
+      (payload) => {
+        console.log('Appointment change detected:', payload);
+        // Refetch count whenever any appointment changes
+        fetchRequestCount();
+      }
+    )
+    .subscribe();
+
+  // Also refresh count when dashboard view changes to 'pending'
+  if (dashboardView === 'pending') {
+    fetchRequestCount();
+  }
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, [session?.user?.id, dashboardView]);
   // State to open schedule editor immediately after add:
   const [openScheduleForIndex, setOpenScheduleForIndex] = useState<number | null>(null);
   const [requestViewVisible, setRequestViewVisible] = useState(false);
@@ -3197,9 +3252,10 @@ const PatientHistoryModalComponent = () => (
   }}
   style={{
     ...styles.mar2,
-    backgroundColor: dashboardView === "pending" ? '#ffffffff' : 'transparent',
+    backgroundColor: dashboardView === 'pending' ? '#ffffffff' : 'transparent',
     borderRadius: 15,
     padding: 5,
+    position: 'relative', // Important for badge positioning
   }}
   disabled={loading}
 >
@@ -3215,6 +3271,36 @@ const PatientHistoryModalComponent = () => (
       }}>
         Requests
       </Text>
+      
+      {/* Notification Badge */}
+      {appointmentRequestCount > 0 && (
+        <View
+          style={{
+            position: 'absolute',
+            top: -5,
+            left: -5,
+            backgroundColor: '#ff4444',
+            borderRadius: 12,
+            minWidth: 24,
+            height: 24,
+            justifyContent: 'center',
+            alignItems: 'center',
+            paddingHorizontal: 6,
+            borderWidth: 2,
+            borderColor: dashboardView === "pending" ? '#ffffff' : '#00505cff',
+          }}
+        >
+          <Text
+            style={{
+              color: 'white',
+              fontSize: 12,
+              fontWeight: 'bold',
+            }}
+          >
+            {appointmentRequestCount > 99 ? '99+' : appointmentRequestCount}
+          </Text>
+        </View>
+      )}
     </View>
   )}
 </TouchableOpacity>
