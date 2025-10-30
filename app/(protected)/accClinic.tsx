@@ -3236,7 +3236,7 @@ const PatientHistoryModalComponent = () => (
         color: dashboardView === "appointments" ? '#00505cff' : '#ffffffff',
         marginLeft: 8,
       }}>
-        Appointments
+        Running Appointments
       </Text>
     </View>
   )}
@@ -3269,7 +3269,7 @@ const PatientHistoryModalComponent = () => (
         color: dashboardView === "pending" ? '#00505cff' : '#ffffffff',
         marginLeft: 8,
       }}>
-        Requests
+        Appointment Requests
       </Text>
       
       {/* Notification Badge */}
@@ -3331,7 +3331,7 @@ const PatientHistoryModalComponent = () => (
         color: dashboardView === "history" ? '#00505cff' : '#ffffffff',
         marginLeft: 8,
       }}>
-        History
+        Appointment History
       </Text>
     </View>
   )}
@@ -4063,7 +4063,7 @@ const PatientHistoryModalComponent = () => (
         marginBottom: 10,
       }}
     >
-      History
+     Appointment History
     </Text>
 
     <FlatList
@@ -6208,7 +6208,7 @@ const PatientHistoryModalComponent = () => (
                   color: "#00505cff",
                 }}
               >
-                History
+                Appointment History
               </Text>
 
               <TouchableOpacity

@@ -349,92 +349,92 @@ export const ChatRoomsList: React.FC<ChatRoomsListProps> = ({
     return bLastMessageDate - aLastMessageDate; // Descending order (newest first)
   });
 
-  const renderRoom = ({ item }: { item: ChatRoom }) => {
-    const otherUserName =
-      role === "clinic"
-        ? `${item.profiles.first_name} ${item.profiles.last_name}`
-        : item?.clinic_profiles?.clinic_name || "Unknown Clinic";
+ const renderRoom = ({ item }: { item: ChatRoom }) => {
+  const otherUserName =
+    role === "clinic"
+      ? `${item.profiles.first_name} ${item.profiles.last_name}`
+      : item?.clinic_profiles?.clinic_name || "Unknown Clinic";
 
-    const otherUserAvatarUrl =
-      role === "clinic"
-        ? item?.profiles?.avatar_url
-        : item?.clinic_profiles?.clinic_photo_url
+  const otherUserAvatarUrl =
+    role === "clinic"
+      ? item?.profiles?.avatar_url
+      : item?.clinic_profiles?.clinic_photo_url;
 
-    // Count unread messages (messages sent by others that haven't been read)
-    const unreadCount = item.messages?.filter(
-      (msg) => msg.sender_id !== currentUserId && msg.is_read === false
-    ).length || 0;
+  // Count unread messages (messages sent by others that haven't been read)
+  const unreadCount = item.messages?.filter(
+    (msg) => msg.sender_id !== currentUserId && msg.is_read === false
+  ).length || 0;
 
-    // Get the date from the most recent message
-    let displayDate = item.created_at; // fallback to room creation date
-    
-    if (item.messages && item.messages.length > 0) {
-      // Find the most recent message by comparing all message dates
-      const mostRecentMessage = item.messages.reduce((latest, current) => {
-        return new Date(current.created_at) > new Date(latest.created_at) ? current : latest;
-      });
-      displayDate = mostRecentMessage.created_at;
-    }
+  // Get the date from the most recent message
+  let displayDate = item.created_at; // fallback to room creation date
+  
+  if (item.messages && item.messages.length > 0) {
+    // Find the most recent message by comparing all message dates
+    const mostRecentMessage = item.messages.reduce((latest, current) => {
+      return new Date(current.created_at) > new Date(latest.created_at) ? current : latest;
+    });
+    displayDate = mostRecentMessage.created_at;
+  }
 
-    return (
-     <TouchableOpacity
-  style={styles.roomItem}
-  onPress={() => onRoomSelect(item.id, otherUserName)}
->
-  <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-    {/* Avatar */}
-    {otherUserAvatarUrl ? (
-      <Image
-        source={{ uri: otherUserAvatarUrl }}
-        style={styles.avatar}
-      />
-    ) : (
-      <View
-        style={[
-          styles.avatar,
-          {
-            justifyContent: "center",
-            alignItems: "center",
-            backgroundColor: "#fff",
-          },
-        ]}
-      >
-        <FontAwesome5 name="clinic-medical" size={24} color="#4a878bff" />
+  return (
+    <TouchableOpacity
+      style={styles.roomItem}
+      onPress={() => onRoomSelect(item.id, otherUserName)}
+    >
+      {/* Avatar */}
+      {otherUserAvatarUrl ? (
+        <Image
+          source={{ uri: otherUserAvatarUrl }}
+          style={styles.avatar}
+        />
+      ) : (
+        <View
+          style={[
+            styles.avatar,
+            {
+              justifyContent: "center",
+              alignItems: "center",
+              backgroundColor: "#fff",
+            },
+          ]}
+        >
+          <FontAwesome5 name="clinic-medical" size={24} color="#4a878bff" />
+        </View>
+      )}
+
+      {/* Name */}
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text
+          style={[
+            styles.roomTitle,
+            isMobile
+              ? otherUserName.length > 25
+                ? { fontSize: 14 }
+                : { fontSize: 18 }
+              : null,
+          ]}
+          numberOfLines={1}
+        >
+          {isMobile && otherUserName.length > 25
+            ? otherUserName.slice(0, 25) + "..."
+            : otherUserName}
+        </Text>
       </View>
-    )}
 
-    {/* Name and unread badge */}
-    <View style={{ flex: 1, minWidth: 0 }}>
-      <Text
-        style={[
-          styles.roomTitle,
-          isMobile
-            ? otherUserName.length > 25
-              ? { fontSize: 14 }
-              : { fontSize: 18 }
-            : null,
-        ]}
-        numberOfLines={1}
-      >
-        {isMobile && otherUserName.length > 25
-          ? otherUserName.slice(0, 25) + "..."
-          : otherUserName}
-      </Text>
+      {/* Unread badge - positioned on the right */}
       {unreadCount > 0 && (
         <View style={styles.unreadBadge}>
           <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
         </View>
       )}
-    </View>
 
-    {/* Date - fixed on the right */}
-    <Text style={styles.roomDate}>
-      {new Date(displayDate).toLocaleDateString()}
-    </Text>
-  </View>
-</TouchableOpacity>
-    );
-  };
+      {/* Date - positioned on the right */}
+      <Text style={styles.roomDate}>
+        {new Date(displayDate).toLocaleDateString()}
+      </Text>
+    </TouchableOpacity>
+  );
+};
 
   if (loading) {
     return (
