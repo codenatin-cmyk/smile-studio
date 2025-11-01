@@ -2205,9 +2205,17 @@ useEffect(() => {
                       </Modal>
 
                       
-                      <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={fullProfile} onBackdropPress={() => setFullProfile(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>
-                      
-                        <View style={{ flex: 1, backgroundColor: "#f8fafc" }}>
+                      <Modal  
+  animationIn="slideInRight" 
+  animationOut="slideOutRight" 
+  isVisible={fullProfile} 
+  onBackdropPress={() => setFullProfile(false)} 
+  backdropColor="#000" 
+  backdropOpacity={0.3} 
+  style={{ margin: 0 }}
+>
+  
+  <View style={{ flex: 1, backgroundColor: "#f8fafc" }}>
                           
                           {/* Header with Back Button */}
                           <View
