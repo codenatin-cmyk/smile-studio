@@ -1561,7 +1561,7 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
 
             <Text style={{fontWeight: 'bold', fontSize: 20, marginTop: -40, color: '#00505cff', textAlign: 'center', }}>SMILE STUDIO</Text>
             <Text style={{fontSize: 12, color: '#00505cff', textAlign: 'center', marginBottom: 7, }}>GRIN CREATORS</Text>
-            <View style={{
+             <View style={{
   paddingHorizontal: 16,
   paddingVertical: 8,
   backgroundColor: 'rgba(255, 255, 255, 0.3)',
@@ -1580,7 +1580,7 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
     letterSpacing: 1,
   }}>
     • PATIENT •
-  </Text>
+     </Text>
             </View>
                 <TouchableOpacity
                   style={{
@@ -2931,328 +2931,461 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
     </TouchableOpacity>
 
     {/* Modal */}
-  <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={viewClinic} onBackdropPress={() => setviewClinic(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}> 
+<Modal
+  animationIn="fadeIn"
+  animationOut="fadeOut"
+  isVisible={viewClinic}
+  onBackdropPress={() => setviewClinic(false)}
+  backdropColor="#000"
+  backdropOpacity={0.1}
+  style={{ alignItems: "center", justifyContent: "center" }}
+>
+  <View
+    style={{
+      backgroundColor: "#fff",
+      borderRadius: 20,
+      padding: isMobile ? 16 : isTablet ? 20 : 24,
+      width: isMobile ? "95%" : isTablet ? "80%" : "40%",
+      maxWidth: isMobile ? "100%" : isTablet ? 700 : 900,
+      maxHeight: "90%",
+      borderWidth: 2,
+      borderColor: "rgba(214, 214, 214, 1)",
+      elevation: 8,
+      position: "relative",
+      // Ensure consistent scaling across devices
+      minWidth: isMobile ? 300 : 400,
+    }}
+  >
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ 
+        paddingBottom: 16,
+        // Prevent horizontal overflow on small screens
+        paddingHorizontal: isMobile ? 0 : 0,
+      }}
+      nestedScrollEnabled={true}
+      keyboardShouldPersistTaps="handled"
+    >
+      {/* ❌ Top-Right Close Button - Adjusted for better touch target on mobile */}
+      <TouchableOpacity
+        onPress={() => setviewClinic(false)}
+        style={{
+          position: "absolute",
+          top: isMobile ? 8 : 12,
+          right: isMobile ? 8 : 12,
+          zIndex: 10,
+          padding: isMobile ? 10 : 12,
+          borderRadius: 20,
+          width: isMobile ? 44 : 48,
+          height: isMobile ? 44 : 48,
+          backgroundColor: "#da3434ff",
+          alignItems: "center",
+          justifyContent: "center",
+          shadowColor: "#da3434ff",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.3,
+          shadowRadius: 4,
+          elevation: 3,
+          // Ensure it's accessible on all screen sizes
+          minWidth: 44,
+          minHeight: 44,
+        }}
+        hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }} // Larger touch area on mobile
+      >
+        <Text style={{ fontSize: isMobile ? 18 : 20, fontWeight: "bold", color: "white" }}>
+          ×
+        </Text>
+      </TouchableOpacity>
 
-
+      {/* Profile Header - Improved flex for better wrapping */}
       <View
         style={{
-          backgroundColor: "#fff",
-          borderRadius: 20,
-          padding: 24,
-          width: isMobile ? "90%" : "35%",
-          borderWidth: 2,
-          borderColor: "rgba(214, 214, 214, 1)",
-          elevation: 8,
-          position: "relative",
+          flexDirection: isMobile ? "column" : "row",
+          alignItems: isMobile ? "center" : "flex-start",
+          marginBottom: 20,
+          paddingRight: isMobile ? 0 : 60, // Adjust for close button overlap
+          marginTop: isMobile ? 50 : 20, // Account for close button height on mobile
+          gap: isMobile ? 12 : 0,
         }}
       >
-        {/* ❌ Top-Right Close Button */}
-        <TouchableOpacity
-          onPress={() => setviewClinic(false)}
-          style={{
-            position: "absolute",
-            top: 16,
-            right: 16,
-            zIndex: 10,
-            padding: 8,
-            borderRadius: 20,
-            width: 36,
-            height: 36,
-            backgroundColor: "#da3434ff",
-            alignItems: "center",
-            justifyContent: "center",
-            shadowColor: "#da3434ff",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.3,
-            shadowRadius: 4,
-            elevation: 3,
-          }}
-        >
-          <Text style={{ fontSize: 20, fontWeight: "bold", color: "white" }}>×</Text>
-        </TouchableOpacity>
-
-        {/* Profile Header */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            marginBottom: 20,
-            paddingRight: 40,
-          }}
-        >
-          {selectedClinicImage ? (
-            <Image
-              source={{ uri: selectedClinicImage }}
-              style={{
-                width: 80,
-                height: 80,
-                borderRadius: 40,
-                marginRight: 16,
-                backgroundColor: "#f2f2f2",
-                borderWidth: 3,
-                borderColor: "rgba(214, 214, 214, 1)",
-              }}
+        {selectedClinicImage ? (
+          <Image
+            source={{ uri: selectedClinicImage }}
+            style={{
+              width: isMobile ? 80 : isTablet ? 90 : 100,
+              height: isMobile ? 80 : isTablet ? 90 : 100,
+              borderRadius: isMobile ? 40 : isTablet ? 45 : 50,
+              marginRight: isMobile ? 0 : 16,
+              marginBottom: isMobile ? 8 : 0,
+              backgroundColor: "#f2f2f2",
+              borderWidth: 3,
+              borderColor: "rgba(214, 214, 214, 1)",
+              // Responsive image sizing
+              aspectRatio: 1,
+              resizeMode: "cover",
+            }}
+          />
+        ) : (
+          <View
+            style={{
+              width: isMobile ? 80 : isTablet ? 90 : 100,
+              height: isMobile ? 80 : isTablet ? 90 : 100,
+              borderRadius: isMobile ? 40 : isTablet ? 45 : 50,
+              marginRight: isMobile ? 0 : 16,
+              marginBottom: isMobile ? 8 : 0,
+              backgroundColor: "#e8f4f5",
+              alignItems: "center",
+              justifyContent: "center",
+              borderWidth: 3,
+              borderColor: "rgba(214, 214, 214, 1)",
+            }}
+          >
+            <FontAwesome5
+              name="clinic-medical"
+              size={isMobile ? 36 : isTablet ? 40 : 45}
+              color="#4a878bff"
             />
-          ) : (
-            <View
-              style={{
-                width: 80,
-                height: 80,
-                borderRadius: 40,
-                marginRight: 16,
-                backgroundColor: "#e8f4f5",
-                alignItems: "center",
-                justifyContent: "center",
-                borderWidth: 3,
-                borderColor: "rgba(214, 214, 214, 1)",
-              }}
-            >
-              <FontAwesome5 name="clinic-medical" size={40} color="#4a878bff" />
-            </View>
-          )}
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: isMobile ? 16 : 22, fontWeight: "bold", color: "#1a1a1a", marginBottom: 4 }}>
-              {selectedClinicName || "Unnamed Clinic"}
-            </Text>
-            <View
-              style={{
-                backgroundColor: verified ? "#e8f5e9" : "#ffebee",
-                paddingHorizontal: 10,
-                paddingVertical: 4,
-                borderRadius: 12,
-                alignSelf: "flex-start",
-                marginBottom: 6,
-              }}
-            >
-              <Text style={{ fontSize: 11, color: verified ? "#2e7d32" : "#c62828", fontWeight: "600" }}>
-                {verified ? "✅ Verified Clinic" : "❌ Unverified"}
-              </Text>
-            </View>
-            <Text style={{ fontSize: 13, color: "#3c6422ff", marginBottom: 2 }}>
-              {selectedClinicEmail}
-            </Text>
-            {selectedClinicSlogan && (
-              <Text
-                style={{
-                  fontSize: 13,
-                  color: "#416e5dff",
-                  fontStyle: "italic",
-                  marginTop: 2,
-                }}
-              >
-                "{selectedClinicSlogan}"
-              </Text>
-            )}
           </View>
-        </View>
-
-        {/* Divider */}
-        <View
-          style={{
-            height: 2,
-            backgroundColor: "#f0f0f0",
-            marginBottom: 20,
-            borderRadius: 1,
-          }}
-        />
-
-        {/* Info Section */}
-        <View style={{ gap: 12, marginBottom: 20 }}>
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <View
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 16,
-                backgroundColor: "#e8f4f5",
-                alignItems: "center",
-                justifyContent: "center",
-                marginRight: 12,
-              }}
-            >
-              <Text style={{ fontSize: 16 }}>📍</Text>
-            </View>
-            <Text style={{ fontSize: 14, color: "#333", flex: 1 }}>
-              {selectedClinicAddress || "No address provided"}
-            </Text>
-          </View>
-
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <View
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 16,
-                backgroundColor: "#e8f4f5",
-                alignItems: "center",
-                justifyContent: "center",
-                marginRight: 12,
-              }}
-            >
-              <Text style={{ fontSize: 16 }}>📞</Text>
-            </View>
-            <Text style={{ fontSize: 14, color: "#333" }}>
-              {selectedClinicMobile || "No contact"}
-            </Text>
-          </View>
-
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <View
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 16,
-                backgroundColor: "#e8f4f5",
-                alignItems: "center",
-                justifyContent: "center",
-                marginRight: 12,
-              }}
-            >
-              <Text style={{ fontSize: 16 }}>🗓️</Text>
-            </View>
-            <Text style={{ fontSize: 14, color: "#333", width: '90%' }}>
-              Joined: {selectedClinicCreatedAt || "N/A"}
-            </Text>
-          </View>
-
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <View
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 16,
-                backgroundColor: selectedClinicDentist ? "#e8f5e9" : "#ffebee",
-                alignItems: "center",
-                justifyContent: "center",
-                marginRight: 12,
-              }}
-            >
-              <Text style={{ fontSize: 16 }}>🦷</Text>
-            </View>
-            <Text style={{ fontSize: 14, color: "#333" }}>
-              Dentist: {selectedClinicDentist ? "Available" : "Not Available"}
-            </Text>
-          </View>
-        </View>
-
-        {/* Schedule Section */}
-        <View
-          style={{
-            backgroundColor: "#f8f9fa",
-            borderRadius: 12,
-            padding: 16,
-            marginBottom: 20,
-          }}
-        >
-          <Text style={{ fontSize: 16, fontWeight: "600", color: "#1a1a1a", marginBottom: 12 }}>
-            📅 Clinic Schedule
+        )}
+        <View style={{ flex: 1, alignItems: isMobile ? "center" : "flex-start", paddingHorizontal: isMobile ? 0 : 4 }}>
+          <Text
+            style={{
+              fontSize: isMobile ? 18 : isTablet ? 20 : 22,
+              fontWeight: "bold",
+              color: "#1a1a1a",
+              marginBottom: 4,
+              textAlign: isMobile ? "center" : "left",
+              lineHeight: isMobile ? 22 : 26, // Better line height for readability
+              // Ensure long names wrap properly
+              flexWrap: "wrap",
+            }}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
+            {selectedClinicName || "Unnamed Clinic"}
           </Text>
-          <View style={{ gap: 6 }}>
-            {[
-              { label: "Sunday", time: selectedSunday },
-              { label: "Monday", time: selectedMonday },
-              { label: "Tuesday", time: selectedTuesday },
-              { label: "Wednesday", time: selectedWednesday },
-              { label: "Thursday", time: selectedThursday },
-              { label: "Friday", time: selectedFriday },
-              { label: "Saturday", time: selectedSaturday },
-            ].map((day) => (
-              <DayScheduleView
-                key={day.label}
-                label={day.label}
-                time={
-                  day.time
-                    ? {
-                        ...day.time,
-                        from: {
-                          ...day.time.from,
-                          minute: day.time.from?.minute?.toString().padStart(2, "0"),
-                        },
-                        to: {
-                          ...day.time.to,
-                          minute: day.time.to?.minute?.toString().padStart(2, "0"),
-                        },
-                      }
-                    : undefined
-                }
-              />
-            ))}
-
-            {/* If all days have no schedule */}
-            {[
-              selectedSunday,
-              selectedMonday,
-              selectedTuesday,
-              selectedWednesday,
-              selectedThursday,
-              selectedFriday,
-              selectedSaturday,
-            ].every((day) => !day || day.from == null || day.to == null) && (
-              <Text
-                style={{
-                  color: "#999",
-                  fontSize: 14,
-                  textAlign: "center",
-                  marginTop: 8,
-                  fontStyle: "italic",
-                }}
-              >
-                No schedule available
-              </Text>
-            )}
+          <View
+            style={{
+              backgroundColor: verified ? "#e8f5e9" : "#ffebee",
+              paddingHorizontal: 10,
+              paddingVertical: 4,
+              borderRadius: 12,
+              alignSelf: isMobile ? "center" : "flex-start",
+              marginBottom: 6,
+              maxWidth: "100%", // Prevent overflow
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 11,
+                color: verified ? "#2e7d32" : "#c62828",
+                fontWeight: "600",
+              }}
+            >
+              {verified ? "✅ Verified Clinic" : "❌ Unverified"}
+            </Text>
           </View>
-        </View>
-
-        {/* Buttons Row */}
-        <View
-          style={{
-            flexDirection: "row",
-            gap: 12,
-          }}
-        >
-          {/* Message Button */}
-          <TouchableOpacity
-            onPress={() => {
-              chatWithClinic(clinic.id);
-              setviewClinic(false);
-              setDashboardView("chats");
-            }}
+          <Text
             style={{
-              flex: 1,
-              backgroundColor: "#3498db",
-              paddingVertical: 14,
-              borderRadius: 12,
-              alignItems: "center",
-              elevation: 4,
+              fontSize: isMobile ? 12 : 13,
+              color: "#3c6422ff",
+              marginBottom: 2,
+              textAlign: isMobile ? "center" : "left",
+              // Email wrapping
+              flexWrap: "wrap",
             }}
           >
-            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>
-              Message
+            {selectedClinicEmail}
+          </Text>
+          {selectedClinicSlogan && (
+            <Text
+              style={{
+                fontSize: isMobile ? 12 : 13,
+                color: "#416e5dff",
+                fontStyle: "italic",
+                marginTop: 2,
+                textAlign: isMobile ? "center" : "left",
+                paddingHorizontal: isMobile ? 8 : 0,
+                lineHeight: 18,
+                // Slogan wrapping with ellipsis if too long
+              }}
+              numberOfLines={2}
+              ellipsizeMode="tail"
+            >
+              "{selectedClinicSlogan}"
             </Text>
-          </TouchableOpacity>
-
-          {/* View Full Button */}
-          <TouchableOpacity
-            onPress={() => {
-              setFullProfile(true);
-            }}
-            style={{
-              flex: 1,
-              backgroundColor: "#2ecc71",
-              paddingVertical: 14,
-              borderRadius: 12,
-              alignItems: "center",
-              elevation: 4,
-            }}
-          >
-            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>
-              View Full
-            </Text>
-          </TouchableOpacity>
+          )}
         </View>
       </View>
 
-  </Modal>
+      {/* Divider */}
+      <View
+        style={{
+          height: 2,
+          backgroundColor: "#f0f0f0",
+          marginBottom: 20,
+          borderRadius: 1,
+          // Full width responsive
+          width: "100%",
+        }}
+      />
+
+      {/* Info Section - Improved gap and wrapping */}
+      <View style={{ gap: 12, marginBottom: 20 }}>
+        <View style={{ flexDirection: "row", alignItems: "flex-start", flexWrap: "wrap" }}>
+          <View
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              backgroundColor: "#e8f4f5",
+              alignItems: "center",
+              justifyContent: "center",
+              marginRight: 12,
+              marginBottom: 4,
+              flexShrink: 0,
+            }}
+          >
+            <Text style={{ fontSize: 16 }}>📍</Text>
+          </View>
+          <Text
+            style={{
+              fontSize: isMobile ? 13 : 14,
+              color: "#333",
+              flex: 1,
+              flexWrap: "wrap",
+              lineHeight: 20,
+            }}
+            numberOfLines={3}
+          >
+            {selectedClinicAddress || "No address provided"}
+          </Text>
+        </View>
+
+        <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
+          <View
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              backgroundColor: "#e8f4f5",
+              alignItems: "center",
+              justifyContent: "center",
+              marginRight: 12,
+              marginBottom: 4,
+              flexShrink: 0,
+            }}
+          >
+            <Text style={{ fontSize: 16 }}>📞</Text>
+          </View>
+          <Text style={{ fontSize: isMobile ? 13 : 14, color: "#333", flex: 1 }}>
+            {selectedClinicMobile || "No contact"}
+          </Text>
+        </View>
+
+        <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
+          <View
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              backgroundColor: "#e8f4f5",
+              alignItems: "center",
+              justifyContent: "center",
+              marginRight: 12,
+              marginBottom: 4,
+              flexShrink: 0,
+            }}
+          >
+            <Text style={{ fontSize: 16 }}>🗓️</Text>
+          </View>
+          <Text style={{ fontSize: isMobile ? 13 : 14, color: "#333", flex: 1 }}>
+            Joined: {selectedClinicCreatedAt || "N/A"}
+          </Text>
+        </View>
+
+        <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
+          <View
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              backgroundColor: selectedClinicDentist ? "#e8f5e9" : "#ffebee",
+              alignItems: "center",
+              justifyContent: "center",
+              marginRight: 12,
+              marginBottom: 4,
+              flexShrink: 0,
+            }}
+          >
+            <Text style={{ fontSize: 16 }}>🦷</Text>
+          </View>
+          <Text style={{ fontSize: isMobile ? 13 : 14, color: "#333", flex: 1 }}>
+            Dentist: {selectedClinicDentist ? "Available" : "Not Available"}
+          </Text>
+        </View>
+      </View>
+
+      {/* Schedule Section - Responsive padding and text sizing */}
+      <View
+        style={{
+          backgroundColor: "#f8f9fa",
+          borderRadius: 12,
+          padding: isMobile ? 12 : isTablet ? 14 : 16,
+          marginBottom: 20,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: isMobile ? 15 : 16,
+            fontWeight: "600",
+            color: "#1a1a1a",
+            marginBottom: 12,
+            textAlign: "center",
+          }}
+        >
+          📅 Clinic Schedule
+        </Text>
+        <View style={{ gap: 6 }}>
+          {[
+            { label: "Sunday", time: selectedSunday },
+            { label: "Monday", time: selectedMonday },
+            { label: "Tuesday", time: selectedTuesday },
+            { label: "Wednesday", time: selectedWednesday },
+            { label: "Thursday", time: selectedThursday },
+            { label: "Friday", time: selectedFriday },
+            { label: "Saturday", time: selectedSaturday },
+          ].map((day) => (
+            <DayScheduleView
+              key={day.label}
+              label={day.label}
+              time={
+                day.time
+                  ? {
+                      ...day.time,
+                      from: {
+                        ...day.time.from,
+                        minute: day.time.from?.minute?.toString().padStart(2, "0"),
+                      },
+                      to: {
+                        ...day.time.to,
+                        minute: day.time.to?.minute?.toString().padStart(2, "0"),
+                      },
+                    }
+                  : undefined
+              }
+              // Pass responsive props if DayScheduleView supports them
+              style={{ paddingHorizontal: isMobile ? 4 : 8 }}
+            />
+          ))}
+
+          {/* If all days have no schedule */}
+          {[
+            selectedSunday,
+            selectedMonday,
+            selectedTuesday,
+            selectedWednesday,
+            selectedThursday,
+            selectedFriday,
+            selectedSaturday,
+          ].every((day) => !day || day.from == null || day.to == null) && (
+            <Text
+              style={{
+                color: "#999",
+                fontSize: isMobile ? 13 : 14,
+                textAlign: "center",
+                marginTop: 8,
+                fontStyle: "italic",
+              }}
+            >
+              No schedule available
+            </Text>
+          )}
+        </View>
+      </View>
+
+      {/* Buttons Row - Improved spacing and full width on mobile */}
+      <View
+        style={{
+          flexDirection: isMobile ? "column" : "row",
+          gap: isMobile ? 8 : 12,
+          width: "100%",
+        }}
+      >
+        {/* Message Button */}
+        <TouchableOpacity
+          onPress={() => {
+            chatWithClinic(clinic.id);
+            setviewClinic(false);
+            setDashboardView("chats");
+          }}
+          style={{
+            flex: 1,
+            backgroundColor: "#3498db",
+            paddingVertical: isMobile ? 14 : 16,
+            borderRadius: 12,
+            alignItems: "center",
+            elevation: 4,
+            marginBottom: isMobile ? 8 : 0,
+            minHeight: 48, // Consistent touch target
+          }}
+        >
+          <Text
+            style={{
+              color: "#fff",
+              fontWeight: "700",
+              fontSize: isMobile ? 15 : 16,
+            }}
+          >
+            Message
+          </Text>
+        </TouchableOpacity>
+
+        {/* View Full Button */}
+        <TouchableOpacity
+          onPress={() => {
+            setFullProfile(true);
+          }}
+          style={{
+            flex: 1,
+            backgroundColor: "#2ecc71",
+            paddingVertical: isMobile ? 14 : 16,
+            borderRadius: 12,
+            alignItems: "center",
+            elevation: 4,
+            minHeight: 48, // Consistent touch target
+          }}
+        >
+          <Text
+            style={{
+              color: "#fff",
+              fontWeight: "700",
+              fontSize: isMobile ? 15 : 16,
+            }}
+          >
+            View Full
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  </View>
+</Modal>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={fullProfile} onBackdropPress={() => setFullProfile(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}> 
 
     <View style={{ flex: 1, backgroundColor: "#f8fafc" }}>

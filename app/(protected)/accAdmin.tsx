@@ -1798,32 +1798,52 @@ useEffect(() => {
                           <Text style={{ color: "#fff", fontSize: isMobile ? 8 : 10 }}>View Clinic</Text>
                         </TouchableOpacity>
 
-                        {/* Modal */}
-                       <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={viewClinic} onBackdropPress={() => setviewClinic(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>                    
-                          <View
-                            style={{
-                              backgroundColor: "#fff",
-                              borderRadius: 20,
-                              padding: 24,
-                              width: isMobile ? "90%" : "60%",
-                              elevation: 8,
-                              borderWidth: 2,
-                              borderColor: "rgba(214, 214, 214, 1)",
-                              position: "relative",
+                      {/* Modal */}
+                      <Modal
+                        animationIn="fadeIn"
+                        animationOut="fadeOut"
+                        isVisible={viewClinic}
+                        onBackdropPress={() => setviewClinic(false)}
+                        backdropColor="#000"
+                        backdropOpacity={0.1}
+                        style={{ alignItems: "center", justifyContent: "center" }}
+                      >
+                        <View
+                          style={{
+                            backgroundColor: "#fff",
+                            borderRadius: 20,
+                            padding: isMobile ? 16 : isTablet ? 20 : 24,
+                            width: isMobile ? "95%" : isTablet ? "80%" : "50%",
+                            maxWidth: isMobile ? "100%" : isTablet ? 700 : 900,
+                            maxHeight: "90%",
+                            elevation: 8,
+                            borderWidth: 2,
+                            borderColor: "rgba(214, 214, 214, 1)",
+                            position: "relative",
+                            // Ensure consistent scaling
+                            minWidth: isMobile ? 300 : 400,
+                          }}
+                        >
+                          <ScrollView
+                            showsVerticalScrollIndicator={false}
+                            contentContainerStyle={{
+                              paddingBottom: 16,
                             }}
+                            nestedScrollEnabled={true}
+                            keyboardShouldPersistTaps="handled"
                           >
-                            {/* ❌ Top-Right Close Button */}
+                            {/* ❌ Top-Right Close Button - Larger touch target on mobile */}
                             <TouchableOpacity
                               onPress={() => setviewClinic(false)}
                               style={{
                                 position: "absolute",
-                                top: 16,
-                                right: 16,
+                                top: isMobile ? 8 : 12,
+                                right: isMobile ? 8 : 12,
                                 zIndex: 10,
-                                padding: 8,
+                                padding: isMobile ? 10 : 12,
                                 borderRadius: 20,
-                                width: 36,
-                                height: 36,
+                                width: isMobile ? 44 : 48,
+                                height: isMobile ? 44 : 48,
                                 backgroundColor: "#da3434ff",
                                 alignItems: "center",
                                 justifyContent: "center",
@@ -1832,40 +1852,51 @@ useEffect(() => {
                                 shadowOpacity: 0.3,
                                 shadowRadius: 4,
                                 elevation: 3,
+                                minWidth: 44,
+                                minHeight: 44,
                               }}
+                              hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
                             >
-                              <Text style={{ fontSize: 20, fontWeight: "bold", color: "white" }}>×</Text>
+                              <Text style={{ fontSize: isMobile ? 18 : 20, fontWeight: "bold", color: "white" }}>
+                                ×
+                              </Text>
                             </TouchableOpacity>
 
-                            {/* Profile Header */}
+                            {/* Profile Header - Stack on mobile */}
                             <View
                               style={{
-                                flexDirection: "row",
-                                alignItems: "center",
+                                flexDirection: isMobile ? "column" : "row",
+                                alignItems: isMobile ? "center" : "flex-start",
                                 marginBottom: 20,
-                                paddingRight: 40,
+                                paddingRight: isMobile ? 0 : 60, // For close button
+                                marginTop: isMobile ? 50 : 20, // Account for close button
+                                gap: isMobile ? 12 : 0,
                               }}
                             >
                               {selectedClinicImage ? (
                                 <Image
                                   source={{ uri: selectedClinicImage }}
                                   style={{
-                                    width: 80,
-                                    height: 80,
-                                    borderRadius: 40,
-                                    marginRight: 16,
+                                    width: isMobile ? 80 : isTablet ? 90 : 100,
+                                    height: isMobile ? 80 : isTablet ? 90 : 100,
+                                    borderRadius: isMobile ? 40 : isTablet ? 45 : 50,
+                                    marginRight: isMobile ? 0 : 16,
+                                    marginBottom: isMobile ? 8 : 0,
                                     backgroundColor: "#f2f2f2",
                                     borderWidth: 3,
                                     borderColor: "rgba(214, 214, 214, 1)",
+                                    aspectRatio: 1,
+                                    resizeMode: "cover",
                                   }}
                                 />
                               ) : (
                                 <View
                                   style={{
-                                    width: 80,
-                                    height: 80,
-                                    borderRadius: 40,
-                                    marginRight: 16,
+                                    width: isMobile ? 80 : isTablet ? 90 : 100,
+                                    height: isMobile ? 80 : isTablet ? 90 : 100,
+                                    borderRadius: isMobile ? 40 : isTablet ? 45 : 50,
+                                    marginRight: isMobile ? 0 : 16,
+                                    marginBottom: isMobile ? 8 : 0,
                                     backgroundColor: "#e8f4f5",
                                     alignItems: "center",
                                     justifyContent: "center",
@@ -1873,11 +1904,26 @@ useEffect(() => {
                                     borderColor: "rgba(214, 214, 214, 1)",
                                   }}
                                 >
-                                  <FontAwesome5 name="clinic-medical" size={40} color="#4a878bff" />
+                                  <FontAwesome5
+                                    name="clinic-medical"
+                                    size={isMobile ? 36 : isTablet ? 40 : 45}
+                                    color="#4a878bff"
+                                  />
                                 </View>
                               )}
-                              <View style={{ flex: 1 }}>
-                                <Text style={{  fontSize: isMobile ? 16 : 22, fontWeight: "bold", color: "#1a1a1a", marginBottom: 4 }}>
+                              <View style={{ flex: 1, alignItems: isMobile ? "center" : "flex-start", paddingHorizontal: isMobile ? 0 : 4 }}>
+                                <Text
+                                  style={{
+                                    fontSize: isMobile ? 16 : isTablet ? 18 : 22,
+                                    fontWeight: "bold",
+                                    color: "#1a1a1a",
+                                    marginBottom: 4,
+                                    textAlign: isMobile ? "center" : "left",
+                                    lineHeight: isMobile ? 20 : 26,
+                                  }}
+                                  numberOfLines={2}
+                                  ellipsizeMode="tail"
+                                >
                                   {selectedClinicName || "Unnamed Clinic"}
                                 </Text>
                                 <View
@@ -1886,25 +1932,46 @@ useEffect(() => {
                                     paddingHorizontal: 10,
                                     paddingVertical: 4,
                                     borderRadius: 12,
-                                    alignSelf: "flex-start",
+                                    alignSelf: isMobile ? "center" : "flex-start",
                                     marginBottom: 6,
+                                    maxWidth: "100%",
                                   }}
                                 >
-                                  <Text style={{ fontSize: 11, color: verified ? "#2e7d32" : "#c62828", fontWeight: "600" }}>
+                                  <Text
+                                    style={{
+                                      fontSize: 11,
+                                      color: verified ? "#2e7d32" : "#c62828",
+                                      fontWeight: "600",
+                                    }}
+                                  >
                                     {verified ? "✅ Verified Clinic" : "❌ Unverified"}
                                   </Text>
                                 </View>
-                                <Text style={{ fontSize: 13, color: "#3c6422ff", marginBottom: 2 }}>
+                                <Text
+                                  style={{
+                                    fontSize: isMobile ? 12 : 13,
+                                    color: "#3c6422ff",
+                                    marginBottom: 2,
+                                    textAlign: isMobile ? "center" : "left",
+                                  }}
+                                  numberOfLines={2}
+                                  ellipsizeMode="tail"
+                                >
                                   {selectedClinicEmail}
                                 </Text>
                                 {selectedClinicSlogan && (
                                   <Text
                                     style={{
-                                      fontSize: 13,
+                                      fontSize: isMobile ? 12 : 13,
                                       color: "#416e5dff",
                                       fontStyle: "italic",
                                       marginTop: 2,
+                                      textAlign: isMobile ? "center" : "left",
+                                      paddingHorizontal: isMobile ? 8 : 0,
+                                      lineHeight: 18,
                                     }}
+                                    numberOfLines={2}
+                                    ellipsizeMode="tail"
                                   >
                                     "{selectedClinicSlogan}"
                                   </Text>
@@ -1919,12 +1986,13 @@ useEffect(() => {
                                 backgroundColor: "#f0f0f0",
                                 marginBottom: 20,
                                 borderRadius: 1,
+                                width: "100%",
                               }}
                             />
 
-                            {/* Info Section */}
+                            {/* Info Section - Added wrapping for long text */}
                             <View style={{ gap: 12, marginBottom: 20 }}>
-                              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                              <View style={{ flexDirection: "row", alignItems: "flex-start", flexWrap: "wrap" }}>
                                 <View
                                   style={{
                                     width: 32,
@@ -1934,16 +2002,27 @@ useEffect(() => {
                                     alignItems: "center",
                                     justifyContent: "center",
                                     marginRight: 12,
+                                    marginBottom: 4,
+                                    flexShrink: 0,
                                   }}
                                 >
                                   <Text style={{ fontSize: 16 }}>📍</Text>
                                 </View>
-                                <Text style={{ fontSize: 14, color: "#333", flex: 1 }}>
+                                <Text
+                                  style={{
+                                    fontSize: isMobile ? 13 : 14,
+                                    color: "#333",
+                                    flex: 1,
+                                    flexWrap: "wrap",
+                                    lineHeight: 20,
+                                  }}
+                                  numberOfLines={3}
+                                >
                                   {selectedClinicAddress || "No address provided"}
                                 </Text>
                               </View>
 
-                              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                              <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
                                 <View
                                   style={{
                                     width: 32,
@@ -1953,16 +2032,24 @@ useEffect(() => {
                                     alignItems: "center",
                                     justifyContent: "center",
                                     marginRight: 12,
+                                    marginBottom: 4,
+                                    flexShrink: 0,
                                   }}
                                 >
                                   <Text style={{ fontSize: 16 }}>📞</Text>
                                 </View>
-                                <Text style={{ fontSize: 14, color: "#333" }}>
+                                <Text
+                                  style={{
+                                    fontSize: isMobile ? 13 : 14,
+                                    color: "#333",
+                                    flex: 1,
+                                  }}
+                                >
                                   {selectedClinicMobile || "No contact"}
                                 </Text>
                               </View>
 
-                              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                              <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
                                 <View
                                   style={{
                                     width: 32,
@@ -1972,16 +2059,24 @@ useEffect(() => {
                                     alignItems: "center",
                                     justifyContent: "center",
                                     marginRight: 12,
+                                    marginBottom: 4,
+                                    flexShrink: 0,
                                   }}
                                 >
                                   <Text style={{ fontSize: 16 }}>🗓️</Text>
                                 </View>
-                                <Text style={{ fontSize: 14, color: "#333", width: '90%' }}>
+                                <Text
+                                  style={{
+                                    fontSize: isMobile ? 13 : 14,
+                                    color: "#333",
+                                    flex: 1,
+                                  }}
+                                >
                                   Joined: {selectedClinicCreatedAt || "N/A"}
                                 </Text>
                               </View>
 
-                              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                              <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
                                 <View
                                   style={{
                                     width: 32,
@@ -1991,11 +2086,19 @@ useEffect(() => {
                                     alignItems: "center",
                                     justifyContent: "center",
                                     marginRight: 12,
+                                    marginBottom: 4,
+                                    flexShrink: 0,
                                   }}
                                 >
                                   <Text style={{ fontSize: 16 }}>🦷</Text>
                                 </View>
-                                <Text style={{ fontSize: 14, color: "#333" }}>
+                                <Text
+                                  style={{
+                                    fontSize: isMobile ? 13 : 14,
+                                    color: "#333",
+                                    flex: 1,
+                                  }}
+                                >
                                   Dentist: {selectedClinicDentist ? "Available" : "Not Available"}
                                 </Text>
                               </View>
@@ -2006,11 +2109,19 @@ useEffect(() => {
                               style={{
                                 backgroundColor: "#f8f9fa",
                                 borderRadius: 12,
-                                padding: 16,
+                                padding: isMobile ? 12 : isTablet ? 14 : 16,
                                 marginBottom: 20,
                               }}
                             >
-                              <Text style={{ fontSize: 16, fontWeight: "600", color: "#1a1a1a", marginBottom: 12 }}>
+                              <Text
+                                style={{
+                                  fontSize: isMobile ? 15 : 16,
+                                  fontWeight: "600",
+                                  color: "#1a1a1a",
+                                  marginBottom: 12,
+                                  textAlign: "center",
+                                }}
+                              >
                                 📅 Clinic Schedule
                               </Text>
                               <View style={{ gap: 6 }}>
@@ -2041,6 +2152,7 @@ useEffect(() => {
                                           }
                                         : undefined
                                     }
+                                    style={{ paddingHorizontal: isMobile ? 4 : 8 }} // Assuming it accepts style
                                   />
                                 ))}
 
@@ -2057,7 +2169,7 @@ useEffect(() => {
                                   <Text
                                     style={{
                                       color: "#999",
-                                      fontSize: 14,
+                                      fontSize: isMobile ? 13 : 14,
                                       textAlign: "center",
                                       marginTop: 8,
                                       fontStyle: "italic",
@@ -2069,26 +2181,30 @@ useEffect(() => {
                               </View>
                             </View>
 
-                            {/* View Full Button */}
+                            {/* View Full Button - Full width with min height */}
                             <TouchableOpacity
                               onPress={() => {
                                 setFullProfile(true);
                               }}
                               style={{
                                 backgroundColor: "#2ecc71",
-                                paddingVertical: 14,
+                                paddingVertical: isMobile ? 14 : 16,
                                 borderRadius: 12,
                                 alignItems: "center",
                                 elevation: 4,
+                                minHeight: 48,
+                                width: "100%",
                               }}
                             >
-                              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>
+                              <Text style={{ color: "#fff", fontWeight: "700", fontSize: isMobile ? 15 : 16 }}>
                                 View Full Profile
                               </Text>
                             </TouchableOpacity>
-                          </View>
-                   
+                          </ScrollView>
+                        </View>
                       </Modal>
+
+                      
                       <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={fullProfile} onBackdropPress={() => setFullProfile(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>
                       
                         <View style={{ flex: 1, backgroundColor: "#f8fafc" }}>
