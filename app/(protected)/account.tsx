@@ -283,6 +283,13 @@ useEffect(() => {
   };
 }, [session?.user?.id]);
 
+useEffect(() => {
+  if (modalAppoint) {
+    // Reset to current date/time when modal opens
+    setAppointmentDate(new Date());
+  }
+}, [modalAppoint]);
+
 // STEP 3: Add the submit function
 const submitSupportMessage = async () => {
   if (!supportInput.trim()) {
@@ -1561,7 +1568,7 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
 
             <Text style={{fontWeight: 'bold', fontSize: 20, marginTop: -40, color: '#00505cff', textAlign: 'center', }}>SMILE STUDIO</Text>
             <Text style={{fontSize: 12, color: '#00505cff', textAlign: 'center', marginBottom: 7, }}>GRIN CREATORS</Text>
-             <View style={{
+              <View style={{
   paddingHorizontal: 16,
   paddingVertical: 8,
   backgroundColor: 'rgba(255, 255, 255, 0.3)',
@@ -4352,26 +4359,45 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                                     }}
                                   />
 
-                                  {/* Time */}
-                                  <Text style={{ alignSelf: "flex-start", marginBottom: 5 }}>*Time</Text>
-                                  <TimePicker
-                                    minuteSkipBy={1}
-                                    onTimeSelected={(hh, mm, atm) => {
-                                      setAppointmentDate((prev) => {
-                                        const time = new Date(prev);
-                                        const hourNum = Number(hh);
-                                        const formatHour =
-                                          atm === "AM"
-                                            ? hourNum === 12 ? 0 : hourNum
-                                            : hourNum === 12 ? 12 : hourNum + 12;
+                                <Text style={{ alignSelf: "flex-start", marginBottom: 5 }}>*Time</Text>
+                                <TimePicker
+                                  minuteSkipBy={1}
+                                  onTimeSelected={(hh, mm, atm) => {
+                                    console.log('onTimeSelected called:', hh, mm, atm); // Add this first
+                                    
+                                    const time = new Date(appointmentDate); // Use current appointmentDate
+                                    const hourNum = Number(hh);
+                                    const formatHour =
+                                      atm === "AM"
+                                        ? hourNum === 12 ? 0 : hourNum
+                                        : hourNum === 12 ? 12 : hourNum + 12;
 
-                                        time.setHours(formatHour);
-                                        time.setMinutes(Number(mm));
-                                        return time;
-                                      });
-                                    }}
-                                    trigger={undefined}
-                                  />
+                                    time.setHours(formatHour);
+                                    time.setMinutes(Number(mm));
+                                    time.setSeconds(0);
+                                    time.setMilliseconds(0);
+
+                                    console.log('Time set to:', time);
+
+                                    // Check if appointment is at least 30 minutes in the future
+                                    const now = new Date();
+                                    const thirtyMinutesFromNow = new Date(now.getTime() + 30 * 60 * 1000);
+
+                                    console.log('Now:', now);
+                                    console.log('30 min from now:', thirtyMinutesFromNow);
+                                    console.log('Selected time:', time);
+                                    console.log('Is too soon?', time <= thirtyMinutesFromNow);
+
+                                    if (time <= thirtyMinutesFromNow) {
+                                      console.log('Showing modal!');
+                                      setShowCloseTimeModal(true);
+                                    }
+
+                                    // Update state after validation
+                                    setAppointmentDate(time);
+                                  }}
+                                  trigger={undefined}
+                                />
 
 
                                 {/* Choose Dentist */}
@@ -4894,63 +4920,73 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                                     </Text>
                                   </TouchableOpacity>
 
-                                 <TouchableOpacity
+                               <TouchableOpacity
+                                  style={{
+                                    flex: 1,
+                                    backgroundColor: "#2e7dccff",
+                                    paddingVertical: 12,
+                                    borderRadius: 8,
+                                    marginLeft: 8,
+                                  }}
+                                  onPress={async () => {
+                                    if (!selectedClinicId) return;
+
+                                    if (!messageToClinic || !messageToClinic.trim()) {
+                                      setShowMessageModal(true);
+                                      return;
+                                    }
+
+                                    // ✅ CHECK IF APPOINTMENT IS AT LEAST 30 MINUTES IN THE FUTURE
+                                    const now = new Date();
+                                    const thirtyMinutesFromNow = new Date(now.getTime() + 30 * 60 * 1000);
+
+                                    console.log('Now:', now);
+                                    console.log('30 min from now:', thirtyMinutesFromNow);
+                                    console.log('Selected appointment date:', appointmentDate);
+                                    console.log('Is too soon?', appointmentDate <= thirtyMinutesFromNow);
+
+                                    if (appointmentDate <= thirtyMinutesFromNow) {
+                                      setShowCloseTimeModal(true);
+                                      return; // Stop the appointment process
+                                    }
+
+                                    // ✅ Create the appointment (logging is done inside this function)
+                                    const appointmentResult = await createAppointment(
+                                      selectedClinicId, 
+                                      appointmentDate, 
+                                      messageToClinic, 
+                                      parsedDentistList
+                                    );
+
+                                    // Check if appointment was created successfully
+                                    if (!appointmentResult) {
+                                      // Handle error (show error modal, etc.)
+                                      return;
+                                    }
+
+                                    // ✅ Save cooldown time
+                                    await AsyncStorage.setItem(COOLDOWN_KEY, now.toISOString());
+                                    setLastAppointmentTime(now);
+
+                                    // ✅ Reset UI
+                                    setModalAppoint(false);
+                                    setaIndicator(true);
+                                    setMessageToClinic("");
+                                    setIsOthersChecked(false);
+                                    setTempMessage("");
+                                    setSelectedReasons([]);
+                                  }}
+                                >
+                                  <Text
                                     style={{
-                                      flex: 1,
-                                      backgroundColor: "#2e7dccff",
-                                      paddingVertical: 12,
-                                      borderRadius: 8,
-                                      marginLeft: 8,
-                                    }}
-                                    onPress={async () => {
-                                      if (!selectedClinicId) return;
-
-                                      if (!messageToClinic || !messageToClinic.trim()) {
-                                        setShowMessageModal(true);
-                                        return;
-                                      }
-
-                                      const now = new Date();
-
-                                      // ... all your validation code ...
-
-                                      // ✅ Create the appointment (logging is done inside this function)
-                                      const appointmentResult = await createAppointment(
-                                        selectedClinicId, 
-                                        appointmentDate, 
-                                        messageToClinic, 
-                                        parsedDentistList
-                                      );
-
-                                      // Check if appointment was created successfully
-                                      if (!appointmentResult) {
-                                        // Handle error (show error modal, etc.)
-                                        return;
-                                      }
-
-                                      // ✅ Save cooldown time
-                                      await AsyncStorage.setItem(COOLDOWN_KEY, now.toISOString());
-                                      setLastAppointmentTime(now);
-
-                                      // ✅ Reset UI
-                                      setModalAppoint(false);
-                                      setaIndicator(true);
-                                      setMessageToClinic("");
-                                      setIsOthersChecked(false);
-                                      setTempMessage("");
-                                      setSelectedReasons([]);
+                                      color: "white",
+                                      fontWeight: "bold",
+                                      textAlign: "center",
                                     }}
                                   >
-                                    <Text
-                                      style={{
-                                        color: "white",
-                                        fontWeight: "bold",
-                                        textAlign: "center",
-                                      }}
-                                    >
-                                      Appoint
-                                    </Text>
-                                  </TouchableOpacity>
+                                    Appoint
+                                  </Text>
+                                </TouchableOpacity>
                                 </View>
                                   
                                   </>

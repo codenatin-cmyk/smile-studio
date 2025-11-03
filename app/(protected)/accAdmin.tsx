@@ -1702,7 +1702,7 @@ useEffect(() => {
             <Text style={{ textAlign: "center" }}>No clinics found.</Text>
           ) : (
             <>
-              <View style={{ flexDirection: isMobile ? "column" : "row", flexWrap: isMobile ? "nowrap" : "wrap", justifyContent: isMobile ? "flex-start" : "center", }} >
+              <View style={{ flexDirection: isMobile ? "column" : "row", flexWrap: isMobile ? "wrap" : "wrap", justifyContent: isMobile ? "flex-start" : "center", }} >
                 {clinicList
                   .filter((clinic) => clinic.isFirst === false)
                   .slice(0, showAllClinics ? clinicList.length : 8) // Show only 8 clinics unless "showAllClinics" is true
@@ -2205,17 +2205,9 @@ useEffect(() => {
                       </Modal>
 
                       
-                      <Modal  
-  animationIn="slideInRight" 
-  animationOut="slideOutRight" 
-  isVisible={fullProfile} 
-  onBackdropPress={() => setFullProfile(false)} 
-  backdropColor="#000" 
-  backdropOpacity={0.3} 
-  style={{ margin: 0 }}
->
-  
-  <View style={{ flex: 1, backgroundColor: "#f8fafc" }}>
+                      <Modal  animationIn="fadeIn" animationOut="fadeOut" isVisible={fullProfile} onBackdropPress={() => setFullProfile(false)} backdropColor="#000" backdropOpacity={0.1} style={{alignItems: "center", justifyContent: "center"}}>
+                      
+                        <View style={{ flex: 1, backgroundColor: "#f8fafc" }}>
                           
                           {/* Header with Back Button */}
                           <View
