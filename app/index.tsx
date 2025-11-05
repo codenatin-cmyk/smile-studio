@@ -60,7 +60,7 @@ export default function Index() {
 
   const downloadAPK = () => {
     // External GitHub Release link - no local asset needed
-    const apkUrl = 'https://github.com/smilestudiohub-gif/smilestudioapkrelease/releases/download/v1/smilestudio.apk';
+    const apkUrl = 'https://github.com/codenatin-cmyk/smile-studio/releases/download/v3/smile-studio.apk';
     
     Linking.openURL(apkUrl).catch(err => {
       Alert.alert(
