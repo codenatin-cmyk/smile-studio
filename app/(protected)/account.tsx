@@ -4173,29 +4173,47 @@ function isAtLeast30MinsBeforeClosing(appointment: Date, closing: ClockScheduleT
                                 />
 
 
-                                {/* Choose Dentist */}
-                                <Text style={{ alignSelf: "flex-start", marginBottom: 5, marginTop: 10 }}>
-                                  *Choose Dentist/Staff
-                                </Text>                  
 
-                                {/* Trigger Button to open Dentist Modal */}
-                                <TouchableOpacity
-                                  style={{
-                                    width: "100%",
-                                    padding: 12,
-                                    backgroundColor: "#e2e8f0",
-                                    borderRadius: 6,
-                                    marginBottom: 10,
-                                  }}
-                                  onPress={() => {
-                                    setTempSelectedDentists([...selectedDentists]);
-                                    setShowDentistModal(true);
-                                  }}
-                                >
-                                  <Text style={{ textAlign: "center", color: "#333", fontWeight: "bold" }}>
-                                    Select Dentist/s, Staff...
-                                  </Text>
-                                </TouchableOpacity>
+/* Choose Dentist */
+<Text style={{ alignSelf: "flex-start", marginBottom: 5, marginTop: 10 }}>
+  *Choose Dentist/Staff
+</Text>                  
+
+{/* Trigger Button to open Dentist Modal */}
+<TouchableOpacity
+  style={{
+    width: "100%",
+    padding: 12,
+    backgroundColor: "#e2e8f0",
+    borderRadius: 6,
+    marginBottom: 10,
+  }}
+  onPress={() => {
+    setTempSelectedDentists([...selectedDentists]);
+    setShowDentistModal(true);
+  }}
+>
+  <Text style={{ textAlign: "center", color: "#333", fontWeight: "bold" }}>
+    Select Dentist/s, Staff...
+  </Text>
+</TouchableOpacity>
+
+{/* ✅ SELECTED DENTISTS PREVIEW - MOVED HERE BEFORE THE MODAL */}
+{selectedDentists.length > 0 && (
+  <View
+    style={{
+      padding: 10,
+      backgroundColor: "#f1f1f1",
+      borderRadius: 6,
+      marginBottom: 10,
+      width: "100%",
+    }}
+  >
+    <Text style={{ color: "#000" }}>
+      {selectedDentists.join(", ")}
+    </Text>
+  </View>
+)}
 
                                  {/* Modal to select Dentists */}
                             <Modal animationIn="fadeIn" animationOut="fadeOut" isVisible={showDentistModal} backdropColor="#000" backdropOpacity={0.1}  onBackdropPress={() => setShowDentistModal(false)} style={{alignItems: "center", justifyContent: "center"}}>                       
@@ -5042,107 +5060,107 @@ if (daySchedule && daySchedule.to) {
                                 >
                                   {appointmentName}
                                 </Text>
-                              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, justifyContent: "center", paddingHorizontal: 10, }} >
-                                  {[
-                                    { label: "Sunday", time: selectedSunday },
-                                    { label: "Monday", time: selectedMonday },
-                                    { label: "Tuesday", time: selectedTuesday },
-                                    { label: "Wednesday", time: selectedWednesday },
-                                    { label: "Thursday", time: selectedThursday },
-                                    { label: "Friday", time: selectedFriday },
-                                    { label: "Saturday", time: selectedSaturday },
-                                  ]
-                                    .filter((day) => day.time && day.time.from && day.time.to)
-                                    .map((day) => (
-                                      <View
-                                        key={day.label}
-                                        style={{
-                                          backgroundColor: "#fff",
-                                          borderRadius: 10,
-                                          paddingVertical: 6,
-                                          paddingHorizontal: 12,
-                                          shadowColor: "#000",
-                                          shadowOpacity: 0.05,
-                                          shadowOffset: { width: 0, height: 1 },
-                                          shadowRadius: 2,
-                                          elevation: 1,
-                                          alignItems: "center",
-                                          justifyContent: "center",
-                                          minWidth: 90,
-                                        }}
-                                      >
-                                        <Text style={{ fontWeight: "600", fontSize: 13, color: "#1f2937" }}>
-                                          {day.label}
-                                        </Text>
-                                        <Text style={{ color: "#2563eb", fontWeight: "500", fontSize: 12 }}>
-                                          {`${day.time.from.hour}:${day.time.from.minute
-                                            ?.toString()
-                                            .padStart(2, "0")} - ${day.time.to.hour}:${day.time.to.minute
-                                            ?.toString()
-                                            .padStart(2, "0")}`}
-                                        </Text>
-                                      </View>
-                                    ))}
+<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, justifyContent: "center", paddingHorizontal: 10, }} >
+  {[
+    { label: "Sunday", time: selectedSunday },
+    { label: "Monday", time: selectedMonday },
+    { label: "Tuesday", time: selectedTuesday },
+    { label: "Wednesday", time: selectedWednesday },
+    { label: "Thursday", time: selectedThursday },
+    { label: "Friday", time: selectedFriday },
+    { label: "Saturday", time: selectedSaturday },
+  ]
+    .filter((day) => day.time && day.time.from && day.time.to)
+    .map((day) => (
+      <View
+        key={day.label}
+        style={{
+          backgroundColor: "#fff",
+          borderRadius: 10,
+          paddingVertical: 6,
+          paddingHorizontal: 12,
+          shadowColor: "#000",
+          shadowOpacity: 0.05,
+          shadowOffset: { width: 0, height: 1 },
+          shadowRadius: 2,
+          elevation: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          minWidth: 90,
+        }}
+      >
+        <Text style={{ fontWeight: "600", fontSize: 13, color: "#1f2937" }}>
+          {day.label}
+        </Text>
+        <Text style={{ color: "#2563eb", fontWeight: "500", fontSize: 12 }}>
+          {`${day.time.from.hour}:${day.time.from.minute
+            ?.toString()
+            .padStart(2, "0")} ${day.time.from.atm} - ${day.time.to.hour}:${day.time.to.minute
+            ?.toString()
+            .padStart(2, "0")} ${day.time.to.atm}`}
+        </Text>
+      </View>
+    ))}
 
-                                  {[
-                                    selectedSunday,
-                                    selectedMonday,
-                                    selectedTuesday,
-                                    selectedWednesday,
-                                    selectedThursday,
-                                    selectedFriday,
-                                    selectedSaturday,
-                                  ].every((day) => !day || day.from == null || day.to == null) && (
-                                    <Text
-                                      style={{
-                                        color: "#999",
-                                        fontSize: 13,
-                                        textAlign: "center",
-                                        marginTop: 8,
-                                      }}
-                                    >
-                                      No schedule available
-                                    </Text>
-                                  )}
-                              </View>
+  {[
+    selectedSunday,
+    selectedMonday,
+    selectedTuesday,
+    selectedWednesday,
+    selectedThursday,
+    selectedFriday,
+    selectedSaturday,
+  ].every((day) => !day || day.from == null || day.to == null) && (
+    <Text
+      style={{
+        color: "#999",
+        fontSize: 13,
+        textAlign: "center",
+        marginTop: 8,
+      }}
+    >
+      No schedule available
+    </Text>
+  )}
+</View>
 
-                              {[
-                                  selectedSunday,
-                                  selectedMonday,
-                                  selectedTuesday,
-                                  selectedWednesday,
-                                  selectedThursday,
-                                  selectedFriday,
-                                  selectedSaturday,
-                                ].every((day) => !day || day.from == null || day.to == null) ? (
-                                  // Show only message if no schedule available
-                                  <View style={{ marginTop: 20, marginBottom: 20, width: '100%' }}>
-                                    <TouchableOpacity
-                                      style={{
-                                        backgroundColor: "#b32020",
-                                        paddingVertical: 12,
-                                        borderRadius: 8,
-                                        width: "100%",
-                                      }}
-                                      onPress={() => {
-                                        setModalAppoint(false);
-                                        setMessageToClinic("");
-                                        setIsOthersChecked(false);
-                                        setTempMessage("");
-                                        setSelectedReasons([]);
-                                      }}
-                                    >
-                                      <Text
-                                        style={{
-                                          color: "white",
-                                          fontWeight: "bold",
-                                          textAlign: "center",
-                                        }}
-                                      >
-                                        Close
-                                      </Text>
-                                    </TouchableOpacity>
-                                  </View>
+{[
+    selectedSunday,
+    selectedMonday,
+    selectedTuesday,
+    selectedWednesday,
+    selectedThursday,
+    selectedFriday,
+    selectedSaturday,
+  ].every((day) => !day || day.from == null || day.to == null) ? (
+    // Show only message if no schedule available
+    <View style={{ marginTop: 20, marginBottom: 20, width: '100%' }}>
+      <TouchableOpacity
+        style={{
+          backgroundColor: "#b32020",
+          paddingVertical: 12,
+          borderRadius: 8,
+          width: "100%",
+        }}
+        onPress={() => {
+          setModalAppoint(false);
+          setMessageToClinic("");
+          setIsOthersChecked(false);
+          setTempMessage("");
+          setSelectedReasons([]);
+        }}
+      >
+        <Text
+          style={{
+            color: "white",
+            fontWeight: "bold",
+            textAlign: "center",
+          }}
+        >
+          Close
+        </Text>
+      </TouchableOpacity>
+    </View>
                                 ) : (
                                   <>
                                   <CalendarPicker
@@ -5716,113 +5734,187 @@ if (daySchedule && daySchedule.to) {
     borderRadius: 8,
     marginLeft: 8,
   }}
-  onPress={async () => {
-    if (!selectedClinicId) return;
+onPress={async () => {
+  if (!selectedClinicId) return;
 
-    if (!messageToClinic || !messageToClinic.trim()) {
-      setShowMessageModal(true);
+  // ✅ 1. CHECK IF MESSAGE EXISTS
+  if (!messageToClinic || !messageToClinic.trim()) {
+    setShowMessageModal(true);
+    return;
+  }
+
+  // ✅ 2. CHECK IF DENTIST IS SELECTED
+  if (!selectedDentists || selectedDentists.length === 0) {
+    setShowDentistRequiredModal(true);
+    return;
+  }
+
+  const now = new Date();
+  
+  // ✅ 3. CHECK IF APPOINTMENT IS IN THE PAST
+  if (appointmentDate <= now) {
+    setShowInvalidTimeModal(true);
+    return;
+  }
+
+  // ✅ 4. CHECK IF APPOINTMENT IS AT LEAST 30 MINUTES IN THE FUTURE
+  const thirtyMinutesFromNow = new Date(now.getTime() + 30 * 60 * 1000);
+  if (appointmentDate <= thirtyMinutesFromNow) {
+    setShowCloseTimeModal(true);
+    return;
+  }
+
+  // ✅ 5. GET THE DAY SCHEDULE
+  const dayName = appointmentDate.toLocaleDateString('en-US', { weekday: 'long' });
+  let daySchedule = null;
+  
+  switch (dayName) {
+    case 'Sunday': daySchedule = selectedSunday; break;
+    case 'Monday': daySchedule = selectedMonday; break;
+    case 'Tuesday': daySchedule = selectedTuesday; break;
+    case 'Wednesday': daySchedule = selectedWednesday; break;
+    case 'Thursday': daySchedule = selectedThursday; break;
+    case 'Friday': daySchedule = selectedFriday; break;
+    case 'Saturday': daySchedule = selectedSaturday; break;
+  }
+
+  // ✅ 6. CHECK IF CLINIC IS OPEN ON THIS DAY
+  if (!daySchedule || !daySchedule.from || !daySchedule.to) {
+    setShowOutOfScheduleModal(true);
+    return;
+  }
+
+  // ✅ 7. VALIDATE APPOINTMENT TIME IS WITHIN CLINIC HOURS
+  const appointmentHour = appointmentDate.getHours();
+  const appointmentMinute = appointmentDate.getMinutes();
+  const appointmentTimeInMinutes = appointmentHour * 60 + appointmentMinute;
+
+  // Convert clinic opening time to minutes
+  let openingHour = daySchedule.from.hour;
+  if (daySchedule.from.atm === "PM" && openingHour !== 12) {
+    openingHour += 12;
+  } else if (daySchedule.from.atm === "AM" && openingHour === 12) {
+    openingHour = 0;
+  }
+  const openingTimeInMinutes = openingHour * 60 + (daySchedule.from.minute || 0);
+
+  // Convert clinic closing time to minutes
+  let closingHour = daySchedule.to.hour;
+  if (daySchedule.to.atm === "PM" && closingHour !== 12) {
+    closingHour += 12;
+  } else if (daySchedule.to.atm === "AM" && closingHour === 12) {
+    closingHour = 0;
+  }
+  const closingTimeInMinutes = closingHour * 60 + (daySchedule.to.minute || 0);
+
+  console.log('Opening time (minutes):', openingTimeInMinutes);
+  console.log('Closing time (minutes):', closingTimeInMinutes);
+  console.log('Appointment time (minutes):', appointmentTimeInMinutes);
+
+  // Check if appointment is before opening
+  if (appointmentTimeInMinutes < openingTimeInMinutes) {
+    setShowOutOfScheduleModal(true);
+    return;
+  }
+
+  // Check if appointment is after closing
+  if (appointmentTimeInMinutes > closingTimeInMinutes) {
+    setShowAfterClosingModal(true);
+    return;
+  }
+
+  // ✅ 8. CHECK IF APPOINTMENT IS TOO CLOSE TO CLOSING (30 minutes before)
+  const thirtyMinutesBeforeClosing = closingTimeInMinutes - 30;
+  if (appointmentTimeInMinutes >= thirtyMinutesBeforeClosing) {
+    setShowClosingTimeModal(true);
+    return;
+  }
+
+  // ✅ 9. VALIDATE DENTISTS AVAILABILITY
+  const selectedDayName = appointmentDate.toLocaleDateString('en-US', { weekday: 'long' });
+  const unavailable = [];
+
+  selectedDentists.forEach((dentistName) => {
+    // Skip fixed roles (they don't have schedules)
+    if (fixedRoles.includes(dentistName)) {
       return;
     }
 
-    // ✅ VALIDATION: CHECK IF APPOINTMENT IS AT LEAST 30 MINUTES IN THE FUTURE (only for same day)
-    const now = new Date();
-    const thirtyMinutesFromNow = new Date(now.getTime() + 30 * 60 * 1000);
-    const isSameDay = appointmentDate.toDateString() === now.toDateString();
-
-    console.log('Now:', now);
-    console.log('30 min from now:', thirtyMinutesFromNow);
-    console.log('Selected appointment date:', appointmentDate);
-    console.log('Is same day?', isSameDay);
-    console.log('Is too soon?', appointmentDate <= thirtyMinutesFromNow);
-
-    if (isSameDay && appointmentDate <= thirtyMinutesFromNow) {
-      setShowCloseTimeModal(true);
-      return; // Stop the appointment process
-    }
-
-    // ✅ VALIDATION: CHECK TIME AGAINST CLOSING (for any day)
-    const dayName = appointmentDate.toLocaleDateString('en-US', { weekday: 'long' });
-    console.log('Day name for schedule:', dayName);
-
-    let daySchedule = null;
-    switch (dayName) {
-      case 'Sunday': daySchedule = selectedSunday; break;
-      case 'Monday': daySchedule = selectedMonday; break;
-      case 'Tuesday': daySchedule = selectedTuesday; break;
-      case 'Wednesday': daySchedule = selectedWednesday; break;
-      case 'Thursday': daySchedule = selectedThursday; break;
-      case 'Friday': daySchedule = selectedFriday; break;
-      case 'Saturday': daySchedule = selectedSaturday; break;
-      default: break;
-    }
-
-    if (daySchedule && daySchedule.to) {
-      console.log('RAW daySchedule.from:', daySchedule.from);
-      console.log('RAW daySchedule.to:', daySchedule.to);
-      
-      const closingTime = new Date(appointmentDate);
-      
-      // Convert closing hour properly
-      let closingHour = daySchedule.to.hour;
-      
-      // If closing hour is less than 12 and opening hour is 12, it's PM time
-      if (daySchedule.from && daySchedule.from.hour === 12 && closingHour < 12) {
-        closingHour += 12; // Convert to PM (e.g., 11 -> 23)
-      }
-      
-      closingTime.setHours(closingHour);
-      closingTime.setMinutes(daySchedule.to.minute || 0);
-      closingTime.setSeconds(0);
-      closingTime.setMilliseconds(0);
-
-      const thirtyMinBeforeClose = new Date(closingTime.getTime() - 30 * 60 * 1000);
-
-      console.log('Calculated closing hour:', closingHour);
-      console.log('Closing time:', closingTime);
-      console.log('30 min before close:', thirtyMinBeforeClose);
-      console.log('Selected appointment date:', appointmentDate);
-      console.log('After closing?', appointmentDate > closingTime);
-      console.log('Too close to closing?', appointmentDate >= thirtyMinBeforeClose);
-
-      // Check if appointment is after closing time
-      if (appointmentDate > closingTime) {
-        setShowAfterClosingModal(true);
-        return;
-      }
-
-      // Check if appointment is too close to closing time
-      if (appointmentDate >= thirtyMinBeforeClose) {
-        setShowClosingTimeModal(true);
-        return;
-      }
-    }
-
-    // ✅ Create the appointment (logging is done inside this function)
-    const appointmentResult = await createAppointment(
-      selectedClinicId, 
-      appointmentDate, 
-      messageToClinic, 
-      parsedDentistList
+    // Find the dentist in the parsed list
+    const dentist = parsedDentistList.find(d => 
+      `Dr. ${d.name} (${d.specialty})` === dentistName
     );
 
-    // Check if appointment was created successfully
-    if (!appointmentResult) {
-      // Handle error (show error modal, etc.)
-      return;
+    if (dentist && dentist.weeklySchedule) {
+      const schedule = dentist.weeklySchedule[selectedDayName] || 
+                      dentist.weeklySchedule[selectedDayName.toLowerCase()] || [];
+      
+      // If dentist has no schedule on this day, they're unavailable
+      if (schedule.length === 0) {
+        unavailable.push(dentistName);
+        return;
+      }
+
+      // Check if appointment time falls within any of the dentist's time slots
+      const isWithinDentistSchedule = schedule.some((timeSlot) => {
+        // Parse time slot (e.g., "09:00 AM - 05:00 PM")
+        const [fromStr, toStr] = timeSlot.split(' - ');
+        
+        const [fromTime, fromAMPM] = fromStr.trim().split(' ');
+        const [fromHourStr, fromMinStr] = fromTime.split(':');
+        let fromHour = parseInt(fromHourStr);
+        if (fromAMPM === 'PM' && fromHour !== 12) fromHour += 12;
+        if (fromAMPM === 'AM' && fromHour === 12) fromHour = 0;
+        const fromMinutes = fromHour * 60 + parseInt(fromMinStr);
+
+        const [toTime, toAMPM] = toStr.trim().split(' ');
+        const [toHourStr, toMinStr] = toTime.split(':');
+        let toHour = parseInt(toHourStr);
+        if (toAMPM === 'PM' && toHour !== 12) toHour += 12;
+        if (toAMPM === 'AM' && toHour === 12) toHour = 0;
+        const toMinutes = toHour * 60 + parseInt(toMinStr);
+
+        // Check if appointment falls within this time slot
+        return appointmentTimeInMinutes >= fromMinutes && 
+               appointmentTimeInMinutes < toMinutes;
+      });
+
+      if (!isWithinDentistSchedule) {
+        unavailable.push(dentistName);
+      }
     }
+  });
 
-    // ✅ Save cooldown time
-    await AsyncStorage.setItem(COOLDOWN_KEY, now.toISOString());
-    setLastAppointmentTime(now);
+  if (unavailable.length > 0) {
+    setUnavailableDentists(unavailable);
+    setShowDentistUnavailableModal(true);
+    return;
+  }
 
-    // ✅ Reset UI
-    setModalAppoint(false);
-    setaIndicator(true);
-    setMessageToClinic("");
-    setIsOthersChecked(false);
-    setTempMessage("");
-    setSelectedReasons([]);
-  }}
+  // ✅ 10. ALL VALIDATIONS PASSED - CREATE APPOINTMENT
+  const appointmentResult = await createAppointment(
+    selectedClinicId, 
+    appointmentDate, 
+    messageToClinic, 
+    parsedDentistList
+  );
+
+  if (!appointmentResult) {
+    return;
+  }
+
+  // ✅ 11. SAVE COOLDOWN AND RESET UI
+  await AsyncStorage.setItem(COOLDOWN_KEY, now.toISOString());
+  setLastAppointmentTime(now);
+
+  setModalAppoint(false);
+  setaIndicator(true);
+  setMessageToClinic("");
+  setIsOthersChecked(false);
+  setTempMessage("");
+  setSelectedReasons([]);
+  setSelectedDentists([]);
+}}
 >
   <Text
     style={{

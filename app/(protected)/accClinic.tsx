@@ -4434,6 +4434,7 @@ const PatientHistoryModalComponent = () => (
         saveDentists={saveDentists}
         initialSelectedDentistIndex={openScheduleForIndex}
         onBack={() => setOpenScheduleForIndex(null)}
+        clinicId={session?.user.id}
       />
     )}
 

@@ -1,5 +1,6 @@
+import { supabase } from "@/lib/supabase";
 import { Picker } from "@react-native-picker/picker";
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Modal,
@@ -41,7 +42,6 @@ function TimePicker({
   );
 
   const ampm = ["AM", "PM"];
-  const { width } = useWindowDimensions();
 
   return (
     <View style={styles.timePickerRow}>
@@ -154,6 +154,7 @@ function DentistScheduleEditor({
   saveDentists,
   initialSelectedDentistIndex,
   onBack,
+  clinicId,
 }) {
   const dentist = dentists[initialSelectedDentistIndex];
 
@@ -169,6 +170,7 @@ function DentistScheduleEditor({
     }
   );
 
+  const [clinicSchedule, setClinicSchedule] = useState(null);
   const [dentistName, setDentistName] = useState(dentist?.name || "");
   const [selectedDay, setSelectedDay] = useState(null);
 
@@ -180,15 +182,104 @@ function DentistScheduleEditor({
   const [toMinute, setToMinute] = useState(0);
   const [toAtm, setToAtm] = useState("PM");
 
+  const [validationError, setValidationError] = useState({});
+
   const hasSchedule = true;
   const is24Hours = false;
 
   const { width } = useWindowDimensions();
 
+  // Fetch clinic schedule on mount
+  useEffect(() => {
+    const fetchClinicSchedule = async () => {
+      if (!clinicId) return;
+
+      const { data, error } = await supabase
+        .from("clinic_schedule")
+        .select("*")
+        .eq("clinic_id", clinicId)
+        .limit(1);
+
+      if (error) {
+        console.error("Error fetching clinic schedule:", error);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        setClinicSchedule(data[0]);
+      }
+    };
+
+    fetchClinicSchedule();
+  }, [clinicId]);
+
   const timeToMinutes = (h, m, ampm) => {
     let hour24 = h % 12;
     if (ampm === "PM") hour24 += 12;
     return hour24 * 60 + m;
+  };
+
+  const getClinicHoursForDay = (day) => {
+    if (!clinicSchedule) return null;
+
+    const dayKey = day.toLowerCase();
+    const daySchedule = clinicSchedule[dayKey];
+
+    if (!daySchedule || !daySchedule.hasSchedule) {
+      return null; // Clinic is closed this day
+    }
+
+    const clinicFrom = timeToMinutes(
+      daySchedule.from.hour,
+      daySchedule.from.minute,
+      daySchedule.from.atm
+    );
+    const clinicTo = timeToMinutes(
+      daySchedule.to.hour,
+      daySchedule.to.minute,
+      daySchedule.to.atm
+    );
+
+    return { from: clinicFrom, to: clinicTo };
+  };
+
+  const validateAgainstClinicHours = (day, startMinutes, endMinutes) => {
+    const clinicHours = getClinicHoursForDay(day);
+
+    if (!clinicHours) {
+      setValidationError({
+        ...validationError,
+        [day]: `The clinic is closed on ${day}.`
+      });
+      return false;
+    }
+
+    if (startMinutes < clinicHours.from || endMinutes > clinicHours.to) {
+      const formatMinutesToTime = (minutes) => {
+        let hour = Math.floor(minutes / 60);
+        const min = minutes % 60;
+        const ampm = hour >= 12 ? "PM" : "AM";
+        hour = hour % 12 || 12;
+        return `${hour.toString().padStart(2, "0")}:${min
+          .toString()
+          .padStart(2, "0")} ${ampm}`;
+      };
+
+      setValidationError({
+        ...validationError,
+        [day]: `Schedule must be within clinic hours: ${formatMinutesToTime(
+          clinicHours.from
+        )} - ${formatMinutesToTime(clinicHours.to)}`
+      });
+      return false;
+    }
+
+    // Clear error if validation passes
+    setValidationError({
+      ...validationError,
+      [day]: null
+    });
+    return true;
   };
 
   const addTimeSlot = (day) => {
@@ -199,6 +290,11 @@ function DentistScheduleEditor({
 
     if (endMinutes <= startMinutes) {
       Alert.alert("Invalid time", "End time must be after start time.");
+      return;
+    }
+
+    // Validate against clinic hours
+    if (!validateAgainstClinicHours(day, startMinutes, endMinutes)) {
       return;
     }
 
@@ -217,6 +313,12 @@ function DentistScheduleEditor({
       ...prev,
       [day]: [...(prev[day] || []), slotStr],
     }));
+
+    // Clear validation error on successful add
+    setValidationError({
+      ...validationError,
+      [day]: null
+    });
 
     setSelectedDay(null);
   };
@@ -243,7 +345,6 @@ function DentistScheduleEditor({
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
-
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Dentist Name</Text>
         <TextInput
@@ -254,67 +355,116 @@ function DentistScheduleEditor({
         />
       </View>
 
-      {daysOfWeek.map((day) => (
-        <View key={day} style={styles.section}>
-          <Text style={styles.sectionTitle}>{day}</Text>
+      {daysOfWeek.map((day) => {
+        const clinicHours = getClinicHoursForDay(day);
+        const isClinicClosed = !clinicHours;
 
-          {(schedule[day] || []).map((slot, index) => (
-            <View key={index} style={styles.slotItem}>
-              <Text>{slot}</Text>
-              <TouchableOpacity
-                style={styles.removeButton}
-                onPress={() => removeTimeSlot(day, index)}
-              >
-                <Text style={styles.removeText}>Remove</Text>
-              </TouchableOpacity>
+        // Format clinic hours for display
+        const formatMinutesToTime = (minutes) => {
+          let hour = Math.floor(minutes / 60);
+          const min = minutes % 60;
+          const ampm = hour >= 12 ? "PM" : "AM";
+          hour = hour % 12 || 12;
+          return `${hour.toString().padStart(2, "0")}:${min
+            .toString()
+            .padStart(2, "0")} ${ampm}`;
+        };
+
+        return (
+          <View key={day} style={styles.section}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Text style={styles.sectionTitle}>{day}</Text>
+              {isClinicClosed && (
+                <Text style={styles.closedBadge}>Clinic Closed</Text>
+              )}
             </View>
-          ))}
 
-          {selectedDay === day ? (
-            <>
-              <ScheduleTimeSelector
-                fromHour={fromHour}
-                fromMinute={fromMinute}
-                fromAtm={fromAtm}
-                setFromHour={setFromHour}
-                setFromMinute={setFromMinute}
-                setFromAtm={setFromAtm}
-                toHour={toHour}
-                toMinute={toMinute}
-                toAtm={toAtm}
-                setToHour={setToHour}
-                setToMinute={setToMinute}
-                setToAtm={setToAtm}
-                hasSchedule={hasSchedule}
-                is24Hours={is24Hours}
-              />
+            {/* Clinic Hours Indicator */}
+            {!isClinicClosed && clinicHours && (
+              <View style={styles.clinicHoursIndicator}>
+                <Text style={styles.clinicHoursText}>
+                  📅 Clinic Hours: {formatMinutesToTime(clinicHours.from)} - {formatMinutesToTime(clinicHours.to)}
+                </Text>
+              </View>
+            )}
 
-              <View style={styles.buttonRow}>
+            {(schedule[day] || []).map((slot, index) => (
+              <View key={index} style={styles.slotItem}>
+                <Text>{slot}</Text>
                 <TouchableOpacity
-                  style={styles.addButton}
-                  onPress={() => addTimeSlot(day)}
+                  style={styles.removeButton}
+                  onPress={() => removeTimeSlot(day, index)}
                 >
-                  <Text style={styles.buttonText}>Add Slot</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={() => setSelectedDay(null)}
-                >
-                  <Text style={styles.buttonText}>Cancel</Text>
+                  <Text style={styles.removeText}>Remove</Text>
                 </TouchableOpacity>
               </View>
-            </>
-          ) : (
-            <TouchableOpacity
-              style={styles.addSlotButton}
-              onPress={() => setSelectedDay(day)}
-            >
-              <Text style={styles.buttonText}>Add Time Slot</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      ))}
+            ))}
+
+            {selectedDay === day ? (
+              <>
+                <ScheduleTimeSelector
+                  fromHour={fromHour}
+                  fromMinute={fromMinute}
+                  fromAtm={fromAtm}
+                  setFromHour={setFromHour}
+                  setFromMinute={setFromMinute}
+                  setFromAtm={setFromAtm}
+                  toHour={toHour}
+                  toMinute={toMinute}
+                  toAtm={toAtm}
+                  setToHour={setToHour}
+                  setToMinute={setToMinute}
+                  setToAtm={setToAtm}
+                  hasSchedule={hasSchedule}
+                  is24Hours={is24Hours}
+                />
+
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={styles.addButton}
+                    onPress={() => addTimeSlot(day)}
+                  >
+                    <Text style={styles.buttonText}>Add Slot</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={() => {
+                      setSelectedDay(null);
+                      setValidationError({
+                        ...validationError,
+                        [day]: null
+                      });
+                    }}
+                  >
+                    <Text style={styles.buttonText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Validation Error Message */}
+                {validationError[day] && (
+                  <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>⚠️ {validationError[day]}</Text>
+                  </View>
+                )}
+              </>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  styles.addSlotButton,
+                  isClinicClosed && styles.disabledButton,
+                ]}
+                onPress={() => !isClinicClosed && setSelectedDay(day)}
+                disabled={isClinicClosed}
+              >
+                <Text style={styles.buttonText}>
+                  {isClinicClosed ? "Cannot Add (Clinic Closed)" : "Add Time Slot"}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        );
+      })}
 
       <View style={styles.buttonRow}>
         <TouchableOpacity
@@ -337,10 +487,15 @@ function DentistScheduleEditor({
         onRequestClose={() => setShowConfirmModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={{...styles.modalContainer,
-           ...(width > 720 ? { width: '40%' } : { width: '90%' }),
-          }}>
-            <Text style={{...styles.modalTitle, color: '#00505cff'}}>Confirm Save</Text>
+          <View
+            style={{
+              ...styles.modalContainer,
+              ...(width > 720 ? { width: "40%" } : { width: "90%" }),
+            }}
+          >
+            <Text style={{ ...styles.modalTitle, color: "#00505cff" }}>
+              Confirm Save
+            </Text>
             <Text style={styles.modalText}>
               Are you sure you want to save this schedule?
             </Text>
@@ -374,8 +529,8 @@ function DentistScheduleEditor({
                     Alert.alert("Error", "Failed to save schedule to DB.");
                     console.error("Save error:", error);
                   }
-                  
-                  onBack
+
+                  onBack();
                 }}
               >
                 <Text style={styles.buttonText}>Save</Text>
@@ -438,14 +593,27 @@ const styles = StyleSheet.create({
   },
   addSlotButton: {
     marginTop: 6,
-    backgroundColor: '#00505cff',
+    backgroundColor: "#00505cff",
     paddingVertical: 12,
     borderRadius: 4,
     alignItems: "center",
   },
+  disabledButton: {
+    backgroundColor: "#999",
+    opacity: 0.6,
+  },
+  closedBadge: {
+    fontSize: 12,
+    color: "white",
+    backgroundColor: "#ff4444",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    fontWeight: "600",
+  },
   addButton: {
     flex: 1,
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
     paddingVertical: 10,
     borderRadius: 4,
     alignItems: "center",
@@ -453,7 +621,7 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: '#b32020ff',
+    backgroundColor: "#b32020ff",
     paddingVertical: 10,
     borderRadius: 4,
     alignItems: "center",
@@ -467,7 +635,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   backButton: {
-    backgroundColor: '#b32020ff',
+    backgroundColor: "#b32020ff",
     padding: 12,
     borderRadius: 6,
     flex: 1,
@@ -497,8 +665,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   timePickerCell: {
-    borderWidth: 1, // single border
-    borderColor: "#999", // gray border color
+    borderWidth: 1,
+    borderColor: "#999",
     borderRadius: 6,
     marginHorizontal: 4,
     backgroundColor: "#fff",
@@ -567,5 +735,33 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 10,
+  },
+  clinicHoursIndicator: {
+    backgroundColor: "#e3f2fd",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    marginBottom: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: "#2196F3",
+  },
+  clinicHoursText: {
+    fontSize: 13,
+    color: "#1565c0",
+    fontWeight: "500",
+  },
+  errorContainer: {
+    backgroundColor: "#ffebee",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    marginTop: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: "#f44336",
+  },
+  errorText: {
+    fontSize: 13,
+    color: "#c62828",
+    fontWeight: "500",
   },
 });
